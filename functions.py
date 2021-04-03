@@ -16,8 +16,8 @@ from datetime import datetime
 class star:
 	def __init__(self, lum, x ,y):
 		self.lum = lum		# star luminosity value
-		self.x = x				# star x coordinate
-		self.y = y				# star y coordinate
+		self.x = x		# star x coordinate
+		self.y = y		# star y coordinate
 
 ##* Function for the initialization of the fieldfrom initial mass function
 #	param	N	dimension of the field
@@ -37,4 +37,4 @@ def initialize(N,IMF):
 
 ##* Plotting function
 def plotting():
-	from import 
+	from mpl_toolkits.mplot3d import Axes3D		# Function for the 3D plotting
