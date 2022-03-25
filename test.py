@@ -12,9 +12,9 @@ Funzioni che devo implementare:
 
 '''
 # dimension of the matrix
-N = int(1e4)
+N = int(1e1)
 # number of stars
-M = int(2e3)
+M = int(2)
 
 # Set parameters
 alpha = 2
@@ -41,4 +41,19 @@ plt.plot(m)
 
 plt.show()
 
+def star_location(n):
+	X = []; Y = []
+	for i in range(0,n):
+		x = rnd.randint(0,N)
+		y = rnd.randint(0,N)
+		while((x in X) and (y in Y)):
+			print(1)
+			x = rnd.randint(0,N)
+			y = rnd.randint(0,N)
+		X.append(x); Y.append(Y)
+	X = np.array(X); Y = np.array(Y)
+	return X, Y	
 
+X, Y = star_location(M)
+
+print(X,Y)
