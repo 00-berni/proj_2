@@ -1,31 +1,25 @@
 
-# SPECTRAL EXERCISE
+# SECOND EXERCISE
 
-## Tasks
+## Structure
 
-> ooo
-> lol
+The project folder contains:
 
-`pd.install()` funziona [^1]
-[^1]: prova nota, mi sembra funzioni
-
-```python
-def lambda(x,y):
-	# comment
-	return x*y
-print(lambda(1,2))
-```
----
-***
-___
-
-*prova*, __prova__.\
-provo<sub>2</sub>
-
-| prova | di | cella |
-| --- | :---: | ---: |
-| primo | secondo | discorso lungo lungo lungo  che succede se non vado mai a capo? |
-| oh nyo | | ok |
-
-
-
+- `Makefile`
+  compilable file. Use `proj_2$ make requirements` to install all the necessary packages.
+- `README.md`
+  (this file)
+- `requirements.txt`
+  require packages
+- `proj_2/exercise2/`
+  folder with script
+  - `ex2_script.py`
+    script
+  - `functions.py`
+    function script, used in `ex2_script.py`.
+- `proj_2/notebook/`
+  folder for implementation
+  - `implementation_notebook.ipynb`
+    jupyter notebook
+  - `proj_2/notebook/Pictures/`
+    folder with pictures, made by script
