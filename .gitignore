@@ -1,8 +1,12 @@
 # ignore figures
 *.png
+/notebook/Pictures
 
 # ignore cpython folder fot function file
 /exercise2/__pycache__
 
 # roba di make
 *.log
+
+# vscode things
+.vscode/*
