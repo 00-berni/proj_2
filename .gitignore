@@ -9,4 +9,5 @@
 *.log
 
 # vscode things
-./.vscode/*
+.vscode/
+.vscode/**
