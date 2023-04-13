@@ -9,5 +9,7 @@
 *.log
 
 # vscode things
-.vscode/
 .vscode/**
+.vscode/configurationCache.log
+.vscode/dryrun.log
+.vscode/targets.log
