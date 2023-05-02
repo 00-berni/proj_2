@@ -14,9 +14,9 @@ from scipy.signal import fftconvolve
 import os
 
 # dimension of the matrix
-N = int(4e2+1)
+N = int(1e2+1)
 # number of stars
-M = int(4e2)
+M = int(1e2)
 
 ## Set parameters
 alpha = 2
@@ -181,8 +181,10 @@ def initialize(dim: int = N, sdim: int = M) -> tuple:
     S = star(m,L,xs,ys)
     return F, S
 
+
+from scipy.signal import windows
 ##* 
-def gaussian(sigma: float = 0.3, dim: int = N) -> np.ndarray:
+def gaussian(sigma: float = 0.5, dim: int = N) -> np.ndarray:
     """Gaussian matrix generator
     It makes a gaussian [dim,dim] matrix, centered in (0,0)
 
@@ -202,7 +204,10 @@ def gaussian(sigma: float = 0.3, dim: int = N) -> np.ndarray:
     G = lambda r : np.exp(-r**2/sigma**2/2)
     # generate [dim,dim] matrix = G_i * G_j
     return np.outer(G(x),G(y))
+    # return np.outer(windows.gaussian(N,sigma,sym=True),windows.gaussian(N,sigma,sym=True))
 
+
+from scipy.signal import convolve2d
 
 ##* 
 #?  Add a parameter to choose atm pfs between Gaussian and Lorentzian
@@ -226,7 +231,7 @@ def atm_seeing(f: np.ndarray, sigma: float = 0.5) -> np.ndarray:
     # take [n,n] matrix from the field
     field = f
     # convolution with gaussian
-    field = fftconvolve(field, gaussian(sigma=sigma, dim=n), mode='same')
+    field = fftconvolve(gaussian(sigma=sigma, dim=n), field, mode='same')
     # values are saved in each color channel 
     # to have grayscale
     return check_field(field)
@@ -251,147 +256,24 @@ def noise(n: float = 2e-4, dim: int = N) -> np.ndarray:
     N0 = np.random.random((dim, dim))*n
     return check_field(N0)
 
+def dark_elaboration(n_value: float = 3e-4, iteration: int = 3) -> np.ndarray:
+    """The function computes a number `iteration` of dark and means over them
+
+    :param n_value: noise value, defaults to 3e-4
+    :type n_value: float, optional
+    :param iteration: number of dark to compute, defaults to 3
+    :type iteration: int, optional
+
+    :return: mean dark
+    :rtype: np.ndarray
+    """
+    dark = noise(n_value)
+    for i in range(iteration-1):
+        dark += noise(n_value)
+    dark /= iteration
+    return dark
+
 
 if __name__ == '__main__':
     # Current directory
     pwd = os.getcwd()
-    # M array of masses in solar mass unit
-    m = generate_mass_array(IMF_min,IMF_max)
-
-    ## Plot data
-
-    plt.figure(figsize=(12,8))
-    plt.title(f'Mass distribution with $\\alpha = {alpha}$ and {M} stars')
-    plt.hist(m,int(3*M/5),histtype='step')
-    plt.xscale('log')
-    #plt.xlim(0.09,20)
-    plt.xlabel('m [$M_\odot$]')
-    plt.ylabel('counts')
-
-
-    plt.show()
-
-    # M array of luminosities in solar luminosity unit
-    L = m**beta
-
-    ## Plot data
-    plt.figure(figsize=(12,8))
-    plt.title(f'Luminosity distribution with $\\beta = {beta}$ for {M} stars')
-    plt.hist(np.log10(L),int(2*M/5),histtype='step')
-    #plt.xlim(np.log10(0.09)*beta,np.log10(20)*beta)
-    plt.xlabel('$\log{(L)}$ [$L_\odot$]')
-    plt.ylabel('counts')
-
-    plt.show()
-
-    # generation of the field and the stars
-    F, S = initialize()
-
-    ## Plot
-    fig1, (img_field, img_field_seeing) = plt.subplots(2,1,figsize=(6,15))
-    fig2, (img_zoom, img_zoom_seeing)   = plt.subplots(2,1,figsize=(6,15))
-
-    ## Plot
-    # variables to zoom a sector [inf:sup] x [inf:sup] of the field
-    inf = int(0.2*N)
-    sup = int(0.7*N)
-
-    #  0 : positive image
-    # -1 : negative image
-    v = -1
-
-    field_image(fig1, img_field,F,v)
-    #img_field.imshow(1-F)
-    img_field.set_title(f'No Seeing Field with {M} stars')
-    field_image(fig1, img_zoom,F,v,[inf,sup])
-    #img_zoom.imshow(1-F[inf:sup,inf:sup,:])
-    img_zoom.set_title(f'No Seeing Field with {M} stars: [{inf}:{sup}] x [{inf}:{sup}]')
-
-    # generation of the seeing image
-    F_s = atm_seeing(F)
-    field_image(fig2, img_field_seeing,F_s,v)
-    #img_field_seeing.imshow(1-F_s)
-    img_field_seeing.set_title(f'Seeing Field with {M} stars')
-    field_image(fig2, img_zoom_seeing,F_s,v,[inf,sup])
-    #img_zoom_seeing.imshow(1-F_s[inf:sup,inf:sup,:])
-    img_zoom_seeing.set_title(f'Seeing Field with {M} stars: [{inf}:{sup}] x [{inf}:{sup}]')
-
-    # path for images directory
-    picdir = os.path.join(pwd,'Pictures')
-
-    # par to save figures
-    #   1   save
-    #   0   not
-    sv = 0
-
-    if sv == 1:
-        fig1.savefig(os.path.join(picdir,'field.png'))
-        fig2.savefig(os.path.join(picdir,'zoom.png'))
-
-    plt.show()
-
-    # generation of the field and the stars
-F, S = initialize()
-
-
-# add background noise
-F_n = F + noise()
-
-
-## Plot
-fig1, ((img_field, img_field_noise),(img_field_seeing,img_field_snoise)) = plt.subplots(2,2,figsize=(17,17))
-fig2, ((img_zoom, img_zoom_noise)  ,(img_zoom_seeing,img_zoom_snoise))   = plt.subplots(2,2,figsize=(17,17))
-fig3, (img_field_tot, img_zoom_tot) = plt.subplots(2,1,figsize=(8,17))
-
-# detector noise
-det_noise = 3e-4
-
-field_image(fig1, img_field,F,v)
-#img_field.imshow(1-F)
-img_field.title.set_text(f'No Seeing and noise sky with {M} stars')
-field_image(fig2, img_zoom,F,v,[inf,sup])
-#img_zoom.imshow(1-F[inf:sup,inf:sup,:])
-img_zoom.title.set_text(f'No Seeing and noise sky with {M} stars: [{inf}:{sup}] x [{inf}:{sup}]')
-
-
-field_image(fig1, img_field_noise,F_n,v)
-#img_field_noise.imshow(1-F_n)
-img_field_noise.title.set_text(f'No Seeing Field with {M} stars and sky noise')
-field_image(fig2, img_zoom_noise,F_n,v,[inf,sup])
-#img_zoom_noise.imshow(1-F_n[inf:sup,inf:sup,:])
-img_zoom_noise.title.set_text(f'No Seeing Field with {M} stars and sky noise: [{inf}:{sup}] x [{inf}:{sup}]')
-
-# generate atmosferic seeing image without sky noise
-F_s = atm_seeing(F)
-
-field_image(fig1, img_field_seeing,F_s,v)
-#img_field_seeing.imshow(1-F_s)
-img_field_seeing.title.set_text(f'Seeing Field with {M} stars without noise')
-field_image(fig2, img_zoom_seeing,F_s,v,[inf,sup])
-#img_zoom_seeing.imshow(1-F_s[inf:sup,inf:sup,:])
-img_zoom_seeing.title.set_text(f'Seeing Field with {M} stars without noise: [{inf}:{sup}] x [{inf}:{sup}]')
-
-# generate atmosferic seeing image with sky noise
-F_sn = atm_seeing(F_n)
-field_image(fig1, img_field_snoise,F_sn,v)
-#img_field_snoise.imshow(1-F_sn)
-img_field_snoise.title.set_text(f'Seeing Field with {M} stars with sky noise')
-field_image(fig2, img_zoom_snoise,F_sn,v,[inf,sup])
-#img_zoom_snoise.imshow(1-F_sn[inf:sup,inf:sup,:])
-img_zoom_snoise.title.set_text(f'Seeing Field with {M} stars with sky noise: [{inf}:{sup}] x [{inf}:{sup}]')
-
-# add detector noise, set to 3e-4 (> than background one)
-F_sn += noise(det_noise)
-field_image(fig3, img_field_tot,F_sn,v)
-#img_field_tot.imshow(1-F_sn)
-img_field_tot.title.set_text(f'Seeing Field with {M} stars with sky and detector noise')
-field_image(fig3, img_zoom_tot,F_sn,v,[inf,sup])
-#img_zoom_tot.imshow(1-F_sn[inf:sup,inf:sup,:])
-img_zoom_tot.title.set_text(f'Seeing Field with {M} stars with sky and detector noise: [{inf}:{sup}] x [{inf}:{sup}]')
-
-if sv == 1:
-    fig1.savefig(os.path.join(picdir,'field_noise.png'))
-    fig2.savefig(os.path.join(picdir,'zoom_noise.png'))
-    fig3.savefig(os.path.join(picdir,'image.png'))
-
-plt.show()
