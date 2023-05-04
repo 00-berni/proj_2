@@ -1,0 +1,126 @@
+[0.001, 0.003, 0.001, 0.003]
+0.002 0.0002907611155027855
+-----------
+Found	Wanted	Expected
+1	338	1338
+Count: 1
+Miscount: 0
+Fraction
+f/e =	0 %
+f/tot =	0 %
+Accuracy: 100.00 %
+pm0 = 0.002798400046508236
+pm1 = 0.0015445805810055107
+pm = 0.0015445805810055107
+
+==========
+Results for 100 stars
+dark =	0.00029047997127241553
+
+The star number is
+Ext	True
+51	100
+ext/tot: 51.00 %
+Expected: 53
+exp/tot: 53.00 %
+Precision: 96.23 %
+Good: 50	98.04 %
+Miscounts: -1
+Fake objs: -1.96 %
+
+
+==========
+Results for 200 stars
+dark =	0.00029469856834206707
+
+The star number is
+Ext	True
+113	200
+ext/tot: 56.50 %
+Expected: 130
+exp/tot: 65.00 %
+Precision: 86.92 %
+Good: 113	100.00 %
+Miscounts: 0
+Fake objs: 0.00 %
+
+
+==========
+Results for 400 stars
+dark =	0.00029456714828903353
+
+The star number is
+Ext	True
+211	400
+ext/tot: 52.75 %
+Expected: 262
+exp/tot: 65.50 %
+Precision: 80.53 %
+Good: 209	99.05 %
+Miscounts: -2
+Fake objs: -0.95 %
+
+
+==========
+Results for 500 stars
+dark =	0.0002960053967015468
+
+The star number is
+Ext	True
+250	500
+ext/tot: 50.00 %
+Expected: 314
+exp/tot: 62.80 %
+Precision: 79.62 %
+Good: 248	99.20 %
+Miscounts: -2
+Fake objs: -0.80 %
+
+
+==========
+Results for 700 stars
+dark =	0.000290277987888049
+
+The star number is
+Ext	True
+342	700
+ext/tot: 48.86 %
+Expected: 447
+exp/tot: 63.86 %
+Precision: 76.51 %
+Good: 339	99.12 %
+Miscounts: -3
+Fake objs: -0.88 %
+
+
+==========
+Results for 800 stars
+dark =	0.00029330099910923174
+
+The star number is
+Ext	True
+371	800
+ext/tot: 46.38 %
+Expected: 504
+exp/tot: 63.00 %
+Precision: 73.61 %
+Good: 362	97.57 %
+Miscounts: -9
+Fake objs: -2.43 %
+
+
+==========
+Results for 900 stars
+dark =	0.00029153649574975826
+
+The star number is
+Ext	True
+395	900
+ext/tot: 43.89 %
+Expected: 568
+exp/tot: 63.11 %
+Precision: 69.54 %
+Good: 392	99.24 %
+Miscounts: -3
+Fake objs: -0.76 %
+
