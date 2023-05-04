@@ -57,8 +57,9 @@ def generate_mass_array(imf_min: float ,imf_max: float ,sdim: int = M) -> np.nda
     np.random.seed()
     return (np.random.rand(sdim)*(imf_min-imf_max)+imf_max)**(-1/alpha)
 
-#? I have to check this function: the condition replace=False forbids M > N  
-def star_location(sdim: int = M, dim: int = N) -> tuple:
+##* 
+#? Check the condition False 
+def star_location(sdim: int = M, dim: int = N) -> tuple[np.ndarray,np.ndarray]:
     """Function to locate the stars
     It generates 2 random arrays of dimension n: 
     one is the x coordinate array and 
@@ -72,9 +73,13 @@ def star_location(sdim: int = M, dim: int = N) -> tuple:
     :return: tuple of star coordinates arrays
     :rtype: tuple
     """
-    tmp = np.random.default_rng()
-    X = tmp.choice(dim, size=sdim)
-    Y = tmp.choice(dim, size=sdim)#, replace=False)
+    # list with all possible position in the field
+    grid = [(i,j) for i in range(dim) for j in range(dim)]
+    # drawing positions
+    ind = np.random.choice(len(grid), size=sdim, replace=False)
+    # making arrays of coordinates
+    X = np.array([grid[i][0] for i in ind])
+    Y = np.array([grid[i][1] for i in ind])
     return X, Y    
 
 
