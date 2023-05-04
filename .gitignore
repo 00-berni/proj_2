@@ -3,10 +3,13 @@
 /notebook/Pictures
 
 # ignore cpython folder fot function file
-/exercise2/__pycache__
+**/__pycache__
 
 # roba di make
 *.log
+
+# non so cosa
+*.pyc
 
 # vscode things
 .vscode/**
