@@ -12,3 +12,7 @@ test-thr:
 	echo - TEST FOR THE STOP IN SEARCHING -
 	echo run the script: test_thr.py
 	python3 $(TDIR)/test_thr.py > $(TDIR)/out-test_thr.txt
+# jupiter to pdf
+notebook-pdf:
+	jupyter nbconvert ./notebook/implementation_notebook.ipynb --to pdf
+	evince ./notebook/implementation_notebook.pdf
