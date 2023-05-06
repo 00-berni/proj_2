@@ -221,7 +221,7 @@ def evaluate_noise(field: np.ndarray, coord: list[tuple], point_num: int = 100, 
     return est_noise
 
 ##*
-def counting_stars(field: np.ndarray, dark_noise: float, thr: float = 1e-3, size: int = 3, coord: list[tuple] = [], point_num: int = 100, loop_num: int = 4, diag: int = 0) -> list[np.ndarray]:
+def counting_stars(field: np.ndarray, dark_noise: float, thr: float = 1e-3, size: int = 3, coord: list[tuple] = [], point_num: int = 100, loop_num: int = 4, diag: int = 0, M: int = M) -> list[np.ndarray]:
     """Extracting stars from field
     The function calls the `object_isolation()` function iteratively until
     the signal-to-noise ratio (`s_t_n`) is less than 2
@@ -298,156 +298,117 @@ def counting_stars(field: np.ndarray, dark_noise: float, thr: float = 1e-3, size
 
 
 if __name__ == '__main__':
+    
     # Current directory
     pwd = os.getcwd()
-    det_noise = 3e-4
-    n = 0.2/1e2
+    
+    # noises
+    n = 0.2/1e2         # background noise 
+    det_noise = 3e-4    # detector noise
+    
+    n_num = [1,3,10,25,50,70,100,120,170,340,560,700]
+    n_objs = []
 
-    test_field = np.zeros((N,N))
-    number = 1000
-    lum = [1e-3,n+1e-3]*number +  [n*5] * (number//3) + [n*10]*5
-    from numpy.random import randint
-    print(lum[:4])
-    org_pos = []
-    pos = (randint(0,N),randint(0,N))
-    for l in lum:
-        while test_field[pos] != 0:
-            pos = (randint(0,N),randint(0,N))
-        test_field[pos] = l
-        org_pos += [pos]
-    noise_camp = atm_seeing(noise(n) + test_field) + noise(det_noise)
+    n_extr = []
+    n_fake = []
 
-    d = dark_elaboration(det_noise)
-    d = d[np.unravel_index(np.argmax(d), d.shape)]
-    print(n,d)
+    for number in n_num: 
+        # generating the field
+        test_field = np.zeros((N,N))
+        
+        # generating the sample
 
+        lum = [n/10,n+2e-3]*number +  [n*5] * (number//3) + [n*10]*5
+        # number of stars
+        nstars = len(lum)
+        # saving number of objs
+        n_objs += [nstars]
+        # number of expected object
+        nexp = number + (number // 3) + 5
+        print(f'\n=====\nRun for {nstars} stars\n')
+        print(f'Detector noise:\t{det_noise}\nBackground:\t{n}\n')
+        print(f'Stars:\nLum\tNum\n{n*10}\t5\n{n*5}\t{number//3}\n{n+1e-3}\t{number}\n{n/10}\t{number}\n')
 
-    #noise_camp = noise_camp - d
+        # list to store the positions of stars
+        org_pos = []
+        # making a list with every position in the field, format (x,y)
+        grid = [(i,j) for i in range(N) for j in range(N)]
+        # locating the stars
+        ind = np.random.choice(len(grid), size=nstars, replace=False)
+        for i in range(nstars):
+            x,y = grid[ind[i]]
+            test_field[x,y] = lum[i]
+            org_pos += [(x,y)]
 
-    # plt.figure(1)
+        # generating the field
+        noise_camp = atm_seeing(noise(n) + test_field) + noise(det_noise)
 
-    # plt.imshow(test_field, norm='log', cmap='gray_r')
-    # # plt.colorbar()
+        # elaboration of dark
+        d = dark_elaboration(det_noise)
+        d = d[np.unravel_index(np.argmax(d), d.shape)]
 
-    # plt.figure(2)
-    # plt.imshow(noise_camp, norm='log', cmap='gray_r')
+        # making a list with every position in the field, format (x,y)
+        grid = [(i,j) for i in range(N) for j in range(N)]
+        # creating an empty array to collect the maximum values
+        maxvalues = np.array([])
+        # setting the number of points taken around
+        size_num = 200
+        # thr to define an obj
+        thr = 1e-2
+        a_extraction, a_pos = counting_stars(noise_camp, d, thr=thr, size=3, point_num=size_num, M=nstars)
 
-    # making a list with every position in the field, format (x,y)
-    grid = [(i,j) for i in range(N) for j in range(N)]
-    # creating an empty array to collect the maximum values
-    maxvalues = np.array([])
-    # setting the number of points taken around
-    size_num = 100
-    # setting the number of iteration for the drawing
-    cnt = 4
-    # noise
-    pm_noise = 0
-    for ii in range(cnt):
-        # drawing positions in the grid
-        ind = np.random.choice(len(grid), size=size_num, replace=False)
-        # making an array for the drawn elements
-        element = np.array([noise_camp[grid[i]] for i in ind])
-        mean = sum(element)/len(element)
-        # evaluating the mean
-        pm_noise += mean
-    # averaging
-    pm_noise /= cnt
-    ss = f'pm0 = {pm_noise}'
-    pm_noise = (d + pm_noise)/2
-    ss2 = f'pm1 = {pm_noise}'
-    pm_noise = min(pm_noise, noise_camp[find_max(noise_camp)]/10)
-    # setting the number of points taken around
-    size_num = 700
-    # setting the noise thr to d of the detector
-    thr = d
-    # setting the starting max value
-    maxval = 1
-    # initializing the iteration counter
-    it = 0
-    # good counter
-    pos_cnt = 0
+        cnt = 0
+        for k in a_pos:
+            if k in org_pos: cnt+=1
 
-    # diagnostic parameter
-    diag = 0
+        # number of extracted
+        next = len(a_extraction)
 
-    # starting the loop
-    while maxval/thr > 10 and it < len(lum)+5:
-        if diag==1: print(f'iteration {it}')
-        # finding the maximum
-        maxind = np.unravel_index(np.argmax(noise_camp), noise_camp.shape)
-        maxval = noise_camp[maxind]
-        xm, ym = maxind
-        if maxval == 0:
-            print('!WARNING: MAXVAL == 0!')
-            break
-        if maxind in org_pos:
-            pos_cnt += 1
-        # removing the obj
-        edges = [min(3,xm), min(4,N-xm), min(3,ym), min(4,N-ym)]
-        noise_camp[xm-edges[0]:xm+edges[1], ym-edges[2]:ym+edges[3]] = 0.0
-        # saving the maxval
-        maxvalues = np.append(maxvalues,maxval)
-        if diag==1:
-            print(f'max =\t{maxval}')
-            print(f'pos =\t{maxind}')
-        # removing the maxval obj from the grid
-        for k in [(xm-3+i,ym-3+j) for i in range(7) for j in range(7)]:
-            # removing only coordinates which aren't have been removed yet
-            if k in grid:
-                grid.remove(k)
-        # saving the actual dim of grid
-        dim = len(grid)
-        # the number of points depends on the number of remained points in the field
-        n_point = min(size_num, dim)
-        if maxval/pm_noise<=50:
-            # defining the variable to mean the noise
-            reco_n_bg = 0
-            hold = []
-            for ii in range(cnt):
-                # drawing positions in the grid
-                ind = np.random.choice(dim, size=n_point, replace=False)
-                # making an array for the drawn elements
-                element = np.array([noise_camp[grid[i]] for i in ind])
-                mean = sum(element)/len(element)
-                # evaluating the mean
-                reco_n_bg += mean
-                hold += [mean]
-            # averaging
-            reco_n_bg /= cnt
-            # controlling the value of noise
-            thr = max(reco_n_bg, d)
-            if diag==1:
-                print(f'noise =\t{reco_n_bg}')
-                print(f'great =\t{max(hold)}')
-                print(f'thr =\t{thr}')
-                print(f's:n =\t{maxval/thr}')
-                print(f's:n2 =\t{maxval/max(hold)}')
-        it += 1
-        if it == len(lum)+1: print(f'MAX ITERATION NUMBER EXCEDED! -> {it}')
+        print(f'====\nExtracted objects:\t{next}\nFraction over tot:\t{next/nstars*100:.2f} %\nExpected objects:\t{nexp}\nFraction over exp:\t{next/nexp*100:.2f} %\n')
 
-    found = len(maxvalues)
-    wanted = number//3 + 5
-    expected = wanted + number        
-    print('-----------'+ f'\nFound\tWanted\tExpected\n{found}\t{wanted}\t{expected}')
-    print(f'Count: {pos_cnt}\nMiscount: {found-pos_cnt}')
-    print(f'Fraction\nf/e =\t{found/expected*100:.0f} %\nf/tot =\t{found/(wanted+number*2)*100 :.0f} %')
-    if pos_cnt != found: print(f'c/e =\t{pos_cnt/expected*100:.0f} %\nc/tot =\t{pos_cnt/(wanted+number*2)*100 :.0f} %')
-    print(f'Accuracy: {pos_cnt/found*100:.2f} %')
-    # plt.figure(3)
-    # plt.imshow(noise_camp, norm='log', cmap='gray_r')
-    # plt.colorbar()
-    print(ss)
-    print(ss2)
-    print(f'pm = {pm_noise}')
+        n_extr += [next/nexp*100] 
 
-    # print(listpos)
-    # print(reco_n_bg)
+        fake_obj = next - cnt
 
+        print(f'True objects:\t{cnt}\nFake objects:\t{fake_obj}\nFraction over ext objs:\t{fake_obj/next*100:.2f} %\n====')
 
+        n_fake += [fake_obj/next*100]
+
+    # print(f'\n=====\nStudied objs:\t{len(n_objs)}')
+
+    xx = np.arange(len(n_objs))
+
+    n_extr = np.array(n_extr)
+    n_fake = np.array(n_fake)
+
+    plt.figure(1)
+    plt.subplots_adjust(hspace=0)
+    plt.subplot(2,1,1)
+    plt.title('Precision and accuracy of the detecting algorithm')
+    plt.hlines(100,min(xx),max(xx),'gray','dashdot',alpha=0.7)
+    plt.plot(xx, n_extr, '--.', label='Precision')
+    plt.xticks(xx,[])
+    plt.ylabel('extracted / expected [%]')
+    plt.grid()
+    plt.legend()
+
+    plt.subplot(2,1,2)
+    plt.hlines(0,min(xx),max(xx),'gray','dashdot',alpha=0.7)
+    plt.plot(xx, n_fake, '--.', color='red', label='Accuracy')
+    plt.xticks(xx,n_objs)
+    plt.xlabel('number of stars')
+    plt.ylabel('1 - (true / extracted) [%]')
+    plt.grid()
+    plt.legend()
+    
     plt.show()
-    # from scipy.signal import argrelextrema
 
-    stars = [5,10,50,70,100,200,500,1000,2000,3000]
+
+    print('\n\n*****************\n')
+
+
+    stars = [5,10]
+    # stars = [5,10,50,70,100,200,500,1000,2000,3000]
     # stars = [3,4,5,6,7,8] 
     # stars = [10,20,40,50,70,80,90] 
     # stars = [100,200,400,500,700,800,900] 
