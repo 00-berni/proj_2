@@ -187,7 +187,7 @@ def object_isolation(obj: tuple[int,int], field: np.ndarray, coord: list[tuple],
     return extraction
 
 ##*
-def evaluate_noise(field: np.ndarray, coord: list[tuple], point_num: int = 100, loop_num: int = 4) -> float:
+def evaluate_noise(field: np.ndarray, coord: list[tuple], point_num: int = 100, loop_num: int = 4, step0: int = 0) -> float:
     """To estimate the background noise value.
     The function draws points in the field and averages over them in order to get an estimation of the mean luminosity
 
@@ -203,7 +203,7 @@ def evaluate_noise(field: np.ndarray, coord: list[tuple], point_num: int = 100, 
     :rtype: float
     """
     # defining the variable for the estimated noise
-    est_noise = 0
+    est_noise = []
     # saving the size of coord
     dim = len(coord)
     # the number of points depends on the number of remained points in the field
@@ -215,13 +215,13 @@ def evaluate_noise(field: np.ndarray, coord: list[tuple], point_num: int = 100, 
         # making an array for the drawn elements
         element = np.array([field[coord[i]] for i in ind])
         # evaluating the mean
-        est_noise += sum(element)/len(element)
+        est_noise += [sum(element)/len(element)]
     # averaging
-    est_noise /= loop_num
+    est_noise = max(est_noise) if step0 == 0 else sum(est_noise)/len(est_noise) 
     return est_noise
 
 ##*
-def counting_stars(field: np.ndarray, dark_noise: float, thr: float = 1e-3, size: int = 3, coord: list[tuple] = [], point_num: int = 100, loop_num: int = 4, diag: int = 0, M: int = M) -> list[np.ndarray]:
+def counting_stars(field: np.ndarray, dark_noise: float, thr: float = 1e-3, size: int = 4, coord: list[tuple] = [], point_num: int = 100, loop_num: int = 4, diag: int = 0, m: int = M) -> list[np.ndarray]:
     """Extracting stars from field
     The function calls the `object_isolation()` function iteratively until
     the signal-to-noise ratio (`s_t_n`) is less than 2
@@ -261,38 +261,47 @@ def counting_stars(field: np.ndarray, dark_noise: float, thr: float = 1e-3, size
     #   that will set the condition to start the estimation of the signal-to-noise ratio
     # first noise value
         # appending the new extracted object to the list
-    n0 = evaluate_noise(tmp_field, coord, point_num=100, loop_num=loop_num)
+    n0 = evaluate_noise(tmp_field, coord, point_num=100, loop_num=loop_num, step0=1)
     # averaging with the noise from dark
     n0 = (n0 + dark_noise) / 2
     # taking the minimum between n and the 10% of maximum luminosity
     n0 = min(n0, max_val/10)
-    if diag==1: print(f'noise =\t{n0}')
+    if diag==1: print(f'noise0 =\t{n0}')
     #! for me to control
     i = 0
     # evaluating the signal-to-noise ratio
-    s_t_n = max_val / n0
-    if diag==1: print(f'stn =\t{1/s_t_n*100:.2f} %')
+    s_t_n0 = max_val / n0
+    s_t_n = s_t_n0
+    if diag==1: print(f'stn0 =\t{1/s_t_n*100:.2f} %')
     # starting the loop 
-    while s_t_n > 2 and i < M+3:
-        # evalueting the new maximum in the field
+    while s_t_n > 2 and i < m+3:
+        # evaluating the new maximum in the field
         max_pos = np.unravel_index(np.argmax(tmp_field, axis=None), tmp_field.shape)
         max_val = tmp_field[max_pos]
         a_extraction += [object_isolation(max_pos, tmp_field, coord, thr, size)]        
         a_pos += [max_pos]
         if diag==1: print(f'max = {max_val}')
-        # condition to start the noise evaluation
-        if s_t_n <= 50:
-            n0 = evaluate_noise(field,coord,point_num,loop_num)
+        if s_t_n0 <= 50:
+            nn = evaluate_noise(tmp_field,coord,point_num,loop_num)
             # taking the max between n and noise from dark
-            n0 = max(n, dark_noise)
-        s_t_n = max_val/n0
-        if diag==1:
-            print(f'noise =\t{n0}')
-            print(f'stn =\t{1/s_t_n*100:.2f} %')
+            nn = max(nn, dark_noise)
+            s_t_n = max_val/nn
+            if diag==1:
+                print(f'noise =\t{nn}')
+                print(f'stn =\t{1/s_t_n*100:.2f} %')
+        else:
+            s_t_n0 = max_val/n0
+            s_t_n = s_t_n0
+            if diag==1:
+                print(f'noise0 =\t{n0}')
+                print(f'stn0 =\t{1/s_t_n*100:.2f} %')
+
         i += 1
-        if i == M+2: print('!WARNING!: ITERATION EXCEDED!')
-    # plt.imshow(tmp_field, norm='log', cmap='gray_r')
-    # plt.show()
+        if i == m+2: print('!WARNING!: ITERATION EXCEDED!')
+    if diag == 1:
+        plt.imshow(tmp_field, norm='log', cmap='viridis')
+        plt.colorbar()
+        plt.show()
     return a_extraction, a_pos
 
 
@@ -301,12 +310,16 @@ if __name__ == '__main__':
     
     # Current directory
     pwd = os.getcwd()
+
+    diag = 0
     
     # noises
     n = 0.2/1e2         # background noise 
     det_noise = 3e-4    # detector noise
     
-    n_num = [1,3,10,25,50,70,100,120,170,340,560,700]
+    # n_num = [1,3,10,25,50,70,100,120,170,340,560,700]
+    n_num = [2,5,10,25,50,100,250,400,500]
+    # n_num = [5, 20, 80]
     n_objs = []
 
     n_extr = []
@@ -318,16 +331,16 @@ if __name__ == '__main__':
         
         # generating the sample
 
-        lum = [n/10,n+2e-3]*number +  [n*5] * (number//3) + [n*10]*5
+        lum = [n/10,n+2e-3]*number +  [n*5] * (number//2) + [n*10] * (number //3) + [n*1e2]
         # number of stars
         nstars = len(lum)
         # saving number of objs
         n_objs += [nstars]
         # number of expected object
-        nexp = number + (number // 3) + 5
+        nexp = number + (number // 2) + (number // 3) + 1
         print(f'\n=====\nRun for {nstars} stars\n')
         print(f'Detector noise:\t{det_noise}\nBackground:\t{n}\n')
-        print(f'Stars:\nLum\tNum\n{n*10}\t5\n{n*5}\t{number//3}\n{n+1e-3}\t{number}\n{n/10}\t{number}\n')
+        print(f'Stars:\nLum\tNum\n{n*1e2}\t1\n{n*10}\t{number // 3}\n{n*5}\t{number//2}\n{n+1e-3}\t{number}\n{n/10}\t{number}\n')
 
         # list to store the positions of stars
         org_pos = []
@@ -355,7 +368,7 @@ if __name__ == '__main__':
         size_num = 200
         # thr to define an obj
         thr = 1e-2
-        a_extraction, a_pos = counting_stars(noise_camp, d, thr=thr, size=3, point_num=size_num, M=nstars)
+        a_extraction, a_pos = counting_stars(noise_camp, d, thr=thr, size=3, point_num=size_num, m=nstars, diag=diag)
 
         cnt = 0
         for k in a_pos:
@@ -370,9 +383,9 @@ if __name__ == '__main__':
 
         fake_obj = next - cnt
 
-        print(f'True objects:\t{cnt}\nFake objects:\t{fake_obj}\nFraction over ext objs:\t{fake_obj/next*100:.2f} %\n====')
+        print(f'True objects:\t{cnt}\nFake objects:\t{fake_obj}\nFraction over ext objs:\t{cnt/next*100:.2f} %\n====')
 
-        n_fake += [fake_obj/next*100]
+        n_fake += [cnt/next*100]
 
     # print(f'\n=====\nStudied objs:\t{len(n_objs)}')
 
@@ -384,7 +397,7 @@ if __name__ == '__main__':
     plt.figure(1)
     plt.subplots_adjust(hspace=0)
     plt.subplot(2,1,1)
-    plt.title('Precision and accuracy of the detecting algorithm')
+    plt.title('Precision and accuracy for set stars')
     plt.hlines(100,min(xx),max(xx),'gray','dashdot',alpha=0.7)
     plt.plot(xx, n_extr, '--.', label='Precision')
     plt.xticks(xx,[])
@@ -393,11 +406,11 @@ if __name__ == '__main__':
     plt.legend()
 
     plt.subplot(2,1,2)
-    plt.hlines(0,min(xx),max(xx),'gray','dashdot',alpha=0.7)
-    plt.plot(xx, n_fake, '--.', color='red', label='Accuracy')
+    plt.hlines(100,min(xx),max(xx),'gray','dashdot',alpha=0.7)
+    plt.plot(xx,n_fake, '--.', color='red', label='Accuracy')
     plt.xticks(xx,n_objs)
     plt.xlabel('number of stars')
-    plt.ylabel('1 - (true / extracted) [%]')
+    plt.ylabel('true / extracted [%]')
     plt.grid()
     plt.legend()
     
@@ -407,8 +420,8 @@ if __name__ == '__main__':
     print('\n\n*****************\n')
 
 
-    stars = [5,10]
-    # stars = [5,10,50,70,100,200,500,1000,2000,3000]
+    stars = [5,10,20,50,100,200,500,800,1000]
+    # stars = [5,10,50,70,100,200,500,1000,2000]
     # stars = [3,4,5,6,7,8] 
     # stars = [10,20,40,50,70,80,90] 
     # stars = [100,200,400,500,700,800,900] 
@@ -418,11 +431,11 @@ if __name__ == '__main__':
     a_prec = []
 
 
-    for M in stars:
+    for m in stars:
         
-        print('\n==========\n'+f'Results for {M} stars')
+        print('\n==========\n'+f'Results for {m} stars')
         # generation of the field and the stars
-        F, S = initialize(sdim=M)
+        F, S = initialize(sdim=m)
 
         # taking the 0.2% of the luminosity of a 1 solar mass star
         # for 1 solar mass star L = M**beta = 1 in solar luminosity unit 
@@ -471,8 +484,8 @@ if __name__ == '__main__':
         # number of points
         p_num = 200 
         # thr to define an obj
-        thr = 1e-1
-        a_extraction, a_pos = counting_stars(test_field, d, thr=thr, size=3, point_num=p_num)
+        thr = 1e-2
+        a_extraction, a_pos = counting_stars(test_field, d, thr=thr, size=3, point_num=p_num, diag=diag, m=m)
         cnt = 0
         star_pos = [(i,j) for i,j in zip(S.x,S.y)]
         for k in a_pos:
@@ -480,17 +493,17 @@ if __name__ == '__main__':
         
         miss = cnt-len(a_extraction)
 
-        a_fake += [miss/len(a_extraction)*100]
+        a_fake += [cnt/len(a_extraction)*100]
         a_prec += [len(a_extraction)/objs*100 if objs!=0 else 0]
 
-        print(f'\nThe star number is\nExt\tTrue\n{len(a_extraction)}\t{M}')
-        print(f'ext/tot: {len(a_extraction)/M*100:.2f} %')
+        print(f'\nThe star number is\nExt\tTrue\n{len(a_extraction)}\t{m}')
+        print(f'ext/tot: {len(a_extraction)/m*100:.2f} %')
         print(f'Expected: {objs}')
-        print(f'exp/tot: {objs/M*100:.2f} %')
+        print(f'exp/tot: {objs/m*100:.2f} %')
         print(f'Precision: {len(a_extraction)/objs*100:.2f} %')
         print(f'Good: {cnt}\t{cnt/len(a_extraction)*100:.2f} %')
-        print(f'Miscounts: {miss}')
-        print(f'Fake objs: {miss/len(a_extraction)*100:.2f} %\n')
+        print(f'miscounts: {miss}')
+        print(f'Accuracy: {cnt/len(a_extraction)*100:.2f} %\n')
 
         selected = a_extraction[-1]
         thr_tmp = selected[np.unravel_index(np.argmax(selected), selected.shape)]
@@ -506,21 +519,23 @@ if __name__ == '__main__':
     xx = np.arange(len(stars))
     
     plt.figure(1)
-    plt.title('Misleading objects')
-    plt.hlines(0,min(xx),max(xx),'gray','dashdot',alpha=0.7)
-    plt.plot(xx, a_fake, '--.', label='true - extracted')
-    plt.xticks(xx,stars)
-    plt.xlabel('number of stars')
-    plt.ylabel('(true - extracted) / extracted [%]')
+    plt.subplots_adjust(hspace=0)
+    plt.subplot(2,1,1)
+    plt.title('Precision and accuracy for stars generated from IMF')
+    plt.hlines(100,min(xx),max(xx),'gray','dashdot',alpha=0.7)
+    plt.plot(xx, a_prec, '--.', label='Precision')
+    plt.xticks(xx,[])
+    plt.ylabel('extracted / expected [%]')
+    plt.legend()
     plt.grid()
 
-    plt.figure(2)
-    plt.title('Precision: fraction of expected')
+    plt.subplot(2,1,2)
     plt.hlines(100,min(xx),max(xx),'gray','dashdot',alpha=0.7)
-    plt.plot(xx, a_prec, '--.', label='ext/exp')
+    plt.plot(xx, a_fake, '--.', color='red', label='Accuracy')
     plt.xticks(xx,stars)
     plt.xlabel('number of stars')
-    plt.ylabel('extracted / expected [%]')
+    plt.ylabel('true  / extracted [%]')
+    plt.legend()
     plt.grid()
     
 

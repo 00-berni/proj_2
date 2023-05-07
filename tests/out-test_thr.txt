@@ -1,126 +1,373 @@
-[0.001, 0.003, 0.001, 0.003]
-0.002 0.0002907611155027855
------------
-Found	Wanted	Expected
-1	338	1338
-Count: 1
-Miscount: 0
-Fraction
-f/e =	0 %
-f/tot =	0 %
-Accuracy: 100.00 %
-pm0 = 0.002798400046508236
-pm1 = 0.0015445805810055107
-pm = 0.0015445805810055107
+
+=====
+Run for 6 stars
+
+Detector noise:	0.0003
+Background:	0.002
+
+Stars:
+Lum	Num
+0.2	1
+0.02	0
+0.01	1
+0.003	2
+0.0002	2
+
+====
+Extracted objects:	5
+Fraction over tot:	83.33 %
+Expected objects:	4
+Fraction over exp:	125.00 %
+
+True objects:	4
+Fake objects:	1
+Fraction over ext objs:	80.00 %
+====
+
+=====
+Run for 14 stars
+
+Detector noise:	0.0003
+Background:	0.002
+
+Stars:
+Lum	Num
+0.2	1
+0.02	1
+0.01	2
+0.003	5
+0.0002	5
+
+====
+Extracted objects:	10
+Fraction over tot:	71.43 %
+Expected objects:	9
+Fraction over exp:	111.11 %
+
+True objects:	9
+Fake objects:	1
+Fraction over ext objs:	90.00 %
+====
+
+=====
+Run for 29 stars
+
+Detector noise:	0.0003
+Background:	0.002
+
+Stars:
+Lum	Num
+0.2	1
+0.02	3
+0.01	5
+0.003	10
+0.0002	10
+
+====
+Extracted objects:	20
+Fraction over tot:	68.97 %
+Expected objects:	19
+Fraction over exp:	105.26 %
+
+True objects:	19
+Fake objects:	1
+Fraction over ext objs:	95.00 %
+====
+
+=====
+Run for 71 stars
+
+Detector noise:	0.0003
+Background:	0.002
+
+Stars:
+Lum	Num
+0.2	1
+0.02	8
+0.01	12
+0.003	25
+0.0002	25
+
+====
+Extracted objects:	44
+Fraction over tot:	61.97 %
+Expected objects:	46
+Fraction over exp:	95.65 %
+
+True objects:	43
+Fake objects:	1
+Fraction over ext objs:	97.73 %
+====
+
+=====
+Run for 142 stars
+
+Detector noise:	0.0003
+Background:	0.002
+
+Stars:
+Lum	Num
+0.2	1
+0.02	16
+0.01	25
+0.003	50
+0.0002	50
+
+====
+Extracted objects:	89
+Fraction over tot:	62.68 %
+Expected objects:	92
+Fraction over exp:	96.74 %
+
+True objects:	88
+Fake objects:	1
+Fraction over ext objs:	98.88 %
+====
+
+=====
+Run for 284 stars
+
+Detector noise:	0.0003
+Background:	0.002
+
+Stars:
+Lum	Num
+0.2	1
+0.02	33
+0.01	50
+0.003	100
+0.0002	100
+
+====
+Extracted objects:	168
+Fraction over tot:	59.15 %
+Expected objects:	184
+Fraction over exp:	91.30 %
+
+True objects:	167
+Fake objects:	1
+Fraction over ext objs:	99.40 %
+====
+
+=====
+Run for 709 stars
+
+Detector noise:	0.0003
+Background:	0.002
+
+Stars:
+Lum	Num
+0.2	1
+0.02	83
+0.01	125
+0.003	250
+0.0002	250
+
+====
+Extracted objects:	351
+Fraction over tot:	49.51 %
+Expected objects:	459
+Fraction over exp:	76.47 %
+
+True objects:	346
+Fake objects:	5
+Fraction over ext objs:	98.58 %
+====
+
+=====
+Run for 1134 stars
+
+Detector noise:	0.0003
+Background:	0.002
+
+Stars:
+Lum	Num
+0.2	1
+0.02	133
+0.01	200
+0.003	400
+0.0002	400
+
+====
+Extracted objects:	491
+Fraction over tot:	43.30 %
+Expected objects:	734
+Fraction over exp:	66.89 %
+
+True objects:	489
+Fake objects:	2
+Fraction over ext objs:	99.59 %
+====
+
+=====
+Run for 1417 stars
+
+Detector noise:	0.0003
+Background:	0.002
+
+Stars:
+Lum	Num
+0.2	1
+0.02	166
+0.01	250
+0.003	500
+0.0002	500
+
+====
+Extracted objects:	569
+Fraction over tot:	40.16 %
+Expected objects:	917
+Fraction over exp:	62.05 %
+
+True objects:	563
+Fake objects:	6
+Fraction over ext objs:	98.95 %
+====
+
+
+*****************
+
 
 ==========
-Results for 100 stars
-dark =	0.00029047997127241553
+Results for 5 stars
+dark =	0.00029127802498992724
 
 The star number is
 Ext	True
-51	100
-ext/tot: 51.00 %
-Expected: 53
-exp/tot: 53.00 %
-Precision: 96.23 %
-Good: 50	98.04 %
-Miscounts: -1
-Fake objs: -1.96 %
+6	5
+ext/tot: 120.00 %
+Expected: 5
+exp/tot: 100.00 %
+Precision: 120.00 %
+Good: 5	83.33 %
+miscounts: -1
+Accuracy: 83.33 %
+
+
+==========
+Results for 10 stars
+dark =	0.00029105921319368984
+
+The star number is
+Ext	True
+7	10
+ext/tot: 70.00 %
+Expected: 6
+exp/tot: 60.00 %
+Precision: 116.67 %
+Good: 7	100.00 %
+miscounts: 0
+Accuracy: 100.00 %
+
+
+==========
+Results for 20 stars
+dark =	0.0002898626705785633
+
+The star number is
+Ext	True
+13	20
+ext/tot: 65.00 %
+Expected: 10
+exp/tot: 50.00 %
+Precision: 130.00 %
+Good: 13	100.00 %
+miscounts: 0
+Accuracy: 100.00 %
+
+
+==========
+Results for 50 stars
+dark =	0.00029164521106009154
+
+The star number is
+Ext	True
+35	50
+ext/tot: 70.00 %
+Expected: 32
+exp/tot: 64.00 %
+Precision: 109.38 %
+Good: 35	100.00 %
+miscounts: 0
+Accuracy: 100.00 %
+
+
+==========
+Results for 100 stars
+dark =	0.0002928992915809422
+
+The star number is
+Ext	True
+67	100
+ext/tot: 67.00 %
+Expected: 65
+exp/tot: 65.00 %
+Precision: 103.08 %
+Good: 67	100.00 %
+miscounts: 0
+Accuracy: 100.00 %
 
 
 ==========
 Results for 200 stars
-dark =	0.00029469856834206707
+dark =	0.00029262912362295815
 
 The star number is
 Ext	True
-113	200
-ext/tot: 56.50 %
-Expected: 130
-exp/tot: 65.00 %
-Precision: 86.92 %
-Good: 113	100.00 %
-Miscounts: 0
-Fake objs: 0.00 %
-
-
-==========
-Results for 400 stars
-dark =	0.00029456714828903353
-
-The star number is
-Ext	True
-211	400
-ext/tot: 52.75 %
-Expected: 262
-exp/tot: 65.50 %
-Precision: 80.53 %
-Good: 209	99.05 %
-Miscounts: -2
-Fake objs: -0.95 %
+126	200
+ext/tot: 63.00 %
+Expected: 121
+exp/tot: 60.50 %
+Precision: 104.13 %
+Good: 125	99.21 %
+miscounts: -1
+Accuracy: 99.21 %
 
 
 ==========
 Results for 500 stars
-dark =	0.0002960053967015468
+dark =	0.0002944097530278321
 
 The star number is
 Ext	True
-250	500
-ext/tot: 50.00 %
-Expected: 314
-exp/tot: 62.80 %
-Precision: 79.62 %
-Good: 248	99.20 %
-Miscounts: -2
-Fake objs: -0.80 %
-
-
-==========
-Results for 700 stars
-dark =	0.000290277987888049
-
-The star number is
-Ext	True
-342	700
-ext/tot: 48.86 %
-Expected: 447
-exp/tot: 63.86 %
-Precision: 76.51 %
-Good: 339	99.12 %
-Miscounts: -3
-Fake objs: -0.88 %
+269	500
+ext/tot: 53.80 %
+Expected: 312
+exp/tot: 62.40 %
+Precision: 86.22 %
+Good: 266	98.88 %
+miscounts: -3
+Accuracy: 98.88 %
 
 
 ==========
 Results for 800 stars
-dark =	0.00029330099910923174
+dark =	0.0002914943723740438
 
 The star number is
 Ext	True
-371	800
-ext/tot: 46.38 %
-Expected: 504
-exp/tot: 63.00 %
-Precision: 73.61 %
-Good: 362	97.57 %
-Miscounts: -9
-Fake objs: -2.43 %
+379	800
+ext/tot: 47.38 %
+Expected: 499
+exp/tot: 62.38 %
+Precision: 75.95 %
+Good: 378	99.74 %
+miscounts: -1
+Accuracy: 99.74 %
 
 
 ==========
-Results for 900 stars
-dark =	0.00029153649574975826
+Results for 1000 stars
+dark =	0.0002931591363627928
 
 The star number is
 Ext	True
-395	900
-ext/tot: 43.89 %
-Expected: 568
-exp/tot: 63.11 %
-Precision: 69.54 %
-Good: 392	99.24 %
-Miscounts: -3
-Fake objs: -0.76 %
+404	1000
+ext/tot: 40.40 %
+Expected: 606
+exp/tot: 60.60 %
+Precision: 66.67 %
+Good: 401	99.26 %
+miscounts: -3
+Accuracy: 99.26 %
 
