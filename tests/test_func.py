@@ -266,3 +266,11 @@ def dark_elaboration(n_value: float = 3e-4, iteration: int = 3) -> np.ndarray:
         dark += noise(n_value)
     dark /= iteration
     return dark
+
+if __name__ == '__main__':
+    n = 0.2/1e2
+    nmat = noise(n)
+    plt.imshow(nmat,norm='log',cmap='gray')
+    plt.show()
+    print(nmat[np.unravel_index(np.argmax(nmat),nmat.shape)])
+    print(nmat.sum()/(len(nmat)**2))
