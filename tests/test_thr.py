@@ -3,10 +3,17 @@
 """
 
 ##* Packages
+import os.path as ph
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
-from test_func import *
-import os
+
+PROJ_FOLDER = ph.split(ph.dirname(ph.realpath(__file__)))[0]
+
+sys.path.insert(1, ph.join(PROJ_FOLDER))
+from skysimulation.field import *
+from skysimulation.recovery import dark_elaboration, object_isolation
+# from test_func import *
 
 # dimension of the matrix
 N = int(1e2+1)
@@ -17,174 +24,6 @@ M = int(1e2)
 def find_max(field):
     return np.unravel_index(np.argmax(field), field.shape)
 
-def grad_check(field: np.ndarray, index: tuple[int,int], size: int = 3) -> tuple[np.ndarray,np.ndarray]:
-    """Function explores the neighbourhood of a selected object and gives its size.
-    It studies the gradient around the obj in the four cardinal directions and the diagonal ones.
-    It takes in account also the presence of the edges of the field.
-    If no other obj is found in a whichever direction, that one is stored and returned.
-
-    :param field: the field matrix
-    :type field: np.ndarray
-    :param index: the obj coordinates
-    :type index: tuple[int,int]
-    :param size: the upper limit for the size of the obj, defaults to 3
-    :type size: int, optional
-    
-    :return: a tuple with:
-            * a_size : array with the size of the obj in each directions, like [x_up, x_down, y_up, y_down]
-            * ind_neg : indeces in `a_size` for free directions
-    :rtype: tuple[np.ndarray,np.ndarray]
-    """    
-    # field size
-    dim = len(field)
-    # object position
-    x, y = index
-    # treatment for edges; f stays for forward, b for backward
-    xlim_f, ylim_f = min(size, dim-2-x), min(size, dim-2-y)
-    xlim_b, ylim_b = min(size, x+1), min(size, y+1)
-    # limits for the object
-    xsize_f0, xsize_b0 = min(size, dim-1-x), min(size, x)
-    ysize_f0, ysize_b0 = min(size, dim-1-y), min(size, y)
-    # saving them in an array
-    # the negative sign is used to take trace of free direction
-    a_size0 = np.array([xsize_f0,xsize_b0,ysize_f0,ysize_b0], dtype=int) * -1
-    # creating an array to store the size of the object in differt directions
-    a_size = np.copy(a_size0)
-    # moving in the four directions
-    for i_f, i_b, j_f, j_b in zip(range(xlim_f), range(xlim_b), range(ylim_f), range(ylim_b)):
-        # studying the sign of the gradient
-        a_size[0] = i_f if (field[x+i_f+1, y]-field[x+i_f, y] >= 0 and a_size[0] == a_size0[0]) else a_size[0]
-        a_size[1] = i_b if (field[x-i_b-1, y]-field[x-i_b, y] >= 0 and a_size[1] == a_size0[1]) else a_size[1]
-        a_size[2] = j_f if (field[x, y+j_f+1]-field[x, y+j_f] >= 0 and a_size[2] == a_size0[2]) else a_size[2]
-        a_size[3] = j_b if (field[x, y-j_b-1]-field[x, y-j_b] >= 0 and a_size[3] == a_size0[3]) else a_size[3]
-        # diagonal
-        a_size[0], a_size[2] = (i_f, j_f) if (field[x+i_f+1, y+j_f+1]-field[x+i_f, y+j_f] >= 0 and a_size[0] == a_size0[0] and a_size[2] == a_size0[2]) else  (a_size[0], a_size[2])
-        a_size[0], a_size[3] = (i_f, j_b) if (field[x+i_f+1, y-j_b-1]-field[x+i_f, y-j_b] >= 0 and a_size[0] == a_size0[0] and a_size[3] == a_size0[3]) else  (a_size[0], a_size[3])
-        a_size[1], a_size[2] = (i_b, j_f) if (field[x-i_b-1, y+j_f+1]-field[x-i_b, y+j_f] >= 0 and a_size[1] == a_size0[1] and a_size[2] == a_size0[2]) else  (a_size[1], a_size[2])
-        a_size[1], a_size[3] = (i_b, j_b) if (field[x-i_b-1, y-j_b-1]-field[x-i_b, y-j_b] >= 0 and a_size[1] == a_size0[1] and a_size[3] == a_size0[3]) else  (a_size[1], a_size[3])
-        # when for every direction there's an obj, the for cycle stops 
-        if (True in (a_size == a_size0)) == False: break
-    # looking for free direction
-    condition = np.where(a_size < 0)[0]
-    # if there is at least one
-    if len(condition) != 0:
-        # saving the indices
-        ind_neg = condition
-        # removing the sign
-        a_size[ind_neg] *= -1
-    # if there is none
-    else:
-        # storing the information
-        ind_neg = np.array([-1])
-    return a_size, ind_neg
-
-"""
-#  COSE DA AGGIUSTARE
-#   X 1. capire come aggiustare la situazione quando 2 oggetti sono appiccicati
-#   X 2. capire come tenere di conto del bordo
-""" 
-def approx_width(field: np.ndarray, index: tuple[int,int], thr: float = 1e-10, size: int = 3) -> tuple:
-    """Extimation of the size of the object
-    The function takes in input the most luminous point, calls the `grad_check()` function
-    to investigate the presence of other objects and then to extimate the size of the
-    target conditionated by the choosen threshold value.
-
-    :param field: field matrix
-    :type field: np.ndarray
-    :param index: coordinates of the most luminous point
-    :type index: tuple
-    :param thr: threshold to get the size of the element, defaults to 1e-10
-    :type thr: float
-    :param size: the upper limit for the size of the obj, defaults to 3
-    :type size: int, optional
-
-    :return: a tuple with the size in each directions
-    :rtype: tuple
-    """
-    # coordinates of the object
-    x, y = index
-    # saving the value in that position
-    max_val = field[index]
-    # getting the size of the object
-    limits, ind_limits = grad_check(field,index,size)
-    # condition for at least one free direction
-    if ind_limits[0] != -1:
-        # taking the maximum size in free direction group
-        pos = max(limits[ind_limits])
-        # storing the index for that direction
-        ind_pos = np.where(limits == pos)[0][0]
-    else:
-        # taking the maximum size 
-        ind_pos = int(np.argmax(limits))
-        # storing its index
-        pos = limits[ind_pos]
-    # creating the parameter for the comparison
-    ratio = 1
-    # inizializing the index to explore the field
-    i = 0
-    # moving along x direction
-    if ind_pos < 2:
-        # direction for the exploration
-        sign = (-2*ind_pos + 1)
-        # take pixels until the threshold or the adge 
-        while(ratio > thr and i < pos):
-            i += 1
-            # upload the parameter     
-            ratio = field[x+sign*i,y]/max_val
-    # moving along y direction
-    else:
-        # direction for the exploration
-        sign = (-2*ind_pos + 5)
-        # take pixels until the threshold 
-        # take pixels until the threshold or the adge 
-        while(ratio > thr and i < pos):
-            i += 1     
-            # upload the parameter     
-            ratio = field[x,y+sign*i]/max_val
-    # saving extimated width
-    width = i
-    # taking the min between width and size
-    return tuple(min(width,i) for i in limits)
-
-def object_isolation(obj: tuple[int,int], field: np.ndarray, coord: list[tuple], thr: float = 1e-10, size: int = 3) -> np.ndarray:
-    """To isolate the most luminous star object.
-    The function calls the `approx_width()` function 
-    to extract from the field the object of interest.
-
-    :param field: field matrix
-    :type field: np.ndarray
-    :param thr: threshold for `approx_width()` function, defaults to 1e-10
-    :type thr: float, optional
-    :param dim: size of the field, defaults to `N`
-    :type dim: int, optional
-    
-    :return: the object matrix
-    :rtype: np.ndarray
-    """
-    # calculating the size of the object
-    wx_u, wx_d, wy_u, wy_d = approx_width(field, obj, thr=thr, size=size)
-    # extracting the coordinates
-    x, y = obj
-    # printing infos
-    # print(f'star ({x},{y}) val {field[obj]} -> {wx_u}, {wx_d}, {wy_u}, {wy_d}')
-    # isolating the obj and coping in order to preserve the field matrix
-    extraction = field[x - wx_d : x + wx_u +1, y - wy_d : y + wy_u +1].copy()
-    # removing the object from the field
-    field[x - wx_d : x + wx_u +1, y - wy_d : y + wy_u +1] = 0.0
-    # removing the obj from the available points 
-    for k in [(x+i, y+j) for i in range(-wx_d,wx_u+1) for j in range(-wy_d, wy_u+1)]:
-        # control condition
-        if k in coord: coord.remove(k)
-    # #! DA RIMUOVERE PRIMA DI MANDARE !#
-    # if M < 11:
-    #     plt.imshow(extraction, norm='log')
-    #     plt.colorbar()
-    #     plt.show()
-    #     plt.imshow(field, norm='log')   
-    #     plt.colorbar()
-    #     plt.show()
-    # #!                               !#
-    return extraction
 
 ##*
 def evaluate_noise(field: np.ndarray, coord: list[tuple], point_num: int = 100, loop_num: int = 4, step0: int = 0) -> float:
@@ -251,7 +90,7 @@ def counting_stars(field: np.ndarray, dark_noise: float, thr: float = 1e-3, size
     max_val = tmp_field[max_pos]
     a_pos += [max_pos]
     # appending the new extracted object to the list
-    a_extraction += [object_isolation(max_pos, tmp_field, coord, thr, size)]
+    a_extraction += [object_isolation(tmp_field, max_pos, coord, thr, size)]
     # printing it
     if diag==1: print(f'max = {max_val}')
     # generating list with all possible position, if it was not 
@@ -278,7 +117,7 @@ def counting_stars(field: np.ndarray, dark_noise: float, thr: float = 1e-3, size
         # evaluating the new maximum in the field
         max_pos = np.unravel_index(np.argmax(tmp_field, axis=None), tmp_field.shape)
         max_val = tmp_field[max_pos]
-        a_extraction += [object_isolation(max_pos, tmp_field, coord, thr, size)]        
+        a_extraction += [object_isolation(tmp_field, max_pos, coord, thr, size)]        
         a_pos += [max_pos]
         if diag==1: print(f'max = {max_val}')
         if s_t_n0 <= 50:
@@ -312,14 +151,16 @@ if __name__ == '__main__':
     pwd = os.getcwd()
 
     diag = 0
+
     
     # noises
     n = 0.2/1e2         # background noise 
     det_noise = 3e-4    # detector noise
     
     # n_num = [1,3,10,25,50,70,100,120,170,340,560,700]
-    n_num = [2,5,10,25,50,100,250,400,500]
-    # n_num = [5, 20, 80]
+    # n_num = [2,5,10,25,50,100,250,400,500]
+    n_num = [5, 20, 80]
+
     n_objs = []
 
     n_extr = []
@@ -420,9 +261,9 @@ if __name__ == '__main__':
     print('\n\n*****************\n')
 
 
-    stars = [5,10,20,50,100,200,500,800,1000]
+    # stars = [5,10,20,50,100,200,500,800,1000]
     # stars = [5,10,50,70,100,200,500,1000,2000]
-    # stars = [3,4,5,6,7,8] 
+    stars = [3,4,5,6,7,8] 
     # stars = [10,20,40,50,70,80,90] 
     # stars = [100,200,400,500,700,800,900] 
 
@@ -487,7 +328,8 @@ if __name__ == '__main__':
         thr = 1e-2
         a_extraction, a_pos = counting_stars(test_field, d, thr=thr, size=3, point_num=p_num, diag=diag, m=m)
         cnt = 0
-        star_pos = [(i,j) for i,j in zip(S.x,S.y)]
+        x, y = S.pos
+        star_pos = [(i,j) for i,j in zip(x,y)]
         for k in a_pos:
             if k in star_pos: cnt+=1
         
