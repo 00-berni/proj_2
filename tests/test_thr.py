@@ -12,7 +12,7 @@ PROJ_FOLDER = ph.split(ph.dirname(ph.realpath(__file__)))[0]
 
 sys.path.insert(1, ph.join(PROJ_FOLDER))
 from skysimulation.field import *
-from skysimulation.recovery import dark_elaboration, object_isolation
+from skysimulation.restoration import dark_elaboration, object_isolation
 # from test_func import *
 
 # dimension of the matrix
