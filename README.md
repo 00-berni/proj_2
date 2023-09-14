@@ -7,8 +7,12 @@
     - [**Quick commands**](#toc1_2_)
     - [**Project directory overview**](#toc1_3_)
 - [**Project tree**](#toc2_)
-    - [**Makefile**](#toc2_1_)
-
+    - [**skysimulation**](#toc2_1_)
+    - [**Makefile**](#toc2_2_)
+    - [**script.py**](#toc2_3_)
+        - [**Input**](#toc2_3_1)
+        - [**Output**](#toc2_3_2)
+- [**References**](#toc_)
 ---
 
 ## <a id='toc1_'></a>[Description of the Project](#toc0_)
@@ -78,26 +82,59 @@ In addition to the package (that is the aim of the exercise), the project direct
 
 - [`script.py`](script.py)
 
-### <a id='toc2_1_'></a>[Makefile](#toc0_)
+### <a id='toc2_1'></a>[skysimulation](#toc0_)
+
+The package is made up of 3 modules[^1]:
+
+- `display.py`
+
+    This module has the function to display the field and the stars. The aim is to speed up the code writing and to set the same parameters of all the pictures.
+
+- `field.py`
+
+    This module contains all the functions to inizialized the process, such as the generation of the star sample, the location in the field, the kernel function and the procedure to generate noise.
+
+- `restoration.py`
+
+    This module collects functions to extract the objects from the field and to restore them through the R-L procedure (see the articles in [References](#toc)). The implementation of these methods is the main part of the exercise, then I want to say a few more words (for a better and more detailed description see the corrisponding section in the [notebook](notebook/implementation_notebook.ipynb) or the documentation of the module):
+    
+    1. **extraction**
+    
+        To extract an object, one must first define what is an _object_.  This is a completely arbitrary choice. 
+        
+        > For the program an _object_ is a generic matrix $n\times m$ of pixels with the most luminous one as the center and a negative gradient of the brightness frome the center to the edges. The dimensions of the object are limitated: $m,n \leq 7$. 
+        
+        
+
+    1. **restoration**
 
 
+[^1]: the module `__init__.py` is not necessary
 
-### <a id='toc2_4_'></a>[script.py](#toc0_)
+### <a id='toc2_2_'></a>[Makefile](#toc0_)
 
-#### <a id='toc1_1_'></a>[Inputs](#toc0_)
+### <a id='toc2_3_'></a>[script.py](#toc0_)
+
+#### <a id='toc2_3_1_'></a>[Inputs](#toc0_)
 
 The script takes :
 
 1. the dimension of the field (that is a matrix $N \times N$)
-1. the number $M$ of stars to generate 
+1. the number $M$ of stars 
 1. the kind of seeing function (Gaussian or Lorentzian)
 1. the magnitude of both background and detector noises
 
-Due to the convolution with seeing a odd number for $N$ is better.
+Due to the convolution with seeing an odd number for $N$ is better.
 
-#### <a id='toc1_2_'></a>[Outputs](#toc0_)
+#### <a id='toc2_3_2_'></a>[Outputs](#toc0_)
 
-The script returns 
+The script restores the star sample and shows it in an histogram. The plot contains also the true sample in order to compare the output with the input.  
 
 
 ## [References](#toc0_)
+
+1. L. B. Lucy, _An iterative technique for the rectification of observed distributions_, ApJ, 79:745, June, 1974, doi: [10.1086/111605](https://ui.adsabs.harvard.edu/link_gateway/1974AJ.....79..745L/doi:10.1086/111605).
+2. Notes of _Astrofisica Osservativa_ course, 2021-2022.
+3. W. H. Richardson, _Bayesian-based iterative method of image restoration_, Journal of the Optical Society of America (1917-1983), 62(1):55, January, 1972, url: [https://ui.adsabs.harvard.edu/abs/1972JOSA...62...55R](https://ui.adsabs.harvard.edu/abs/1972JOSA...62...55R).
+
+
