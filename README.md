@@ -100,13 +100,27 @@ The package is made up of 3 modules[^1]:
     
     1. **extraction**
     
-        To extract an object, one must first define what is an _object_.  This is a completely arbitrary choice. 
+        To extract an object from the field, one must first define what we mean by _object_.  This is completely an arbitrary choice. 
         
-        > For the program an _object_ is a generic matrix $n\times m$ of pixels with the most luminous one as the center and a negative gradient of the brightness frome the center to the edges. The dimensions of the object are limitated: $m,n \leq 7$. 
+        When the sample is generated, an _object_ is simple a not-empty pixel: the whole brightness of a star is contained in a single pixel; but, after the convolution with the PSF, light is spread around that single pixel. That is why for this implementation an _object_ is:
         
+        > a generic matrix $n\times m$ of pixels that has the brightest one as its center and a decreasing trend in brightness as one procresses from the center toward the edges. The dimensions of the object are limitated[^2]: $m,n \leq 7$.
+
+        In brief the algorithm for the extraction consists in a routine that stops when a particular threshold value is reached:
         
+        1. Find the pixel with the maximum value in brightness
+        2. Compute the _signal-to-noise_ ratio (SNR)
+        3. If $SNR>threshold$ go to (d.), otherwise go to (g.)
+        4. Compute the size of the object according to the previous definition
+        5. Store and remove the object
+        6. Go to (a.)
+        7. Stop  
+        
+        [^2]: This limit prevents crashes: in fact, if the number of stars is much less than the size of the field ($M\ll N$), then the condition on the trend alone leads to either over-extended objects or a crash.  
 
     1. **restoration**
+
+        After that all detected object were estracted, the program starts to restore star brightness one by one. The algorithm to do that is an iterative procedure taken from the articles of Lucy and Richardson (see [References]()).
 
 
 [^1]: the module `__init__.py` is not necessary
