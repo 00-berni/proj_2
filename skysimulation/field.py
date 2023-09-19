@@ -28,18 +28,6 @@ N = int(1e2+1)
 M = int(1e2)
 
 
-# setting parameters of power laws
-alpha = 2   # for IMF
-beta  = 3   # for M-L relation
-# minimum and maximum masses in solar mass units
-m_min = 0.1; m_max = 20
-# Initial Mass Function
-IMF = lambda m : m**(-alpha)
-
-# calculating IMF for the extreme masses
-IMF_min = IMF(0.1); IMF_max = IMF(20) 
-
-
 ##* 
 def generate_mass_array(m_min: float = 0.1, m_max: float = 20, alpha: float = 2,  sdim: int = M) -> np.ndarray:
     """Generating masses array from the IMF distribution
@@ -140,40 +128,6 @@ def check_field(field: np.ndarray) -> np.ndarray:
     return np.where(field < 0, 0.0, field)
 
 
-##*
-def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (0.1, 20), alpha: float = 2, beta: float = 3) -> tuple[np.ndarray,star]:
-    """Initialization function for the generation of the "perfect" sky
-    It generates the stars and updates the field without any seeing 
-    or noise effect.
-
-    :param dim: size of the field, defaults to N
-    :type dim: int, optional
-    :param sdim: number of stars, defaults to M
-    :type sdim: int, optional
-    :param masses: the extremes of masses range, defaults to (0.1, 20)
-    :type masses: tuple[float, float], optional
-    :param alpha: exponent of IMF, defaults to 2
-    :type alpha: float, optional
-    :param beta: exponent of M-L relation, defaults to 3
-    :type beta: float, optional
-
-    :return: the field matrix F and :class: `star` object with all the stars informations
-    :rtype: tuple
-    """
-    # generating an empty field (dim,dim) matrix
-    F = np.zeros((dim,dim))
-    m_inf, m_sup = masses
-    # generating masses
-    m = generate_mass_array(m_inf, m_sup, alpha=alpha, sdim=sdim)
-    # evaluating corrisponding luminosities
-    L = m**beta
-    # locating the stars
-    star_pos = star_location(sdim=sdim, dim=dim)
-    # updating the field matrix
-    F = check_field(update_field(F,star_pos,L))
-    # saving stars infos
-    S = star(m,L,star_pos)
-    return F, S
 
 ##* 
 def gaussian(sigma: float = 0.5, dim: int = N) -> np.ndarray:
@@ -189,6 +143,8 @@ def gaussian(sigma: float = 0.5, dim: int = N) -> np.ndarray:
     :return: gaussian (dim,dim) matrix
     :rtype: np.ndarray
     """
+    if dim % 2 == 0:
+        dim -= 1
     # generating arrays of all positions
     x = np.arange(dim, dtype=int)
     y = np.arange(dim, dtype=int)
@@ -245,3 +201,47 @@ def noise(n: float, dim: int = N) -> np.ndarray:
     N0 = np.random.random((dim, dim))*n
     # checking the field
     return check_field(N0)
+
+##*
+def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (0.1, 20), alpha: float = 2, beta: float = 3, sigma: float = 0.5, n_b: float = 0.2e-2, n_d: float = 3e-4, all_res: bool = False) -> tuple[np.ndarray,star] | tuple[list[np.ndarray],star]:
+    """Initialization function for the generation of the "perfect" sky
+    It generates the stars and updates the field without any seeing 
+    or noise effect.
+
+    :param dim: size of the field, defaults to N
+    :type dim: int, optional
+    :param sdim: number of stars, defaults to M
+    :type sdim: int, optional
+    :param masses: the extremes of masses range, defaults to (0.1, 20)
+    :type masses: tuple[float, float], optional
+    :param alpha: exponent of IMF, defaults to 2
+    :type alpha: float, optional
+    :param beta: exponent of M-L relation, defaults to 3
+    :type beta: float, optional
+
+    :return: the field matrix F and :class: `star` object with all the stars informations
+    :rtype: tuple
+    """
+    # generating an empty field (dim,dim) matrix
+    F = np.zeros((dim,dim))
+    m_inf, m_sup = masses
+    # generating masses
+    m = generate_mass_array(m_inf, m_sup, alpha=alpha, sdim=sdim)
+    # evaluating corrisponding luminosities
+    L = m**beta
+    # locating the stars
+    star_pos = star_location(sdim=sdim, dim=dim)
+    # updating the field matrix
+    F = check_field(update_field(F,star_pos,L))
+    # saving stars infos
+    S = star(m,L,star_pos)
+    # adding background noise
+    Fb = F + noise(n_b, dim=dim)
+    # seeing effect
+    Fs = atm_seeing(Fb,sigma=sigma)
+    # adding detector noise
+    Fd = Fs + noise(n_d, dim=dim)
+    if all_res:
+        return [F,Fb,Fs,Fd], S
+    else:
+        return Fd, S
