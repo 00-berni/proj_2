@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from skysimulation.field import N, noise
+from .field import N, noise
 
 ##*
 def dark_elaboration(n_value: float = 3e-4, iteration: int = 3, dim: int = N) -> np.ndarray:
@@ -71,16 +71,16 @@ def grad_check(field: np.ndarray, index: tuple[int,int], size: int = 3) -> tuple
         """  
         # studying the sign of the gradient
         # along the x direction
-        a_size[0] = i_f if (field[x+i_f+1, y]-field[x+i_f, y] >= 0 and a_size[0] == a_size0[0]) else a_size[0]
-        a_size[1] = i_b if (field[x-i_b-1, y]-field[x-i_b, y] >= 0 and a_size[1] == a_size0[1]) else a_size[1]
+        a_size[0] = i_f if ((field[x+i_f+1, y]-field[x+i_f, y] >= 0 or field[x+i_f+1, y] == 0) and a_size[0] == a_size0[0]) else a_size[0]
+        a_size[1] = i_b if ((field[x-i_b-1, y]-field[x-i_b, y] >= 0 or field[x-i_b+1, y] == 0) and a_size[1] == a_size0[1]) else a_size[1]
         # along the y direction
-        a_size[2] = j_f if (field[x, y+j_f+1]-field[x, y+j_f] >= 0 and a_size[2] == a_size0[2]) else a_size[2]
-        a_size[3] = j_b if (field[x, y-j_b-1]-field[x, y-j_b] >= 0 and a_size[3] == a_size0[3]) else a_size[3]
+        a_size[2] = j_f if ((field[x, y+j_f+1]-field[x, y+j_f] >= 0 or field[x, y+j_f] == 0) and a_size[2] == a_size0[2]) else a_size[2]
+        a_size[3] = j_b if ((field[x, y-j_b-1]-field[x, y-j_b] >= 0 or field[x, y-j_b] == 0) and a_size[3] == a_size0[3]) else a_size[3]
         # along diagonal directions
-        a_size[0], a_size[2] = (i_f, j_f) if (field[x+i_f+1, y+j_f+1]-field[x+i_f, y+j_f] >= 0 and a_size[0] == a_size0[0] and a_size[2] == a_size0[2]) else  (a_size[0], a_size[2])
-        a_size[0], a_size[3] = (i_f, j_b) if (field[x+i_f+1, y-j_b-1]-field[x+i_f, y-j_b] >= 0 and a_size[0] == a_size0[0] and a_size[3] == a_size0[3]) else  (a_size[0], a_size[3])
-        a_size[1], a_size[2] = (i_b, j_f) if (field[x-i_b-1, y+j_f+1]-field[x-i_b, y+j_f] >= 0 and a_size[1] == a_size0[1] and a_size[2] == a_size0[2]) else  (a_size[1], a_size[2])
-        a_size[1], a_size[3] = (i_b, j_b) if (field[x-i_b-1, y-j_b-1]-field[x-i_b, y-j_b] >= 0 and a_size[1] == a_size0[1] and a_size[3] == a_size0[3]) else  (a_size[1], a_size[3])
+        a_size[0], a_size[2] = (i_f, j_f) if ((field[x+i_f+1, y+j_f+1]-field[x+i_f, y+j_f] >= 0 or field[x+i_f+1, y+j_f+1] == 0) and a_size[0] == a_size0[0] and a_size[2] == a_size0[2]) else  (a_size[0], a_size[2])
+        a_size[0], a_size[3] = (i_f, j_b) if ((field[x+i_f+1, y-j_b-1]-field[x+i_f, y-j_b] >= 0 or field[x+i_f+1, y-j_b-1] == 0) and a_size[0] == a_size0[0] and a_size[3] == a_size0[3]) else  (a_size[0], a_size[3])
+        a_size[1], a_size[2] = (i_b, j_f) if ((field[x-i_b-1, y+j_f+1]-field[x-i_b, y+j_f] >= 0 or field[x-i_b-1, y+j_f+1] == 0) and a_size[1] == a_size0[1] and a_size[2] == a_size0[2]) else  (a_size[1], a_size[2])
+        a_size[1], a_size[3] = (i_b, j_b) if ((field[x-i_b-1, y-j_b-1]-field[x-i_b, y-j_b] >= 0 or field[x-i_b-1, y-j_b-1] == 0) and a_size[1] == a_size0[1] and a_size[3] == a_size0[3]) else  (a_size[1], a_size[3])
         # if no free direction is present, 
         # there is no reason to run again the loop
         if (True in (a_size == a_size0)) == False: break
