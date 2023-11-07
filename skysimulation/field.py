@@ -1,10 +1,13 @@
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 from scipy.signal import fftconvolve
+from scipy.ndimage import gaussian_filter
+from .display import fast_image
 
 
 ##* 
-class star():
+class Star():
     """Star object class.
     This class will be used only to store the 
     parameters of star object.
@@ -17,18 +20,44 @@ class star():
     :type pos: tuple[np.ndarray, np.ndarray]
     """
     def __init__(self, mass: float, lum: float, pos: tuple[np.ndarray, np.ndarray]):
-        self.m   = mass        # star mass value
+        self.m   = mass       # star mass value
         self.lum = lum        # star luminosity value
         self.pos = pos        # star coordinates
 
+class Gaussian():
+    def __init__(self, sigma: float, mu: float | None = None) -> None:
+        self.mu = mu
+        self.sigma = sigma
+    
+    def kernel(self, dim: int) -> np.ndarray:
+        if dim % 2 == 0: dim -= 1
+        mu = dim // 2
+        x, y = np.meshgrid(np.arange(dim),np.arange(dim))
+        r2 = (x-mu)**2 + (y-mu)**2
+        sigma = self.sigma
+        const = np.sqrt(2 * np.pi * sigma**2)
+        kernel = np.exp(-r2/(2*sigma**2)) / const
+        return kernel
+
+    def field(self, dim: int) -> np.ndarray:
+        mu = self.mu
+        sigma = self.sigma
+        return np.random.normal(mu,sigma,size=(dim,dim))
+
+class Uniform():
+    def __init__(self, maxval: float) -> None:
+        self.max = maxval
+    
+    def field(self, dim: int) -> np.ndarray:
+        n = self.max
+        return np.random.uniform(0,n,size=(dim,dim))
 
 # dimension of the field matrix
-N = int(1e2+1)
+N = int(1e2)
 # number of stars
 M = int(1e2)
 
 
-##* 
 def generate_mass_array(m_min: float = 0.1, m_max: float = 20, alpha: float = 2,  sdim: int = M) -> np.ndarray:
     """Generating masses array from the IMF distribution
     The function takes the minimum and the maximum masses, the IMF 
@@ -61,8 +90,8 @@ def generate_mass_array(m_min: float = 0.1, m_max: float = 20, alpha: float = 2,
     # generating the sample 
     return (np.random.rand(sdim)*(imf_min-imf_max)+imf_max)**(-1/alpha)
 
-##* 
-def star_location(sdim: int = M, dim: int = N) -> tuple[np.ndarray,np.ndarray]:
+
+def star_location(sdim: int = M, dim: int = N, overlap: bool = False) -> tuple[np.ndarray,np.ndarray]:
     """Function to locate the stars.
     It generates a list with all possible positions in the
     field matrix and draws `sdim` of those. Then it collects
@@ -77,42 +106,38 @@ def star_location(sdim: int = M, dim: int = N) -> tuple[np.ndarray,np.ndarray]:
     :type sdim: int, optional
     :param dim: size of the field, defaults to `N`
     :type dim: int, optional
+    :param overlap: if `True` overlap between stars can occur, defaults to `False`
+    :type overlap: bool, optional
 
     :return: tuple of star coordinates arrays `X` and `Y`
     :rtype: tuple
-
-    .. todo:: 
-        - #! Check the `replace` condition in `np.random.choice()`
-          #? Is it a good choice?
     """
     # list with all possible positions in the field
     grid = [(i,j) for i in range(dim) for j in range(dim)]
     # drawing positions from grid for stars
-    ind = np.random.choice(len(grid), size=sdim, replace=False)
+    ind = np.random.choice(len(grid), size=sdim, replace=overlap)
     # making arrays of coordinates
     X = np.array([grid[i][0] for i in ind])
     Y = np.array([grid[i][1] for i in ind])
     return (X, Y)    
 
-##* 
-def update_field(F: np.ndarray, pos: tuple[np.ndarray, np.ndarray], lum: np.ndarray) -> np.ndarray:
-    """Function to update the field.
-    It adds the generated stars to the field.
+# def update_field(F: np.ndarray, pos: tuple[np.ndarray, np.ndarray], lum: np.ndarray) -> np.ndarray:
+#     """Function to update the field.
+#     It adds the generated stars to the field.
 
-    :param F: field matrix
-    :type F: np.ndarray
-    :param pos: star coordinates
-    :type pos: tuple[np.ndarray, np.ndarray]
-    :param lum: luminosities array
-    :type lum: np.ndarray
+#     :param F: field matrix
+#     :type F: np.ndarray
+#     :param pos: star coordinates
+#     :type pos: tuple[np.ndarray, np.ndarray]
+#     :param lum: luminosities array
+#     :type lum: np.ndarray
 
-    :return: updated field matrix
-    :rtype: np.ndarray
-    """
-    # uppdating the field
-    F[pos] += lum
-    return F
-
+#     :return: updated field matrix
+#     :rtype: np.ndarray
+#     """
+#     # uppdating the field
+#     F[pos] += lum
+#     return F
 
 def check_field(field: np.ndarray) -> np.ndarray:
     """Check the presence of negative values.
@@ -127,83 +152,7 @@ def check_field(field: np.ndarray) -> np.ndarray:
     """
     return np.where(field < 0, 0.0, field)
 
-
-
-##* 
-def gaussian(sigma: float = 0.5, dim: int = N) -> np.ndarray:
-    """Gaussian matrix generator
-    It generates a gaussian (`dim`,`dim`) matrix, centered in 
-    (`dim//2`,`dim//2`)
-
-    :param sigma: the root of the variance, defaults to 0.5
-    :type sigma: float, optional
-    :param dim: size of the field, defaults to N
-    :type dim: int, optional
-    
-    :return: gaussian (dim,dim) matrix
-    :rtype: np.ndarray
-    """
-    if dim % 2 == 0:
-        dim -= 1
-    # generating arrays of all positions
-    x = np.arange(dim, dtype=int)
-    y = np.arange(dim, dtype=int)
-    # shifting to center of the field
-    x -= dim // 2  
-    y -= dim // 2
-    # gaussian function expression
-    G = lambda r : np.exp(-(r/sigma)**2/2)
-    # computing the outer product
-    kernel = np.outer(G(x),G(y))
-    return kernel/kernel.sum()
-
-
-##* 
-def atm_seeing(field: np.ndarray, sigma: float = 0.5) -> np.ndarray:
-    """Atmosferic seeing function
-    It convolves the field with tha Gaussian to
-    make the atmosferic seeing
-
-    :param field: field matrix
-    :type field: np.ndarray
-    :param sigma: the root of variance of Gaussian, defaults to 0.5
-    :type sigma: float, optional
-    
-    :return: field matrix with seeing
-    :rtype: np.ndarray
-    """
-    # dim of the field
-    n = len(field)
-    # coping the field in order to preserve it
-    see_field = np.copy(field)
-    # convolution with gaussian seeing
-    see_field = fftconvolve(see_field, gaussian(sigma=sigma, dim=n), mode='same')
-    # checking the field and returning it
-    return check_field(see_field)
-
-##* 
-def noise(n: float, dim: int = N) -> np.ndarray:
-    """Noise generator
-    It generates a (dim,dim) matrix of noise, using
-    an arbitrary maximum intensity n.
-
-    :param n: max intensity of noise
-    :type n: float
-    :param dim: size of the field, defaults to N
-    :type dim: int, optional
-
-    :return: noise matrix
-    :rtype: np.ndarray
-    """
-    # initializing the seed
-    np.random.seed()
-    # (`dim`,`dim`) matrix with random numbers 
-    N0 = np.random.random((dim, dim))*n
-    # checking the field
-    return check_field(N0)
-
-##*
-def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (0.1, 20), alpha: float = 2, beta: float = 3, sigma: float = 0.5, n_b: float = 0.2e-2, n_d: float = 3e-4, all_res: bool = False) -> tuple[np.ndarray,star] | tuple[list[np.ndarray],star]:
+def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (0.1, 20), alpha: float = 2, beta: float = 3, overlap: bool = False, display_fig: bool = False) -> tuple[np.ndarray, Star]:
     """Initialization function for the generation of the "perfect" sky
     It generates the stars and updates the field without any seeing 
     or noise effect.
@@ -230,18 +179,97 @@ def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (0.1, 
     # evaluating corrisponding luminosities
     L = m**beta
     # locating the stars
-    star_pos = star_location(sdim=sdim, dim=dim)
+    star_pos = star_location(sdim=sdim, dim=dim, overlap=overlap)
     # updating the field matrix
-    F = check_field(update_field(F,star_pos,L))
+    F[star_pos] += L
+    if display_fig:
+        fast_image(F,v=1)
     # saving stars infos
-    S = star(m,L,star_pos)
-    # adding background noise
-    Fb = F + noise(n_b, dim=dim)
-    # seeing effect
-    Fs = atm_seeing(Fb,sigma=sigma)
-    # adding detector noise
-    Fd = Fs + noise(n_d, dim=dim)
-    if all_res:
-        return [F,Fb,Fs,Fd], S
-    else:
-        return Fd, S
+    S = Star(m,L,star_pos)
+    return F, S
+
+def atm_seeing(field: np.ndarray, sigma: float = 0.5, display_fig: bool = False) -> np.ndarray:
+    """Atmosferic seeing function
+    It convolves the field with tha Gaussian to
+    make the atmosferic seeing
+
+    :param field: field matrix
+    :type field: np.ndarray
+    :param sigma: the root of variance of Gaussian, defaults to 0.5
+    :type sigma: float, optional
+    
+    :return: field matrix with seeing
+    :rtype: np.ndarray
+    """
+    # dim of the field
+    n = len(field)
+    # coping the field in order to preserve it
+    field = np.copy(field)
+    kernel = Gaussian(sigma).kernel(n)
+    # convolution with gaussian seeing
+    see_field = fftconvolve(field, kernel, mode='same')
+    # see_field = gaussian_filter(field,sigma)
+    if display_fig:
+        fast_image(see_field,v=1)
+    # checking the field and returning it
+    return see_field
+
+def noise(distr: Uniform | Gaussian, dim: int = N,display_fig: bool = False) -> np.ndarray:
+    """Noise generator
+    It generates a (dim,dim) matrix of noise, using
+    an arbitrary maximum intensity n.
+
+    :param n: max intensity of noise
+    :type n: float
+    :param dim: size of the field, defaults to N
+    :type dim: int, optional
+
+    :return: noise matrix
+    :rtype: np.ndarray
+    """
+    n = distr.field(dim)
+    if display_fig:
+        fast_image(n,v=1)
+    return n
+
+def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (0.1, 20), star_param: tuple[float,float] = (2, 3), atm_param: tuple[str,float | tuple] = ('Gaussian',0.5), back_param: tuple[str, float | tuple] = ('Uniform',0.2/1e2), det_param: tuple[str, float | tuple] = ('Uniform', 3e-4), overlap: bool = False, display_fig: bool = False, results: str | None = None) -> np.ndarray | list[np.ndarray]:
+    SEP = '-'*10 + '\n'
+    print(SEP+f'Initialization of the field\nDimension:\t{dim} x {dim}\nNumber of stars:\t{stnum}')
+    # creating the starting field
+    F, S = initialize(dim,stnum,masses,*star_param,overlap=overlap,display_fig=display_fig)
+    # background
+    print(f'\nBackground:\t{back_param[0]} distribution')
+    if back_param[0] == 'Uniform':
+        n = back_param[1]
+        print(f'Max background:\t{n}')
+        n_b = noise(Uniform(n),dim,display_fig)
+    F_b = F + n_b
+    if display_fig:
+        fast_image(F_b)        
+    # atm seeing
+    print(f'\nAtm Seeing:\t{atm_param[0]} distribution')
+    if atm_param[0] == 'Gaussian':
+        sigma = atm_param[1]
+        print(f'sigma:\t{sigma}')
+        F_bs = atm_seeing(F_b,sigma,display_fig)
+    # detector
+    print(f'\nDetector noise:\t{det_param[0]} distribution')
+    if det_param[0] == 'Uniform':
+        n = det_param[1]
+        print(f'Max detector noise:\t{n}')
+        n_d = noise(Uniform(n),dim,display_fig)
+    F_bsd = F_bs + n_d 
+    if display_fig:
+        fast_image(F_bsd)        
+    
+    if results is None:
+        ret_val = F_bsd
+    else:    
+        ret_val = [F_bsd]
+        if 'F' in results or results == 'all':
+            ret_val += [F]
+        if 'b' in results or results == 'all':
+            ret_val += [F_b]
+        if 's' in results or results == 'all':
+            ret_val += [F_bs]
+    return ret_val    

@@ -1,6 +1,6 @@
 import numpy as np
-
-##*   
+import matplotlib.pyplot as plt
+ 
 def field_image(fig, image, F: np.ndarray, v: int = 0, sct: tuple = (0,-1), norm: str = 'log') -> None:
     """Function to display the field.
     It is possible to display only a section of the field 
@@ -19,7 +19,7 @@ def field_image(fig, image, F: np.ndarray, v: int = 0, sct: tuple = (0,-1), norm
     """ 
     # extracting the edges of image
     a,b = sct
-    # setting the color map from `v` param
+    # setting the color map through `v` param
     if v == 0: color = 'gray'
     elif v == 1: color = 'viridis' 
     else: color = 'gray_r' 
@@ -27,3 +27,8 @@ def field_image(fig, image, F: np.ndarray, v: int = 0, sct: tuple = (0,-1), norm
     pic = image.imshow(F[a:b,a:b], cmap=color, norm=norm)
     # generating the colorbar
     fig.colorbar(pic, ax=image, cmap=color, norm=norm, location='bottom')
+
+def fast_image(F: np.ndarray, v: int = 0, sct: tuple = (0,-1), norm: str = 'log') -> None:
+    fig, ax = plt.subplots(1,1)
+    field_image(fig,ax,F,v,sct,norm)
+    plt.show()
