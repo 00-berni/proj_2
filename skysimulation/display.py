@@ -28,7 +28,8 @@ def field_image(fig, image, F: np.ndarray, v: int = 0, sct: tuple = (0,-1), norm
     # generating the colorbar
     fig.colorbar(pic, ax=image, cmap=color, norm=norm, location='bottom')
 
-def fast_image(F: np.ndarray, v: int = 0, sct: tuple = (0,-1), norm: str = 'log') -> None:
+def fast_image(F: np.ndarray, v: int = 0, sct: tuple = (0,-1), norm: str = 'log',title: str = '') -> None:
     fig, ax = plt.subplots(1,1)
+    ax.set_title(title)
     field_image(fig,ax,F,v,sct,norm)
     plt.show()
