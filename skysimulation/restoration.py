@@ -55,8 +55,6 @@ def detection(field: np.ndarray, back: float):
     flat = field.flatten()
     pks, _ = find_peaks(flat,back)
     print(len(pks))
-    pos = np.where(flat > back)[0]
-    print(pos)
     plt.figure()
     plt.plot(np.arange(len(flat)),flat)
     plt.plot(pks,flat[pks],'.')
