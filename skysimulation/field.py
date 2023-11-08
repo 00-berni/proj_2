@@ -19,10 +19,38 @@ class Star():
     :param pos: star coordinates (x,y)
     :type pos: tuple[np.ndarray, np.ndarray]
     """
-    def __init__(self, mass: float, lum: float, pos: tuple[np.ndarray, np.ndarray]):
+    def __init__(self, mass: float, lum: float, pos: tuple[np.ndarray, np.ndarray]) -> None:
         self.m   = mass       # star mass value
         self.lum = lum        # star luminosity value
         self.pos = pos        # star coordinates
+
+    def plot_info(self, alpha: float, beta: float, sel: str = 'all') -> None:
+        nstars = len(self.m)
+        if sel == 'all' or sel == 'm':
+            ## Plot data for masses
+            plt.figure(figsize=(12,8))
+            plt.title(f'Mass distribution with $\\alpha = {alpha}$ and {nstars} stars')
+            bins = np.linspace(min(self.m),max(self.m),nstars//3*2)
+            plt.hist(self.m,bins=bins)
+            fm = bins**(-alpha)
+            plt.plot(bins,fm)
+            plt.xscale('log')
+            plt.xlabel('m [$M_\odot$]')
+            plt.ylabel('counts')
+        if sel == 'all' or sel == 'L':
+            ## Plot data for corrisponding luminosities
+            # plot the logarithm of L
+            L = np.log10(self.lum)
+            plt.figure()
+            plt.plot(self.m,self.lum,'.')
+            plt.plot(bins,bins**beta)
+            plt.yscale('log')
+            plt.figure(figsize=(12,8))
+            plt.title(f'Luminosity distribution with $\\beta = {beta}$ for {nstars} stars')
+            bins = np.linspace(min(L),max(L),nstars//2)
+            plt.hist(L,bins=bins)
+            plt.xlabel('$\log{(L)}$ [$L_\odot$]')
+            plt.ylabel('counts')
 
 class Gaussian():
     def __init__(self, sigma: float, mu: float | None = None) -> None:
@@ -182,10 +210,11 @@ def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (0.1, 
     star_pos = star_location(sdim=sdim, dim=dim, overlap=overlap)
     # updating the field matrix
     F[star_pos] += L
-    if display_fig:
-        fast_image(F,v=1,title='Inizialized Field')
     # saving stars infos
     S = Star(m,L,star_pos)
+    if display_fig:
+        S.plot_info(alpha,beta)       
+        fast_image(F,v=1,title='Inizialized Field')
     return F, S
 
 def atm_seeing(field: np.ndarray, sigma: float = 0.5, display_fig: bool = False) -> np.ndarray:
