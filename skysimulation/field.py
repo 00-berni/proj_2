@@ -183,7 +183,7 @@ def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (0.1, 
     # updating the field matrix
     F[star_pos] += L
     if display_fig:
-        fast_image(F,v=1)
+        fast_image(F,v=1,title='Inizialized Field')
     # saving stars infos
     S = Star(m,L,star_pos)
     return F, S
@@ -208,13 +208,16 @@ def atm_seeing(field: np.ndarray, sigma: float = 0.5, display_fig: bool = False)
     kernel = Gaussian(sigma).kernel(n)
     # convolution with gaussian seeing
     see_field = fftconvolve(field, kernel, mode='same')
-    # see_field = gaussian_filter(field,sigma)
     if display_fig:
-        fast_image(see_field,v=1)
+        fast_image(see_field,v=1,title='Atmospheric Seeing mio')
+    # see_field = gaussian_filter(field,sigma)
+    # print(np.where(see_field<0))
+    # if display_fig:
+    #     fast_image(see_field,v=1,title='Atmospheric Seeing filter')
     # checking the field and returning it
     return see_field
 
-def noise(distr: Uniform | Gaussian, dim: int = N,display_fig: bool = False) -> np.ndarray:
+def noise(distr: Uniform | Gaussian, dim: int = N,display_fig: bool = False, title: str = '') -> np.ndarray:
     """Noise generator
     It generates a (dim,dim) matrix of noise, using
     an arbitrary maximum intensity n.
@@ -229,7 +232,7 @@ def noise(distr: Uniform | Gaussian, dim: int = N,display_fig: bool = False) -> 
     """
     n = distr.field(dim)
     if display_fig:
-        fast_image(n,v=1)
+        fast_image(n,v=1,title=title)
     return n
 
 def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (0.1, 20), star_param: tuple[float,float] = (2, 3), atm_param: tuple[str,float | tuple] = ('Gaussian',0.5), back_param: tuple[str, float | tuple] = ('Uniform',0.2/1e2), det_param: tuple[str, float | tuple] = ('Uniform', 3e-4), overlap: bool = False, display_fig: bool = False, results: str | None = None) -> np.ndarray | list[np.ndarray]:
@@ -242,10 +245,10 @@ def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (0.
     if back_param[0] == 'Uniform':
         n = back_param[1]
         print(f'Max background:\t{n}')
-        n_b = noise(Uniform(n),dim,display_fig)
+        n_b = noise(Uniform(n),dim,display_fig,title='Background')
     F_b = F + n_b
     if display_fig:
-        fast_image(F_b)        
+        fast_image(F_b,title='Field + Background')        
     # atm seeing
     print(f'\nAtm Seeing:\t{atm_param[0]} distribution')
     if atm_param[0] == 'Gaussian':
@@ -257,10 +260,10 @@ def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (0.
     if det_param[0] == 'Uniform':
         n = det_param[1]
         print(f'Max detector noise:\t{n}')
-        n_d = noise(Uniform(n),dim,display_fig)
+        n_d = noise(Uniform(n),dim,display_fig,title='Detector noise')
     F_bsd = F_bs + n_d 
     if display_fig:
-        fast_image(F_bsd)        
+        fast_image(F_bsd,title='Field')        
     
     if results is None:
         ret_val = F_bsd
