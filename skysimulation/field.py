@@ -57,15 +57,29 @@ class Gaussian():
         self.mu = mu
         self.sigma = sigma
     
+    def value(self,r: float | np.ndarray) -> float | np.ndarray:
+        return np.exp(-r**2/(2*self.sigma**2))
+    
+    
+    def kernel_norm(self, dim: int) -> float:
+        if dim % 2 == 0: dim -= 1
+        if self.mu is None:
+            self.mu = dim // 2
+        inf = -self.mu
+        sup = dim - 1 - self.mu
+        from scipy.integrate import quad
+        return quad(self.value,inf,sup)[0]**2
+
     def kernel(self, dim: int) -> np.ndarray:
         if dim % 2 == 0: dim -= 1
-        mu = dim // 2
+        if self.mu is None:
+            self.mu = dim // 2
         x, y = np.meshgrid(np.arange(dim),np.arange(dim))
-        r2 = (x-mu)**2 + (y-mu)**2
+        r = np.sqrt((x-self.mu)**2 + (y-self.mu)**2)
         sigma = self.sigma
         const = np.sqrt(2 * np.pi * sigma**2)
-        kernel = np.exp(-r2/(2*sigma**2)) / const
-        return kernel
+        kernel = self.value(r) / const
+        return kernel / self.kernel_norm(dim)
 
     def field(self, dim: int) -> np.ndarray:
         mu = self.mu
