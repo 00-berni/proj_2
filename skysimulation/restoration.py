@@ -51,11 +51,8 @@ def bkg_est(field: np.ndarray, display_fig: bool = False) -> float:
     return mbin
 
 
-def detection(field: np.ndarray, back: float):
+def detection(field: np.ndarray, thr: float):
     flat = field.flatten()
-    pks, _ = find_peaks(flat,back)
-    print(len(pks))
-    plt.figure()
-    plt.plot(np.arange(len(flat)),flat)
-    plt.plot(pks,flat[pks],'.')
-    plt.show()
+    pks, _ = find_peaks(flat,thr)
+    pos = np.where(field == flat[pks])
+        
