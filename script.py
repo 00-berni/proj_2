@@ -1,7 +1,6 @@
 import numpy as np
 import skysimulation.field as field
 import skysimulation.restoration as restore
-from skysimulation.display import fast_image
 
 if __name__ == '__main__':
     figure = False
@@ -12,7 +11,8 @@ if __name__ == '__main__':
     back = restore.bkg_est(Fn,figure)
     print(f'Extimated background maxval:\t{10**back}')
     back = 10**back
-    thr = max(back, dark.max())
-    restore.detection(Fn,thr)
-    F,S = field.initialize(100,30)
-    FF = field.atm_seeing(F,display_fig=True)
+    field.fast_image(F_bsd)
+    extlist = restore.objects_detection(F_bsd,dark.max(),back)
+    for elem in extlist:
+        field.fast_image(elem,v=1)
+
