@@ -59,7 +59,7 @@ def moving(direction: str, field: np.ndarray, index: tuple[int,int], size: int =
 
 
 def grad_check(field: np.ndarray, index: tuple[int,int], size: int = 3) -> tuple[np.ndarray,np.ndarray]:
-
+    return
 
 def size_est(field: np.ndarray, index: tuple[int,int], thr: float = 1e-3, size: int = 3) -> tuple:
     """Estimation of the size of the object
