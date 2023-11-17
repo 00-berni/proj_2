@@ -50,16 +50,92 @@ def bkg_est(field: np.ndarray, display_fig: bool = False) -> float:
         plt.show()
     return mbin
 
-def moving(direction: str, field: np.ndarray, index: tuple[int,int], size: int = 3) -> int:
+def moving(direction: str, field: np.ndarray, index: tuple[int,int], size: int = 3) -> list[int]:
     tmp_field = field.copy()
     dim = len(tmp_field)
     x, y = index
+    # size += 1
+    
+    results = []
+    xd = 0
+    yd = 0
+    xmax = x
+    ymax = y
+    xcond = lambda xval, xlim: xlim == x
+    ycond = lambda yval, ylim: ylim == y
 
-
+    if 'fx' in direction:
+        print('hey')
+        xd = 1
+        xmax = min(size, dim-1-x)
+        if xmax == 0: results += [0]
+        else: xcond = lambda xval, xlim: xval < xlim 
+    elif 'bx' in direction:
+        xd = -1
+        xmax = min(size, x)
+        if xmax == 0: results += [0]
+        else: xcond = lambda xval, xlim: xval < xlim 
+    if 'fy' in direction:
+        yd = 1
+        ymax = min(size, dim-1-y)
+        print(ymax)
+        if ymax == 0: results += [0]
+        else: ycond = lambda yval, ylim: yval < ylim 
+    elif 'by' in direction:
+        yd = -1
+        ymax = min(size, y)
+        if ymax == 0: results += [0]
+        else: ycond = lambda yval, ylim: yval < ylim 
+    
+    if len(results) == 0:
+        xsize = 0
+        ysize = 0
+        condition = xcond(xsize,xmax) and ycond(ysize,ymax)
+        print(xcond(xsize,xmax),xmax)
+        while condition:
+            step0 = tmp_field[x + xsize*xd, y + ysize*yd]
+            step1 = tmp_field[x + (xsize+1)*xd, y + (ysize+1)*yd]
+            grad = step1 - step0
+            if grad >= 0 or step1 == 0:
+                print(grad,step1)
+                print(xsize,ysize)
+                break
+            else:
+                xsize += 1
+                ysize += 1
+                condition = xcond(xsize,xmax) and ycond(ysize,ymax)
+        if 'x' in direction: results += [xsize]
+        if 'y' in direction: results += [ysize]
+    if len(results) == 1: results = results[0] 
+    return results
 
 
 def grad_check(field: np.ndarray, index: tuple[int,int], size: int = 3) -> tuple[np.ndarray,np.ndarray]:
-    return
+    x,y = index
+    yf = moving('fy',field,index,size)
+    xf = moving('fx',field,index,size)
+    yb = moving('by',field,index,size)
+    xb = moving('bx',field,index,size)
+    xff, yff = moving('fxfy',field,index,size)
+    xbb, ybb = moving('bxby',field,index,size)
+    xfb, yfb = moving('fxby',field,index,size)
+    xbf, ybf = moving('bxfy',field,index,size)
+    
+    print('x',x)
+    print('y',y)
+    print('xf',xf,xff,xfb)
+    print('yf',yf,yff,yfb)
+    print('xb',xb,xbb,xbf)
+    print('yb',yb,ybb,ybf)
+    xf = min(xff,xf,xfb)
+    yf = min(yff,yf,ybf)
+    xb = min(xbb,xb,xbf)
+    yb = min(ybb,yb,yfb)
+
+    X = slice(x-xb,x+xf+1)
+    Y = slice(y-yb,y+yf+1)
+    
+    fast_image(field[X,Y],v=1)
 
 def size_est(field: np.ndarray, index: tuple[int,int], thr: float = 1e-3, size: int = 3) -> tuple:
     """Estimation of the size of the object
