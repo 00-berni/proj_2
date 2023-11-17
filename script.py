@@ -14,6 +14,4 @@ if __name__ == '__main__':
     print(F.shape,F_bsd.shape)
     field.fast_image(F_bsd)
 
-    restore.grad_check(F_bsd,np.unravel_index(F_bsd.argmax(),F_bsd.shape))
-    field.fast_image(F_bsd,v=1)
-
+    extr = restore.object_isolation(F_bsd,max(back,dark.max()))
