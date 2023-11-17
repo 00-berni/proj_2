@@ -11,8 +11,9 @@ if __name__ == '__main__':
     back = restore.bkg_est(Fn,figure)
     print(f'Extimated background maxval:\t{10**back}')
     back = 10**back
+    print(F.shape,F_bsd.shape)
     field.fast_image(F_bsd)
-    extlist = restore.objects_detection(F_bsd,dark.max(),back)
-    for elem in extlist:
-        field.fast_image(elem,v=1)
+
+    restore.grad_check(F_bsd,np.unravel_index(F_bsd.argmax(),F_bsd.shape))
+    field.fast_image(F_bsd,v=1)
 
