@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
  
-def field_image(fig, image, F: np.ndarray, v: int = 0, sct: tuple = (0,-1), norm: str = 'log') -> None:
+def field_image(fig, image, F: np.ndarray, v: int = 0, sct: tuple = (0,None), norm: str = 'log') -> None:
     """Function to display the field.
     It is possible to display only a section of the field 
     through the parameter `sct` 
@@ -28,7 +28,7 @@ def field_image(fig, image, F: np.ndarray, v: int = 0, sct: tuple = (0,-1), norm
     # generating the colorbar
     fig.colorbar(pic, ax=image, cmap=color, norm=norm, location='bottom')
 
-def fast_image(F: np.ndarray, v: int = 0, sct: tuple = (0,-1), norm: str = 'log',title: str = '') -> None:
+def fast_image(F: np.ndarray, v: int = 0, sct: tuple = (0,None), norm: str = 'log',title: str = '') -> None:
     fig, ax = plt.subplots(1,1)
     ax.set_title(title)
     field_image(fig,ax,F,v,sct,norm)
