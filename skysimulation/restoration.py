@@ -84,14 +84,22 @@ def moving(direction: str, field: np.ndarray, index: tuple[int,int], size: int =
         yd = 1
         ymax = min(size, dim-1-y)
         print(ymax)
-        if ymax == 0: results += [0]
+        if ymax == 0: 
+            # if len(results) == 1:
+            #     results = [[0,0]]
+            # else: results += [0]
+            results += [0]
         else: ycond = lambda yval, ylim: yval < ylim 
     elif 'by' in direction:
         yd = -1
         ymax = min(size, y)
-        if ymax == 0: results += [0]
+        if ymax == 0: 
+            # if len(results) == 1:
+            #     results = [[0,0]]
+            # else: results += [0]
+            results += [0]
         else: ycond = lambda yval, ylim: yval < ylim 
-    
+    print('1 result',results)
     if len(results) == 0:
         xsize = 0
         ysize = 0
@@ -111,15 +119,19 @@ def moving(direction: str, field: np.ndarray, index: tuple[int,int], size: int =
                 condition = xcond(xsize,xmax) and ycond(ysize,ymax)
         if 'x' in direction: results += [xsize]
         if 'y' in direction: results += [ysize]
+    elif len(results) == 1:
+        if 'x' in direction and 'y' in direction:
+            results = [0,0]        
     if len(results) == 1: results = results[0] 
+    print('2 result',results)
     return results
 
 
 def grad_check(field: np.ndarray, index: tuple[int,int], size: int = 3) -> tuple[np.ndarray,np.ndarray]:
-    x,y = index
     mov = lambda val: moving(val,field,index,size)
     xy_dir = ['fxfy','fxby','bxfy','bxby'] 
     a_xysize = np.array([mov(dir) for dir in xy_dir])
+    print('sizes',a_xysize)
     xf_size = a_xysize[:2,0]
     xb_size = a_xysize[2:,0]
     yf_size = a_xysize[(0,2),1]
@@ -132,7 +144,7 @@ def grad_check(field: np.ndarray, index: tuple[int,int], size: int = 3) -> tuple
     
 
 ##*
-def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int = 4, reshape: bool = False) -> np.ndarray | None:
+def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False) -> np.ndarray | None:
     """To isolate the most luminous star object.
     The function calls the `size_est()` function to compute the size of the object and
     then to extract it from the field.
@@ -154,8 +166,9 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
     tmp_field = field.copy()
 
     extraction = []
-
-    for k in range(objnum):
+    
+    k = 0 
+    while k < objnum:
         # finding the peak
         index = peak_pos(tmp_field)
         peak = tmp_field[index]
@@ -166,16 +179,34 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
         x, y = index
         a_size = grad_check(field,index,size)
         x_size, y_size = a_size
-        #? if reshape:
-        xr = slice(x-x_size[-1], x+x_size[0]+1) 
-        yr = slice(y-y_size[-1], y+y_size[0]+1)
+        xu, xd = x_size
+        yu, yd = y_size
+        if reshape:
+            a_size = np.array(a_size)
+            pos = np.where(a_size != 0)
+            min_size = a_size[pos].min()
+            a_size[pos] = min_size
+        xr = slice(x-xd, x+xu+1) 
+        yr = slice(y-yd, y+yu+1)
         obj = field[xr,yr].copy() 
         tmp_field[xr,yr] = 0.0
         print(a_size)
-        if [0,0] not in a_size:
+        if all([0,0] == a_size[0]) or all([0,0] == a_size[1]):
+            print(f'Remove obj: ({x},{y})')
+        else: 
+            if reshape and reshape_corr:
+                xpad_pos = (0,0)
+                ypad_pos = (0,0)
+                if xu == 0: xpad_pos = (0,xd)
+                elif xd == 0: xpad_pos = (xu,0)
+                if yu == 0: ypad_pos = (0,yd)
+                elif yd == 0: ypad_pos = (yu,0)
+                obj = np.pad(obj,(xpad_pos,ypad_pos),'reflect')
             extraction += [obj]
-        else: print(f'Remove obj: ({x},{y})')
+            fast_image(obj,v=1) 
+            k += 1
         fast_image(tmp_field,v=1)
+        
 
 
     if len(extraction) == 0: extraction = None
