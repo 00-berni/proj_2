@@ -144,7 +144,7 @@ def grad_check(field: np.ndarray, index: tuple[int,int], size: int = 3) -> tuple
     
 
 ##*
-def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False) -> np.ndarray | None:
+def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, display_fig: bool = False) -> np.ndarray | None:
     """To isolate the most luminous star object.
     The function calls the `size_est()` function to compute the size of the object and
     then to extract it from the field.
@@ -183,8 +183,9 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
             a_size = np.array(a_size)
             pos = np.where(a_size != 0)
             print('POS: ',pos)
-            min_size = a_size[pos].min()
-            a_size[pos] = min_size
+            if len(pos) != 0:
+                min_size = a_size[pos].min()
+                a_size[pos] = min_size
         x_size, y_size = a_size
         xu, xd = x_size
         yu, yd = y_size
@@ -208,14 +209,14 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
                     print('PAd',xpad_pos,ypad_pos)
                     obj = np.pad(obj,(xpad_pos,ypad_pos),'reflect')
             extraction += [obj]
-            fast_image(obj,v=1) 
+            if display_fig: fast_image(obj,v=1) 
             k += 1
-        fast_image(tmp_field,v=1)
+    fast_image(tmp_field,v=1)
 
     if len(extraction) == 0: extraction = None
     return extraction
 
-def kernel_fit(obj: np.ndarray):
+def kernel_fit(obj: np.ndarray, back: float, noise: float):
     dim = len(obj)
     m = np.arange(dim)
     x, y = np.meshgrid(m,m)
@@ -223,15 +224,20 @@ def kernel_fit(obj: np.ndarray):
     x -= c
     y -= c
     r = np.sqrt(x**2 + y**2)
-
-    diff1 = abs(obj[c+1,c]-obj[c-1,c])
-    diff2 = abs(obj[c,c+1]-obj[c,c-1])
-    sigma0 = (diff1+diff2)/2
+    print(r)
+    print(r.flatten())
+    # diff1 = abs(obj[c+1,c]-obj[c-1,c])
+    # diff2 = abs(obj[c,c+1]-obj[c,c-1])
+    # sigma0 = (diff1+diff2)/2
+    sigma0 = 1
+    print('sigma',sigma0)
     k0 = obj.max()
 
     def fit_func(x,sigma,k):
-        return k * Gaussian(sigma).value(x)
-   
+        return k * Gaussian(sigma).value(x) #+ back + noise
+    
+    print(len(r.flatten()),len(obj.flatten()))
+    print('Max',obj.flatten().argmax(),fit_func(r.flatten(),0.5,obj.max()).argmax())
     from scipy.optimize import curve_fit
     initial_values = [sigma0,k0]
     pop, pcov = curve_fit(fit_func,r.flatten(),obj.flatten(),initial_values)
