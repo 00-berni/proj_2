@@ -178,38 +178,62 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
         # computing size
         x, y = index
         a_size = grad_check(field,index,size)
-        x_size, y_size = a_size
-        xu, xd = x_size
-        yu, yd = y_size
+        print('a_size',a_size)
         if reshape:
             a_size = np.array(a_size)
             pos = np.where(a_size != 0)
+            print('POS: ',pos)
             min_size = a_size[pos].min()
             a_size[pos] = min_size
+        x_size, y_size = a_size
+        xu, xd = x_size
+        yu, yd = y_size
         xr = slice(x-xd, x+xu+1) 
         yr = slice(y-yd, y+yu+1)
+        print('SLices: ',xr,yr)
         obj = field[xr,yr].copy() 
         tmp_field[xr,yr] = 0.0
-        print(a_size)
+        print('a_size 2',a_size)
         if all([0,0] == a_size[0]) or all([0,0] == a_size[1]):
             print(f'Remove obj: ({x},{y})')
         else: 
             if reshape and reshape_corr:
-                xpad_pos = (0,0)
-                ypad_pos = (0,0)
-                if xu == 0: xpad_pos = (0,xd)
-                elif xd == 0: xpad_pos = (xu,0)
-                if yu == 0: ypad_pos = (0,yd)
-                elif yd == 0: ypad_pos = (yu,0)
-                obj = np.pad(obj,(xpad_pos,ypad_pos),'reflect')
+                if 0 in [xu,xd,yu,yd]:
+                    xpad_pos = (0,0)
+                    ypad_pos = (0,0)
+                    if xu == 0: xpad_pos = (0,xd)
+                    elif xd == 0: xpad_pos = (xu,0)
+                    if yu == 0: ypad_pos = (0,yd)
+                    elif yd == 0: ypad_pos = (yu,0)
+                    print('PAd',xpad_pos,ypad_pos)
+                    obj = np.pad(obj,(xpad_pos,ypad_pos),'reflect')
             extraction += [obj]
             fast_image(obj,v=1) 
             k += 1
         fast_image(tmp_field,v=1)
-        
-
 
     if len(extraction) == 0: extraction = None
     return extraction
 
-        
+def kernel_fit(obj: np.ndarray):
+    dim = len(obj)
+    m = np.arange(dim)
+    x, y = np.meshgrid(m,m)
+    c = dim // 2
+    x -= c
+    y -= c
+    r = np.sqrt(x**2 + y**2)
+
+    diff1 = abs(obj[c+1,c]-obj[c-1,c])
+    diff2 = abs(obj[c,c+1]-obj[c,c-1])
+    sigma0 = (diff1+diff2)/2
+    k0 = obj.max()
+
+    def fit_func(x,sigma,k):
+        return k * Gaussian(sigma).value(x)
+   
+    from scipy.optimize import curve_fit
+    initial_values = [sigma0,k0]
+    pop, pcov = curve_fit(fit_func,r.flatten(),obj.flatten(),initial_values)
+    print(pop)
+    
