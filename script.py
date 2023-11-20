@@ -16,7 +16,8 @@ if __name__ == '__main__':
 
     objnum = 5
 
-    extr = restore.object_isolation(F_bsd,max(back,dark.max()),objnum=objnum)
+    # extr = restore.object_isolation(F_bsd,max(back,dark.max()),objnum=objnum)
     print('\n\nRESHAPE')
     field.fast_image(F_bsd)
     extr = restore.object_isolation(F_bsd,max(back,dark.max()),objnum=objnum,reshape=True,reshape_corr=True)
+    restore.kernel_fit(extr[0])
