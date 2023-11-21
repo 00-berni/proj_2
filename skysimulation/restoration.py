@@ -183,7 +183,7 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
             a_size = np.array(a_size)
             pos = np.where(a_size != 0)
             print('POS: ',pos)
-            if len(pos) != 0:
+            if len(pos[0]) != 0:
                 min_size = a_size[pos].min()
                 a_size[pos] = min_size
         x_size, y_size = a_size
@@ -216,7 +216,7 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
     if len(extraction) == 0: extraction = None
     return extraction
 
-def kernel_fit(obj: np.ndarray, back: float, noise: float):
+def kernel_fit(obj: np.ndarray, back: float, noise: float) -> float:
     dim = len(obj)
     m = np.arange(dim)
     x, y = np.meshgrid(m,m)
@@ -224,22 +224,40 @@ def kernel_fit(obj: np.ndarray, back: float, noise: float):
     x -= c
     y -= c
     r = np.sqrt(x**2 + y**2)
-    print(r)
-    print(r.flatten())
-    # diff1 = abs(obj[c+1,c]-obj[c-1,c])
-    # diff2 = abs(obj[c,c+1]-obj[c,c-1])
-    # sigma0 = (diff1+diff2)/2
     sigma0 = 1
     print('sigma',sigma0)
     k0 = obj.max()
 
     def fit_func(x,sigma,k):
-        return k * Gaussian(sigma).value(x) #+ back + noise
+        return k * Gaussian(sigma).value(x) + back + noise
     
-    print(len(r.flatten()),len(obj.flatten()))
-    print('Max',obj.flatten().argmax(),fit_func(r.flatten(),0.5,obj.max()).argmax())
+    err = (back+noise)*np.ones(obj.shape)
     from scipy.optimize import curve_fit
     initial_values = [sigma0,k0]
-    pop, pcov = curve_fit(fit_func,r.flatten(),obj.flatten(),initial_values)
-    print(pop)
+    pop, pcov = curve_fit(fit_func,r.flatten(),obj.flatten(),initial_values,sigma=err.flatten())
+    sigma, k = pop
+    Dsigma, _ = np.sqrt(pcov.diagonal())
+    print(f'sigma = {sigma} +- {Dsigma}')
+    chi_sq = (((obj-fit_func(r,sigma,k))/err)**2).sum()
+    chi0 = len(obj.flatten()) - 2
+    print(f'chi_sq = {chi_sq/chi0*100:.2f} +- {np.sqrt(2/chi0)*100:.2f} %')
+    return sigma
+
+def kernel_extimation(extraction: list[np.ndarray], back: float, noise: float, dim: int, display_plot: bool = False, all_results: bool = False) -> np.ndarray | tuple[np.ndarray,tuple[float,float]]:
+    a_sigma = np.array([],dtype=float)
+    for obj in extraction:
+        sigma = kernel_fit(obj,back,noise)
+        a_sigma = np.append(a_sigma,sigma)
+        del sigma
+    sigma = np.mean(a_sigma)
+    Dsigma = np.sqrt(((sigma-a_sigma)**2).sum()/(len(a_sigma)*(len(a_sigma)-1)))
+    print(f'\nsigma = {sigma:.5f} +- {Dsigma:.5f}')
+    kernel = Gaussian(sigma)
+    kernel = kernel.kernel(dim)
+    if display_plot:
+        fast_image(kernel,v=1)
     
+    if all_results:
+        return kernel,(sigma,Dsigma)
+    else:
+        return kernel
