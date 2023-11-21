@@ -14,7 +14,7 @@ if __name__ == '__main__':
     print(F.shape,F_bsd.shape)
     field.fast_image(F_bsd)
 
-    objnum = 5
+    objnum = 10
 
     ndet = dark.max()
 
@@ -22,4 +22,4 @@ if __name__ == '__main__':
     print('\n\nRESHAPE')
     field.fast_image(F_bsd)
     extr = restore.object_isolation(F_bsd,max(back,dark.max()),objnum=objnum,reshape=True,reshape_corr=True)
-    restore.kernel_fit(extr[0],back,ndet)
+    ext_kernel = restore.kernel_extimation(extr,back,ndet,len(F),True)
