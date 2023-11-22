@@ -1,8 +1,10 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from scipy.signal import find_peaks
+
 from .display import fast_image
-from .field import N, noise, Uniform, Gaussian, check_field
+from .field import Gaussian, N, Uniform, check_field, noise
+
 
 def peak_pos(field: np.ndarray) -> int | tuple[int,int]:
     if len(field.shape) == 1:
@@ -271,29 +273,31 @@ def LR_deconvolution(field: np.ndarray, kernel: np.ndarray, back: float, noise: 
     n = np.mean(tmp_field)
     Dn = np.sqrt(np.mean((tmp_field-n)**2))
     
+    from scipy.integrate import trapz
     from scipy.ndimage import convolve
-    from scipy.integrate import trapz        
+    from skimage.restoration import richardson_lucy
     I = np.copy(field)
     P = np.copy(kernel)
     Ir = lambda S: convolve(S,P)
     Sr = lambda S,Ir: S * convolve(I/Ir,P)
     
-    r = 1
-    Ir0 = Ir(I)
-    Sr1 = Sr(I,Ir0)
-    Ir1 = Ir(Sr1)
-    diff = abs(trapz(trapz(Ir1-Ir0)))
-    print('Dn', Dn)
-    print(f'{r:02d}: - diff {diff}')
-    while diff > Dn:
-        r += 1
-        Sr0 = Sr1
-        Ir0 = Ir1
-        Sr1 = Sr(Sr0,Ir0)
-        Ir1 = Ir(Sr1)
-        diff = abs(trapz(trapz(Ir1-Ir0)))
-        print(f'{r:02d}: - diff {diff}')
-    Sr1 = Sr(Sr1,Ir1)
+    # r = 1
+    # Ir0 = Ir(I)
+    # Sr1 = Sr(I,Ir0)
+    # Ir1 = Ir(Sr1)
+    # diff = abs(trapz(trapz(Ir1-Ir0)))
+    # print('Dn', Dn)
+    # print(f'{r:02d}: - diff {diff}')
+    # while r < 60: #diff > Dn:
+    #     r += 1
+    #     Sr0 = Sr1
+    #     Ir0 = Ir1
+    #     Sr1 = Sr(Sr0,Ir0)
+    #     Ir1 = Ir(Sr1)
+    #     diff = abs(trapz(trapz(Ir1-Ir0)))
+    #     print(f'{r:02d}: - diff {diff}')
+    # Sr1 = Sr(Sr1,Ir1)
+    Sr1 = richardson_lucy(I,P)
     fast_image(Sr1,v=1)    
     fast_image(Sr1-back-noise,v=1)    
     return Sr1
