@@ -94,13 +94,27 @@ class Uniform():
         n = self.max
         return np.random.uniform(0,n,size=(dim,dim))
 
+## Standard values
 # dimension of the field matrix
 N = int(1e2)
 # number of stars
 M = int(1e2)
+# masses range
+MIN_m = 0.1
+MAX_m = 20
+# IMF exp
+ALPHA = 2
+# M-L exp
+BETA = 3
+# max background
+BACK = 0.2/1e2
+# max detector noise
+NOISE = 3e-4
+# sigma of PSF
+SIGMA = 0.5
+##
 
-
-def generate_mass_array(m_min: float = 0.1, m_max: float = 20, alpha: float = 2,  sdim: int = M) -> np.ndarray:
+def generate_mass_array(m_min: float = MIN_m, m_max: float = MAX_m, alpha: float = ALPHA,  sdim: int = M) -> np.ndarray:
     """Generating masses array from the IMF distribution
     The function takes the minimum and the maximum masses, the IMF 
     and generates a `sdim`-dimensional array of masses distributed like 
@@ -194,7 +208,7 @@ def check_field(field: np.ndarray) -> np.ndarray:
     """
     return np.where(field < 0, 0.0, field)
 
-def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (0.1, 20), alpha: float = 2, beta: float = 3, overlap: bool = False, display_fig: bool = False) -> tuple[np.ndarray, Star]:
+def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m,MAX_m), alpha: float = ALPHA, beta: float = BETA, overlap: bool = False, display_fig: bool = False) -> tuple[np.ndarray, Star]:
     """Initialization function for the generation of the "perfect" sky
     It generates the stars and updates the field without any seeing 
     or noise effect.
@@ -231,7 +245,7 @@ def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (0.1, 
         fast_image(F,v=1,title='Inizialized Field')
     return F, S
 
-def atm_seeing(field: np.ndarray, sigma: float = 0.5, display_fig: bool = False) -> np.ndarray:
+def atm_seeing(field: np.ndarray, sigma: float = SIGMA, display_fig: bool = False) -> np.ndarray:
     """Atmosferic seeing function
     It convolves the field with tha Gaussian to
     make the atmosferic seeing
@@ -260,7 +274,7 @@ def atm_seeing(field: np.ndarray, sigma: float = 0.5, display_fig: bool = False)
     # checking the field and returning it
     return see_field
 
-def noise(distr: Uniform | Gaussian, dim: int = N,display_fig: bool = False, title: str = '') -> np.ndarray:
+def noise(distr: Uniform | Gaussian, dim: int = N, display_fig: bool = False, title: str = '') -> np.ndarray:
     """Noise generator
     It generates a (dim,dim) matrix of noise, using
     an arbitrary maximum intensity n.
@@ -278,7 +292,7 @@ def noise(distr: Uniform | Gaussian, dim: int = N,display_fig: bool = False, tit
         fast_image(n,v=1,title=title)
     return n
 
-def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (0.1, 20), star_param: tuple[float,float] = (2, 3), atm_param: tuple[str,float | tuple] = ('Gaussian',0.5), back_param: tuple[str, float | tuple] = ('Uniform',0.2/1e2), det_param: tuple[str, float | tuple] = ('Uniform', 3e-4), overlap: bool = False, display_fig: bool = False, results: str | None = None) -> np.ndarray | list[np.ndarray]:
+def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ('Gaussian',SIGMA), back_param: tuple[str, float | tuple] = ('Uniform',BACK), det_param: tuple[str, float | tuple] = ('Uniform', NOISE), overlap: bool = False, display_fig: bool = False, results: str | None = None) -> np.ndarray | list[np.ndarray]:
     SEP = '-'*10 + '\n'
     print(SEP+f'Initialization of the field\nDimension:\t{dim} x {dim}\nNumber of stars:\t{stnum}')
     # creating the starting field
