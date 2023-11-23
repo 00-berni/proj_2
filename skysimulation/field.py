@@ -139,8 +139,8 @@ N = int(1e2)
 # number of stars
 M = int(1e2)
 # masses range
-MIN_m = 0.1
-MAX_m = 20
+MIN_m = 0.5
+MAX_m = 5
 # IMF exp
 ALPHA = 2
 # M-L exp
@@ -150,7 +150,7 @@ BACK = 0.2/1e2
 # max detector noise
 NOISE = 3e-4
 # sigma of PSF
-SIGMA = 1
+SIGMA = 2
 ##
 
 def generate_mass_array(m_min: float = MIN_m, m_max: float = MAX_m, alpha: float = ALPHA,  sdim: int = M) -> np.ndarray:
