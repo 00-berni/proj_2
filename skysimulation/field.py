@@ -57,9 +57,13 @@ class Gaussian():
         self.mu = mu
         self.sigma = sigma
     
+    def info(self) -> None:
+        print('Gaussian distribution')
+        print(f'mean:\t{self.mu}')
+        print(f'sigma:\t{self.sigma}')
+
     def value(self,r: float | np.ndarray) -> float | np.ndarray:
         return np.exp(-r**2/(2*self.sigma**2))
-    
     
     def kernel_norm(self, dim: int) -> float:
         if dim % 2 == 0: dim -= 1
@@ -84,15 +88,50 @@ class Gaussian():
     def field(self, dim: int) -> np.ndarray:
         mu = self.mu
         sigma = self.sigma
-        return np.random.normal(mu,sigma,size=(dim,dim))
+        return (np.random.normal(mu,sigma,size=(dim,dim)))**2
 
 class Uniform():
-    def __init__(self, maxval: float) -> None:
+    def __init__(self, maxval: float, minval: float = 0) -> None:
         self.max = maxval
-    
+        self.min = minval
+
+    def info(self) -> None:
+        print('Uniform distribution')
+        print(f'minval:\t{self.min}')
+        print(f'maxval:\t{self.max}')
+
     def field(self, dim: int) -> np.ndarray:
         n = self.max
-        return np.random.uniform(0,n,size=(dim,dim))
+        return np.random.uniform(self.min,n,size=(dim,dim))
+
+class Poisson():
+    def __init__(self,lam: float, k: float = 1) -> None:
+        self.lam = lam
+        self.k = k
+
+    def info(self) -> None:
+        print('Poisson distribution')
+        print(f'lambda:\t{self.lam}')
+
+    def field(self, dim: int) -> np.ndarray:
+        return self.k * np.random.poisson(self.lam,size=(dim,dim))
+        
+
+
+def from_parms_to_distr(params: tuple[str, float | tuple], infos: bool = False) -> Gaussian | Uniform:
+    name, vals = params
+    if name == 'Gaussian' or name == 'Normal':
+        mu, sigma = vals
+        distr = Gaussian(sigma,mu)
+    elif name == 'Uniform':
+        max_val = vals
+        distr = Uniform(max_val)
+    elif name == 'Poisson':
+        lam, k = vals
+        distr = Poisson(lam,k)
+    if infos:
+        distr.info()
+    return distr
 
 ## Standard values
 # dimension of the field matrix
@@ -111,7 +150,7 @@ BACK = 0.2/1e2
 # max detector noise
 NOISE = 3e-4
 # sigma of PSF
-SIGMA = 0.5
+SIGMA = 1
 ##
 
 def generate_mass_array(m_min: float = MIN_m, m_max: float = MAX_m, alpha: float = ALPHA,  sdim: int = M) -> np.ndarray:
@@ -242,7 +281,7 @@ def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m
     S = Star(m,L,star_pos)
     if display_fig:
         S.plot_info(alpha,beta)       
-        fast_image(F,v=1,title='Inizialized Field')
+        fast_image(F,title='Inizialized Field')
     return F, S
 
 def atm_seeing(field: np.ndarray, sigma: float = SIGMA, display_fig: bool = False) -> np.ndarray:
@@ -266,15 +305,15 @@ def atm_seeing(field: np.ndarray, sigma: float = SIGMA, display_fig: bool = Fals
     # convolution with gaussian seeing
     see_field = fftconvolve(field, kernel, mode='same')
     if display_fig:
-        fast_image(see_field,v=1,title='Atmospheric Seeing mio')
+        fast_image(see_field,title='Atmospheric Seeing mio')
     # see_field = gaussian_filter(field,sigma)
     # print(np.where(see_field<0))
     # if display_fig:
-    #     fast_image(see_field,v=1,title='Atmospheric Seeing filter')
+    #     fast_image(see_field,title='Atmospheric Seeing filter')
     # checking the field and returning it
     return see_field
 
-def noise(distr: Uniform | Gaussian, dim: int = N, display_fig: bool = False, title: str = '') -> np.ndarray:
+def noise(params: tuple[str, float | tuple], dim: int = N, infos: bool = False, display_fig: bool = False, title: str = '') -> np.ndarray:
     """Noise generator
     It generates a (dim,dim) matrix of noise, using
     an arbitrary maximum intensity n.
@@ -287,9 +326,10 @@ def noise(distr: Uniform | Gaussian, dim: int = N, display_fig: bool = False, ti
     :return: noise matrix
     :rtype: np.ndarray
     """
+    distr = from_parms_to_distr(params,infos)
     n = distr.field(dim)
     if display_fig:
-        fast_image(n,v=1,title=title)
+        fast_image(n,title=title)
     return n
 
 def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ('Gaussian',SIGMA), back_param: tuple[str, float | tuple] = ('Uniform',BACK), det_param: tuple[str, float | tuple] = ('Uniform', NOISE), overlap: bool = False, display_fig: bool = False, results: str | None = None) -> np.ndarray | list[np.ndarray]:
@@ -298,11 +338,8 @@ def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (MI
     # creating the starting field
     F, S = initialize(dim,stnum,masses,*star_param,overlap=overlap,display_fig=display_fig)
     # background
-    print(f'\nBackground:\t{back_param[0]} distribution')
-    if back_param[0] == 'Uniform':
-        n = back_param[1]
-        print(f'Max background:\t{n}')
-        n_b = noise(Uniform(n),dim,display_fig,title='Background')
+    print('\nBackground:')
+    n_b = noise(back_param,dim,infos=True,display_fig=display_fig,title='Background')
     F_b = F + n_b
     if display_fig:
         fast_image(F_b,title='Field + Background')        
@@ -313,11 +350,8 @@ def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (MI
         print(f'sigma:\t{sigma}')
         F_bs = atm_seeing(F_b,sigma,display_fig)
     # detector
-    print(f'\nDetector noise:\t{det_param[0]} distribution')
-    if det_param[0] == 'Uniform':
-        n = det_param[1]
-        print(f'Max detector noise:\t{n}')
-        n_d = noise(Uniform(n),dim,display_fig,title='Detector noise')
+    print('\nDetector noise:')
+    n_d = noise(det_param,dim,infos=True,display_fig=display_fig,title='Detector noise')
     F_bsd = F_bs + n_d 
     if display_fig:
         fast_image(F_bsd,title='Field')        
