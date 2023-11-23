@@ -12,7 +12,7 @@ def peak_pos(field: np.ndarray) -> int | tuple[int,int]:
     else:
         return np.unravel_index(field.argmax(),field.shape)
 ##*
-def dark_elaboration(distr: Uniform | Gaussian, iteration: int = 3, dim: int = N, display_fig: bool = False) -> np.ndarray:
+def dark_elaboration(params: tuple[str, float | tuple], iteration: int = 3, dim: int = N, display_fig: bool = False) -> np.ndarray:
     """The function computes a number (`iteration`) of darks
     and averages them in order to get a mean estimation 
     of the detector noise
@@ -26,10 +26,10 @@ def dark_elaboration(distr: Uniform | Gaussian, iteration: int = 3, dim: int = N
     :rtype: np.ndarray
     """
     # generating the first dark
-    dark = noise(distr, dim=dim)
+    dark = noise(params, dim=dim)
     # making the loop
     for i in range(iteration-1):
-        dark += noise(distr, dim=dim)
+        dark += noise(params, dim=dim)
     # averaging
     dark /= iteration
     if display_fig:
@@ -266,7 +266,7 @@ def kernel_extimation(extraction: list[np.ndarray], back: float, noise: float, d
 
 
 
-def LR_deconvolution(field: np.ndarray, kernel: np.ndarray, back: float, noise: float) -> np.ndarray:
+def LR_deconvolution(field: np.ndarray, kernel: np.ndarray, back: float, noise: float, iter: int = 17) -> np.ndarray:
     n = max(back,noise)
     pos = np.where(field <= n)
     tmp_field = field[pos].copy()
@@ -280,24 +280,31 @@ def LR_deconvolution(field: np.ndarray, kernel: np.ndarray, back: float, noise: 
     P = np.copy(kernel)
     Ir = lambda S: convolve(S,P)
     Sr = lambda S,Ir: S * convolve(I/Ir,P)
-    
-    # r = 1
-    # Ir0 = Ir(I)
-    # Sr1 = Sr(I,Ir0)
-    # Ir1 = Ir(Sr1)
-    # diff = abs(trapz(trapz(Ir1-Ir0)))
-    # print('Dn', Dn)
-    # print(f'{r:02d}: - diff {diff}')
-    # while r < 60: #diff > Dn:
-    #     r += 1
-    #     Sr0 = Sr1
-    #     Ir0 = Ir1
-    #     Sr1 = Sr(Sr0,Ir0)
-    #     Ir1 = Ir(Sr1)
-    #     diff = abs(trapz(trapz(Ir1-Ir0)))
-    #     print(f'{r:02d}: - diff {diff}')
-    # Sr1 = Sr(Sr1,Ir1)
-    Sr1 = richardson_lucy(I,P)
-    fast_image(Sr1,v=1)    
+
+    r = 1
+    Ir0 = Ir(I)
+    Sr1 = Sr(I,Ir0)
+    Ir1 = Ir(Sr1)
+    diff = abs(trapz(trapz(Ir1-Ir0)))
+    print('Dn', Dn)
+    print(f'{r:02d}: - diff {diff}')
+    while r < iter: #diff > Dn:
+        r += 1
+        Sr0 = Sr1
+        Ir0 = Ir1
+        Sr1 = Sr(Sr0,Ir0)
+        Ir1 = Ir(Sr1)
+        diff = abs(trapz(trapz(Ir1-Ir0)))
+        print(f'{r:02d}: - diff {diff}')
+    SrD = Sr(Sr1,Ir1)
+    fast_image(SrD,v=1)    
+    Sr1 = richardson_lucy(I,P,iter)
+    fast_image(Sr1,v=1)   
+    plt.figure()
+    plt.subplot(1,2,1)
+    plt.imshow(SrD,norm='log')
+    plt.subplot(1,2,2)
+    plt.imshow(Sr1,norm='log')
+    plt.show()
     fast_image(Sr1-back-noise,v=1)    
     return Sr1
