@@ -16,7 +16,7 @@ if __name__ == '__main__':
     dark = restore.dark_elaboration(noise_param,display_fig=figure)
     Fn = F_bsd - dark
     back = restore.bkg_est(Fn,figure)
-    print(f'Extimated background maxval:\t{10**back}')
+    print(f'\nExtimated background maxval: {10**back}')
     back = 10**back
     print(F.shape,F_bsd.shape)
     field.fast_image(F_bsd)

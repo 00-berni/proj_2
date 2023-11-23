@@ -55,7 +55,7 @@ def bkg_est(field: np.ndarray, display_fig: bool = False) -> float:
         plt.xlabel('$\\log_{10}(F_{sn})$')
         plt.ylabel('counts')
         plt.show()
-    return mbin
+    return bins[counts.argmax()] #mbin
 
 def moving(direction: str, field: np.ndarray, index: tuple[int,int], size: int = 3) -> list[int]:
     tmp_field = field.copy()
