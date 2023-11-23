@@ -53,45 +53,106 @@ class Star():
             plt.ylabel('counts')
 
 class Gaussian():
+    """Gaussian distribution
+
+    """
     def __init__(self, sigma: float, mu: float | None = None) -> None:
+        """Storing sigma and mean of the distribution
+
+        :param sigma: variance
+        :type sigma: float
+        :param mu: mean, defaults to None
+        :type mu: float | None, optional
+        """
+        # mean
         self.mu = mu
+        # sigma
         self.sigma = sigma
     
     def info(self) -> None:
+        """Printing the information about the distribution
+        """
         print('Gaussian distribution')
         print(f'mean:\t{self.mu}')
         print(f'sigma:\t{self.sigma}')
 
     def value(self,r: float | np.ndarray) -> float | np.ndarray:
+        """Computing the value
+
+        :param r: variable
+        :type r: float | np.ndarray
+        
+        :return: the value of the distribution
+        :rtype: float | np.ndarray
+        """
         return np.exp(-r**2/(2*self.sigma**2))
     
     def kernel_norm(self, dim: int) -> float:
+        """Computing the normalization coefficient of a matrix
+
+        :param dim: size of the field
+        :type dim: int
+        
+        :return: normalization coefficient
+        :rtype: float
+        """
+        # kernel must have a odd size
         if dim % 2 == 0: dim -= 1
         if self.mu is None:
             self.mu = dim // 2
+        # edges of integration
         inf = -self.mu
         sup = dim - 1 - self.mu
         from scipy.integrate import quad
         return quad(self.value,inf,sup)[0]**2
 
     def kernel(self, dim: int) -> np.ndarray:
+        """Computing a Gaussian kernel
+
+        :param dim: size of the field
+        :type dim: int
+        
+        :return: kernel
+        :rtype: np.ndarray
+        """
+        # kernel must have a odd size
         if dim % 2 == 0: dim -= 1
         if self.mu is None:
             self.mu = dim // 2
+        # generating coordinates
         x, y = np.meshgrid(np.arange(dim),np.arange(dim))
+        # computing the distance from the center
         r = np.sqrt((x-self.mu)**2 + (y-self.mu)**2)
         sigma = self.sigma
         const = np.sqrt(2 * np.pi * sigma**2)
         kernel = self.value(r) / const
+        # computing kernel
         return kernel / self.kernel_norm(dim)
 
     def field(self, dim: int) -> np.ndarray:
+        """Drawing values from Gaussian distribution
+
+        :param dim: size of the field
+        :type dim: int
+        
+        :return: matrix
+        :rtype: np.ndarray
+        """
         mu = self.mu
         sigma = self.sigma
         return (np.random.normal(mu,sigma,size=(dim,dim)))**2
 
 class Uniform():
+    """Uniform distribution
+    """
     def __init__(self, maxval: float, minval: float = 0) -> None:
+        """Storing parameters of uniform distribution
+
+        :param maxval: maximum value
+        :type maxval: float
+        :param minval: minimum value, defaults to 0
+        :type minval: float, optional
+        """
         self.max = maxval
         self.min = minval
 
