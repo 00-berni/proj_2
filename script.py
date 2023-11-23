@@ -12,7 +12,7 @@ if __name__ == '__main__':
     # noise_param = ('Uniform',ndet)
     # noise_param = ('Gaussian',(ndet,0.1))
     noise_param = ('Poisson',(0.5,ndet))
-    F_bsd, F, F_b, F_bs = field.field_builder(100,5000,display_fig=figure,results='Fbs',back_param=back_param,det_param=noise_param,overlap=True)
+    F_bsd, F, F_b, F_bs = field.field_builder(100,1000,display_fig=figure,results='Fbs',back_param=back_param,det_param=noise_param,overlap=True)
     dark = restore.dark_elaboration(noise_param,display_fig=figure)
     Fn = F_bsd - dark
     back = restore.bkg_est(Fn,figure)

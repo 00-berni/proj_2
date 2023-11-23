@@ -33,7 +33,7 @@ def dark_elaboration(params: tuple[str, float | tuple], iteration: int = 3, dim:
     # averaging
     dark /= iteration
     if display_fig:
-        fast_image(dark,v=1,title=f'Dark elaboration\nAveraged on {iteration} iterations')
+        fast_image(dark,title=f'Dark elaboration\nAveraged on {iteration} iterations')
     return dark
 
 def bkg_est(field: np.ndarray, display_fig: bool = False) -> float:
@@ -211,9 +211,9 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
                     print('PAd',xpad_pos,ypad_pos)
                     obj = np.pad(obj,(xpad_pos,ypad_pos),'reflect')
             extraction += [obj]
-            if display_fig: fast_image(obj,v=1) 
+            if display_fig: fast_image(obj) 
             k += 1
-    fast_image(tmp_field,v=1)
+    fast_image(tmp_field)
 
     if len(extraction) == 0: extraction = None
     return extraction
@@ -257,7 +257,7 @@ def kernel_extimation(extraction: list[np.ndarray], back: float, noise: float, d
     kernel = Gaussian(sigma)
     kernel = kernel.kernel(dim)
     if display_plot:
-        fast_image(kernel,v=1)
+        fast_image(kernel)
     
     if all_results:
         return kernel,(sigma,Dsigma)
@@ -297,14 +297,14 @@ def LR_deconvolution(field: np.ndarray, kernel: np.ndarray, back: float, noise: 
         diff = abs(trapz(trapz(Ir1-Ir0)))
         print(f'{r:02d}: - diff {diff}')
     SrD = Sr(Sr1,Ir1)
-    fast_image(SrD,v=1)    
+    fast_image(SrD)    
     Sr1 = richardson_lucy(I,P,iter)
-    fast_image(Sr1,v=1)   
+    fast_image(Sr1)   
     plt.figure()
     plt.subplot(1,2,1)
-    plt.imshow(SrD,norm='log')
+    plt.imshow(SrD,cmap='gray')
     plt.subplot(1,2,2)
-    plt.imshow(Sr1,norm='log')
+    plt.imshow(Sr1,cmap='gray')
     plt.show()
-    fast_image(Sr1-back-noise,v=1)    
+    fast_image(Sr1-back-noise)    
     return Sr1
