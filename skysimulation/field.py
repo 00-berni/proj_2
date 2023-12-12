@@ -32,19 +32,23 @@ class Star():
             plt.title(f'Mass distribution with $\\alpha = {alpha}$ and {nstars} stars')
             bins = np.linspace(min(self.m),max(self.m),nstars//3*2)
             plt.hist(self.m,bins=bins)
-            fm = bins**(-alpha)
-            plt.plot(bins,fm)
+            mm = np.linspace(self.m.min(),self.m.max(),len(self.m))
+            fm = lambda m: m**(-alpha)
+            imf = fm(mm)
+            # imf /= quad(fm,mm.min(),mm.max())[0]
+            plt.plot(mm,imf,label='$IMF = m^{-\\alpha}$')
             plt.xscale('log')
             plt.xlabel('m [$M_\odot$]')
             plt.ylabel('counts')
+            plt.legend()
         if sel == 'all' or sel == 'L':
             ## Plot data for corrisponding luminosities
             # plot the logarithm of L
             L = np.log10(self.lum)
-            plt.figure()
-            plt.plot(self.m,self.lum,'.')
-            plt.plot(bins,bins**beta)
-            plt.yscale('log')
+            # plt.figure()
+            # plt.plot(self.m,self.lum,'.')
+            # plt.plot(bins,bins**beta)
+            # plt.yscale('log')
             plt.figure(figsize=(12,8))
             plt.title(f'Luminosity distribution with $\\beta = {beta}$ for {nstars} stars')
             bins = np.linspace(min(L),max(L),nstars//2)
@@ -104,7 +108,7 @@ class Gaussian():
         inf = -self.mu
         sup = dim - 1 - self.mu
         from scipy.integrate import quad
-        return quad(self.value,inf,sup)[0]**2
+        return quad(self.value,inf,sup)[0]
 
     def kernel(self, dim: int) -> np.ndarray:
         """Computing a Gaussian kernel
@@ -140,7 +144,8 @@ class Gaussian():
         """
         mu = self.mu
         sigma = self.sigma
-        return (np.random.normal(mu,sigma,size=(dim,dim)))**2
+        rng = np.random.default_rng()
+        return rng.normal(mu,sigma,size=(dim,dim))
 
 class Uniform():
     """Uniform distribution
@@ -163,7 +168,8 @@ class Uniform():
 
     def field(self, dim: int) -> np.ndarray:
         n = self.max
-        return np.random.uniform(self.min,n,size=(dim,dim))
+        rng = np.random.default_rng()
+        return rng.uniform(self.min,n,size=(dim,dim))
 
 class Poisson():
     def __init__(self,lam: float, k: float = 1) -> None:
@@ -175,7 +181,8 @@ class Poisson():
         print(f'lambda:\t{self.lam}')
 
     def field(self, dim: int) -> np.ndarray:
-        return self.k * np.random.poisson(self.lam,size=(dim,dim))
+        rng = np.random.default_rng()
+        return self.k * rng.poisson(self.lam,size=(dim,dim))
         
 
 
@@ -195,23 +202,31 @@ def from_parms_to_distr(params: tuple[str, float | tuple], infos: bool = False) 
     return distr
 
 ## Standard values
+MSOL = 1.989e+33 # g
+LSOL = 3.84e+33 # erg/s
+K = LSOL
 # dimension of the field matrix
 N = int(1e2)
 # number of stars
 M = int(1e2)
 # masses range
-MIN_m = 0.5
-MAX_m = 5
+MIN_m = 0.1
+MAX_m = 20
 # IMF exp
 ALPHA = 2
 # M-L exp
 BETA = 3
-# max background
-BACK = 0.2/1e2
-# max detector noise
-NOISE = 3e-4
-# sigma of PSF
-SIGMA = 2
+# mean background value
+BACK_MEAN = 0.001
+BACK_SIGMA = 1.5
+BACK_PARAM = ('Gaussian',(BACK_MEAN, BACK_SIGMA))
+# mean detector noise
+NOISE_MEAN = 3e-4
+NOISE_SIGMA = 1
+NOISE_PARAM = ('Gaussian',(NOISE_MEAN,NOISE_SIGMA))
+# sigma of seeing
+SEEING_SIGMA = 5       
+ATM_PARAM = ('Gaussian',SEEING_SIGMA)                                                                                     
 ##
 
 def generate_mass_array(m_min: float = MIN_m, m_max: float = MAX_m, alpha: float = ALPHA,  sdim: int = M) -> np.ndarray:
@@ -241,10 +256,9 @@ def generate_mass_array(m_min: float = MIN_m, m_max: float = MAX_m, alpha: float
     # evaluating IMF for the extremes
     imf_min = IMF(m_min)
     imf_max = IMF(m_max) 
-    # initializing random seed
-    np.random.seed()
     # generating the sample 
-    return (np.random.rand(sdim)*(imf_min-imf_max)+imf_max)**(-1/alpha)
+    rng = np.random.default_rng()
+    return rng.uniform(imf_max,imf_min,sdim)**(-1/alpha)
 
 
 def star_location(sdim: int = M, dim: int = N, overlap: bool = False) -> tuple[np.ndarray,np.ndarray]:
@@ -271,7 +285,8 @@ def star_location(sdim: int = M, dim: int = N, overlap: bool = False) -> tuple[n
     # list with all possible positions in the field
     grid = [(i,j) for i in range(dim) for j in range(dim)]
     # drawing positions from grid for stars
-    ind = np.random.choice(len(grid), size=sdim, replace=overlap)
+    rng = np.random.default_rng()
+    ind = rng.choice(len(grid), size=sdim, replace=overlap)
     # making arrays of coordinates
     X = np.array([grid[i][0] for i in ind])
     Y = np.array([grid[i][1] for i in ind])
@@ -308,7 +323,7 @@ def check_field(field: np.ndarray) -> np.ndarray:
     """
     return np.where(field < 0, 0.0, field)
 
-def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m,MAX_m), alpha: float = ALPHA, beta: float = BETA, overlap: bool = False, display_fig: bool = False) -> tuple[np.ndarray, Star]:
+def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m,MAX_m), alpha: float = ALPHA, beta: float = BETA, overlap: bool = False, display_fig: bool = False, **kwargs) -> tuple[np.ndarray, Star]:
     """Initialization function for the generation of the "perfect" sky
     It generates the stars and updates the field without any seeing 
     or noise effect.
@@ -337,15 +352,17 @@ def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m
     # locating the stars
     star_pos = star_location(sdim=sdim, dim=dim, overlap=overlap)
     # updating the field matrix
-    F[star_pos] += L
+    F[star_pos] += L #/max(L)
     # saving stars infos
     S = Star(m,L,star_pos)
     if display_fig:
         S.plot_info(alpha,beta)       
-        fast_image(F,title='Inizialized Field')
+        if 'title' not in kwargs:
+            kwargs['title'] = 'Inizialized Field'
+        fast_image(F,**kwargs)
     return F, S
 
-def atm_seeing(field: np.ndarray, sigma: float = SIGMA, display_fig: bool = False) -> np.ndarray:
+def atm_seeing(field: np.ndarray, sigma: float = SEEING_SIGMA, display_fig: bool = False, **kwargs) -> np.ndarray:
     """Atmosferic seeing function
     It convolves the field with tha Gaussian to
     make the atmosferic seeing
@@ -364,17 +381,16 @@ def atm_seeing(field: np.ndarray, sigma: float = SIGMA, display_fig: bool = Fals
     field = np.copy(field)
     kernel = Gaussian(sigma).kernel(n)
     # convolution with gaussian seeing
-    see_field = fftconvolve(field, kernel, mode='same')
+    # see_field = fftconvolve(field, kernel, mode='same')
+    see_field = gaussian_filter(field,sigma)
     if display_fig:
-        fast_image(see_field,title='Atmospheric Seeing mio')
-    # see_field = gaussian_filter(field,sigma)
-    # print(np.where(see_field<0))
-    # if display_fig:
-    #     fast_image(see_field,title='Atmospheric Seeing filter')
+        if 'title' not in kwargs:
+            kwargs['title'] = 'Atmospheric Seeing'
+        fast_image(see_field,**kwargs)
     # checking the field and returning it
     return see_field
 
-def noise(params: tuple[str, float | tuple], dim: int = N, infos: bool = False, display_fig: bool = False, title: str = '') -> np.ndarray:
+def noise(params: tuple[str, float | tuple], dim: int = N, infos: bool = False, display_fig: bool = False, **kwargs) -> np.ndarray:
     """Noise generator
     It generates a (dim,dim) matrix of noise, using
     an arbitrary maximum intensity n.
@@ -390,37 +406,45 @@ def noise(params: tuple[str, float | tuple], dim: int = N, infos: bool = False, 
     distr = from_parms_to_distr(params,infos)
     n = distr.field(dim)
     if display_fig:
-        fast_image(n,title=title)
-    return n
+        fast_image(n,**kwargs)
+        plt.figure()
+        plt.title('Distribution')
+        plt.hist(n.flatten(),len(n.flatten())//100)
+        plt.show()
+    return np.abs(n)**2
 
-def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ('Gaussian',SIGMA), back_param: tuple[str, float | tuple] = ('Uniform',BACK), det_param: tuple[str, float | tuple] = ('Uniform', NOISE), overlap: bool = False, display_fig: bool = False, results: str | None = None) -> np.ndarray | list[np.ndarray]:
+def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, back_param: tuple[str, float | tuple] = BACK_PARAM, det_param: tuple[str, float | tuple] = NOISE_PARAM, overlap: bool = False, results: str | None = None, display_fig: bool = False, **kwargs) -> list[np.ndarray]:
     SEP = '-'*10 + '\n'
     print(SEP+f'Initialization of the field\nDimension:\t{dim} x {dim}\nNumber of stars:\t{stnum}')
     # creating the starting field
     F, S = initialize(dim,stnum,masses,*star_param,overlap=overlap,display_fig=display_fig)
     # background
     print('\nBackground:')
-    n_b = noise(back_param,dim,infos=True,display_fig=display_fig,title='Background')
+    kwargs['title'] = 'Background'
+    n_b = noise(back_param,dim,infos=True,display_fig=display_fig,**kwargs)
     F_b = F + n_b
     if display_fig:
-        fast_image(F_b,title='Field + Background')        
+        kwargs['title'] = 'Field + Background'
+        fast_image(F_b,**kwargs)        
     # atm seeing
-    print(f'\nAtm Seeing:\t{atm_param[0]} distribution')
+    print(f'\nAtm Seeing:\n{atm_param[0]} distribution')
     if atm_param[0] == 'Gaussian':
         sigma = atm_param[1]
         print(f'sigma:\t{sigma}')
-        F_bs = atm_seeing(F_b,sigma,display_fig)
+        # F_bs = atm_seeing(F_b,sigma,display_fig)
+        kwargs['title'] = 'Atmospheric Seeing'
+        F_bs = atm_seeing(F_b,sigma,display_fig,**kwargs)
     # detector
     print('\nDetector noise:')
-    n_d = noise(det_param,dim,infos=True,display_fig=display_fig,title='Detector noise')
+    kwargs['title'] = 'Detector noise'
+    n_d = noise(det_param,dim,infos=True,display_fig=display_fig,**kwargs)
     F_bsd = F_bs + n_d 
     if display_fig:
-        fast_image(F_bsd,title='Field')        
+        kwargs['title'] = 'Final Field'
+        fast_image(F_bsd,**kwargs)        
     
-    if results is None:
-        ret_val = F_bsd
-    else:    
-        ret_val = [F_bsd]
+    ret_val = [S, F_bsd]
+    if results is not None:
         if 'F' in results or results == 'all':
             ret_val += [F]
         if 'b' in results or results == 'all':
