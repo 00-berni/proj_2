@@ -7,21 +7,33 @@ from .field import Gaussian, N, Uniform, check_field, noise
 
 
 def peak_pos(field: np.ndarray) -> int | tuple[int,int]:
+    """Finding the coordinate/s of the maximum
+
+    :param field: array
+    :type field: np.ndarray
+
+    :return: coordinate/s
+    :rtype: int | tuple[int,int]
+    """
     if len(field.shape) == 1:
         return field.argmax()
     else:
         return np.unravel_index(field.argmax(),field.shape)
 ##*
-def dark_elaboration(params: tuple[str, float | tuple], iteration: int = 3, dim: int = N, display_fig: bool = False) -> np.ndarray:
+def dark_elaboration(params: tuple[str, float | tuple], iteration: int = 3, dim: int = N, display_fig: bool = False, **kwargs) -> np.ndarray:
     """The function computes a number (`iteration`) of darks
     and averages them in order to get a mean estimation 
     of the detector noise
 
-    :param n_value: detector noise, defaults to 3e-4
-    :type n_value: float, optional
-    :param iteration: number of darks to compute, defaults to 3
+    :param params: parameters of the signal
+    :type params: tuple[str, float  |  tuple]
+    :param iteration: number of darks, defaults to 3
     :type iteration: int, optional
-
+    :param dim: size of the field, defaults to N
+    :type dim: int, optional
+    :param display_fig: if `True` pictures are shown, defaults to False
+    :type display_fig: bool, optional
+    
     :return: mean dark
     :rtype: np.ndarray
     """
@@ -33,10 +45,22 @@ def dark_elaboration(params: tuple[str, float | tuple], iteration: int = 3, dim:
     # averaging
     dark /= iteration
     if display_fig:
-        fast_image(dark,title=f'Dark elaboration\nAveraged on {iteration} iterations')
+        if 'title' not in kwargs:
+            kwargs['title'] = f'Dark elaboration\nAveraged on {iteration} iterations'
+        fast_image(dark,**kwargs)
     return dark
 
 def bkg_est(field: np.ndarray, display_fig: bool = False) -> float:
+    """Estimating a value for the background
+
+    :param field: the field
+    :type field: np.ndarray
+    :param display_fig: if `True` pictures are shown, defaults to False
+    :type display_fig: bool, optional
+    
+    :return: estimated background value
+    :rtype: float
+    """
     field = np.copy(field).flatten()
     field = field[np.where(field > 0)[0]]
     num = np.sqrt(len(field))
@@ -49,15 +73,39 @@ def bkg_est(field: np.ndarray, display_fig: bool = False) -> float:
     if display_fig:
         plt.figure(figsize=(14,10))
         plt.stairs(counts, bins,fill=True)
-        # plt.axvline(max(bins[pos]),0,1,linestyle='--',color='orange')
-        # plt.axvline(bins[counts.argmax()],0,1,linestyle='--',color='red')
+        plt.axvline(max(bins[pos]),0,1,linestyle='--',color='yellow')
+        plt.axvline(bins[counts.argmax()],0,1,linestyle='--',color='red')
         plt.axvline(mbin,0,1,linestyle='--',color='orange')
+        from .field import BACK_MEAN
+        plt.axvline(np.log10(BACK_MEAN),0,1,linestyle=':')
         plt.xlabel('$\\log_{10}(F_{sn})$')
         plt.ylabel('counts')
         plt.show()
     return bins[counts.argmax()] #mbin
 
 def moving(direction: str, field: np.ndarray, index: tuple[int,int], size: int = 3) -> list[int]:
+    """Looking in one direction
+
+    `direction` is a string and contains two parameters:
+
+      1. `'f'` or `'b'` mean forward or backward, respectively.
+      2. `'x'` or `'y'` mean horizontal or vertical direction, respectively.
+
+    It is also possible to combine different directions such as `'fxby'`
+    (combinations along same axis are not allowed) 
+
+    :param direction: selected direction
+    :type direction: str
+    :param field: the field
+    :type field: np.ndarray
+    :param index: the coordinates of the object
+    :type index: tuple[int,int]
+    :param size: maximum size of the object, defaults to 3
+    :type size: int, optional
+    
+    :return: the size of the object in different directions
+    :rtype: list[int]
+    """
     tmp_field = field.copy()
     dim = len(tmp_field)
     x, y = index
@@ -130,6 +178,18 @@ def moving(direction: str, field: np.ndarray, index: tuple[int,int], size: int =
 
 
 def grad_check(field: np.ndarray, index: tuple[int,int], size: int = 3) -> tuple[np.ndarray,np.ndarray]:
+    """Checking the gradient trend around an object
+
+    :param field: the field
+    :type field: np.ndarray
+    :param index: coordinates of the object
+    :type index: tuple[int,int]
+    :param size: the maximum size of the object, defaults to 3
+    :type size: int, optional
+    
+    :return: size of the object (x,y)
+    :rtype: tuple[np.ndarray,np.ndarray]
+    """
     mov = lambda val: moving(val,field,index,size)
     xy_dir = ['fxfy','fxby','bxfy','bxby'] 
     a_xysize = np.array([mov(dir) for dir in xy_dir])
@@ -146,24 +206,28 @@ def grad_check(field: np.ndarray, index: tuple[int,int], size: int = 3) -> tuple
     
 
 ##*
-def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, display_fig: bool = False) -> np.ndarray | None:
+def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, display_fig: bool = False,**kwargs) -> np.ndarray | None:
     """To isolate the most luminous star object.
     The function calls the `size_est()` function to compute the size of the object and
     then to extract it from the field.
 
-    :param field: field matrix
+    :param field: the field
     :type field: np.ndarray
-    :param obj: object coordinates
-    :type obj: tuple[int,int]
-    :param coord: list of possible positions in the field
-    :type coord: list[tuple]
-    :param thr: threshold for `size_est()` function, defaults to 1e-3
-    :type thr: float, optional
-    :param size: the upper limit for the size of the obj, defaults to 3
+    :param thr: threshold value
+    :type thr: float
+    :param size: maximum size of the object, defaults to 3
     :type size: int, optional
+    :param objnum: maximum number of object to search, defaults to 10
+    :type objnum: int, optional
+    :param reshape: if `True` x and y sizes of the object are equal, defaults to False
+    :type reshape: bool, optional
+    :param reshape_corr: if `True` objects at the edges are corrected, defaults to False
+    :type reshape_corr: bool, optional
+    :param display_fig: if `True` pictures are shown, defaults to False
+    :type display_fig: bool, optional
     
-    :return: the extracted object matrix
-    :rtype: np.ndarray
+    :return: the size or `None`
+    :rtype: np.ndarray | None
     """
     tmp_field = field.copy()
 
@@ -193,7 +257,7 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
         yu, yd = y_size
         xr = slice(x-xd, x+xu+1) 
         yr = slice(y-yd, y+yu+1)
-        print('SLices: ',xr,yr)
+        print('Slices: ',xr,yr)
         obj = field[xr,yr].copy() 
         tmp_field[xr,yr] = 0.0
         print('a_size 2',a_size)
@@ -211,14 +275,30 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
                     print('PAd',xpad_pos,ypad_pos)
                     obj = np.pad(obj,(xpad_pos,ypad_pos),'reflect')
             extraction += [obj]
-            if display_fig: fast_image(obj) 
+            if display_fig: 
+                if 'title' not in kwargs:
+                    kwargs['title'] = f'{k} object'
+                fast_image(obj,**kwargs) 
             k += 1
-    fast_image(tmp_field)
+    kwargs['title'] = 'Field after extraction'
+    fast_image(tmp_field,**kwargs)
 
     if len(extraction) == 0: extraction = None
     return extraction
 
 def kernel_fit(obj: np.ndarray, back: float, noise: float) -> float:
+    """Estimating the sigma of the kernel
+
+    :param obj: extracted objects
+    :type obj: np.ndarray
+    :param back: estimated value of the background
+    :type back: float
+    :param noise: mean noise value
+    :type noise: float
+    
+    :return: mean sigma of the kernel
+    :rtype: float
+    """
     dim = len(obj)
     m = np.arange(dim)
     x, y = np.meshgrid(m,m)
@@ -245,7 +325,25 @@ def kernel_fit(obj: np.ndarray, back: float, noise: float) -> float:
     print(f'chi_sq = {chi_sq/chi0*100:.2f} +- {np.sqrt(2/chi0)*100:.2f} %')
     return sigma
 
-def kernel_extimation(extraction: list[np.ndarray], back: float, noise: float, dim: int, display_plot: bool = False, all_results: bool = False) -> np.ndarray | tuple[np.ndarray,tuple[float,float]]:
+def kernel_extimation(extraction: list[np.ndarray], back: float, noise: float, dim: int, all_results: bool = False, display_plot: bool = False, **kwargs) -> np.ndarray | tuple[np.ndarray,tuple[float,float]]:
+    """Estimation of the kernel from a Gaussian model
+
+    :param extraction: extracted objects
+    :type extraction: list[np.ndarray]
+    :param back: estimated value of the background
+    :type back: float
+    :param noise: mean noise
+    :type noise: float
+    :param dim: size of the kernel
+    :type dim: int
+    :param display_plot: if `True` pictures are shown, defaults to False
+    :type display_plot: bool, optional
+    :param all_results: if `True` additional results are returned, defaults to False
+    :type all_results: bool, optional
+    
+    :return: kernel (and sigma with the error)
+    :rtype: np.ndarray | tuple[np.ndarray,tuple[float,float]]
+    """
     a_sigma = np.array([],dtype=float)
     for obj in extraction:
         sigma = kernel_fit(obj,back,noise)
@@ -257,7 +355,8 @@ def kernel_extimation(extraction: list[np.ndarray], back: float, noise: float, d
     kernel = Gaussian(sigma)
     kernel = kernel.kernel(dim)
     if display_plot:
-        fast_image(kernel)
+        
+        fast_image(kernel,**kwargs)
     
     if all_results:
         return kernel,(sigma,Dsigma)
@@ -267,6 +366,22 @@ def kernel_extimation(extraction: list[np.ndarray], back: float, noise: float, d
 
 
 def LR_deconvolution(field: np.ndarray, kernel: np.ndarray, back: float, noise: float, iter: int = 17) -> np.ndarray:
+    """Richardson-Lucy deconvolution algorithm
+
+    :param field: the field
+    :type field: np.ndarray
+    :param kernel: estimated kernel
+    :type kernel: np.ndarray
+    :param back: estimated value of the background
+    :type back: float
+    :param noise: mean noise
+    :type noise: float
+    :param iter: number of iterations, defaults to 17
+    :type iter: int, optional
+    
+    :return: recostructed field
+    :rtype: np.ndarray
+    """
     n = max(back,noise)
     pos = np.where(field <= n)
     tmp_field = field[pos].copy()
