@@ -414,6 +414,33 @@ def noise(params: tuple[str, float | tuple], dim: int = N, infos: bool = False, 
     return np.abs(n)**2
 
 def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, back_param: tuple[str, float | tuple] = BACK_PARAM, det_param: tuple[str, float | tuple] = NOISE_PARAM, overlap: bool = False, results: str | None = None, display_fig: bool = False, **kwargs) -> list[np.ndarray]:
+    """Constructor of the field
+
+
+    :param dim: size of the field, defaults to N
+    :type dim: int, optional
+    :param stnum: number of starfish, defaults to M
+    :type stnum: int, optional
+    :param masses: mass range extrema, defaults to (MIN_m,MAX_m)
+    :type masses: tuple[float,float], optional
+    :param star_param: exponents, defaults to (ALPHA,BETA)
+    :type star_param: tuple[float,float], optional
+    :param atm_param: seeing, defaults to ATM_PARAM
+    :type atm_param: tuple[str,float  |  tuple], optional
+    :param back_param: background, defaults to BACK_PARAM
+    :type back_param: tuple[str, float  |  tuple], optional
+    :param det_param: detector, defaults to NOISE_PARAM
+    :type det_param: tuple[str, float  |  tuple], optional
+    :param overlap: if `True` stars can have the same position, defaults to False
+    :type overlap: bool, optional
+    :param results: chosen results to return, defaults to None
+    :type results: str | None, optional
+    :param display_fig: if `True` pictures are shown, defaults to False
+    :type display_fig: bool, optional
+    
+    :return: stars and field (and additional results)
+    :rtype: list[np.ndarray]
+    """
     SEP = '-'*10 + '\n'
     print(SEP+f'Initialization of the field\nDimension:\t{dim} x {dim}\nNumber of stars:\t{stnum}')
     # creating the starting field
