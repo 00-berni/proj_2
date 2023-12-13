@@ -22,14 +22,19 @@ def field_image(fig, image, F: np.ndarray, v: int = 0, sct: tuple = (0,None), no
     # setting the color map through `v` param
     if v == 0: color = 'gray'
     elif v == 1: color = 'viridis' 
+    elif v == 2: color = 'brg'
     else: color = 'gray_r' 
     # generating the image
     pic = image.imshow(F[a:b,a:b], cmap=color, norm=norm)
+    # adjusting the position and the size of colorbar
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
+    divider = make_axes_locatable(image)
+    colorbar_axes = divider.append_axes("right", size="10%", pad=0.1)  
     # generating the colorbar
-    fig.colorbar(pic, ax=image, cmap=color, norm=norm, location='bottom')
+    fig.colorbar(pic, ax=image, cmap=color, norm=norm, cax=colorbar_axes)
 
 def fast_image(F: np.ndarray, v: int = 0, sct: tuple = (0,None), norm: str = 'linear',title: str = '') -> None:
     fig, ax = plt.subplots(1,1)
-    ax.set_title(title)
+    ax.set_title(title,fontsize=20)
     field_image(fig,ax,F,v,sct,norm)
     plt.show()
