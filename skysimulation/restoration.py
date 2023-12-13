@@ -40,7 +40,7 @@ def dark_elaboration(params: tuple[str, float | tuple], iteration: int = 3, dim:
     # generating the first dark
     dark = noise(params, dim=dim)
     # making the loop
-    for i in range(iteration-1):
+    for _ in range(iteration-1):
         dark += noise(params, dim=dim)
     # averaging
     dark /= iteration
@@ -355,7 +355,8 @@ def kernel_extimation(extraction: list[np.ndarray], back: float, noise: float, d
     kernel = Gaussian(sigma)
     kernel = kernel.kernel(dim)
     if display_plot:
-        
+        if 'title' not in kwargs:
+            kwargs['title'] = 'Estimated kernel'
         fast_image(kernel,**kwargs)
     
     if all_results:
