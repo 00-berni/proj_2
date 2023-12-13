@@ -5,10 +5,10 @@ import skysimulation.restoration as restore
 
 if __name__ == '__main__':
     N = 100
-    M = 2500
+    M = 4500
     figure = True
+    norm = 'log'
     back = field.BACK_PARAM
     det = field.NOISE_PARAM
-    S, I = field.field_builder(N,M,back_param=back,det_param=det,display_fig=figure)
+    S, I = field.field_builder(N,M,back_param=back,det_param=det,display_fig=figure,norm=norm)
 
-    kernel = restore.kernel_extimation()
