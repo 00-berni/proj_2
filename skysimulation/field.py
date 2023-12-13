@@ -204,7 +204,6 @@ def from_parms_to_distr(params: tuple[str, float | tuple], infos: bool = False) 
 ## Standard values
 MSOL = 1.989e+33 # g
 LSOL = 3.84e+33 # erg/s
-K = LSOL
 # dimension of the field matrix
 N = int(1e2)
 # number of stars
@@ -216,16 +215,18 @@ MAX_m = 20
 ALPHA = 2
 # M-L exp
 BETA = 3
+# normalization constant
+K = 1/(MAX_m**BETA)
 # mean background value
-BACK_MEAN = 0.001
-BACK_SIGMA = 1.5
+BACK_MEAN = MAX_m**BETA * 0.01e-2
+BACK_SIGMA = BACK_MEAN * 20e-2
 BACK_PARAM = ('Gaussian',(BACK_MEAN, BACK_SIGMA))
 # mean detector noise
-NOISE_MEAN = 3e-4
-NOISE_SIGMA = 1
+NOISE_MEAN = MIN_m**BETA 
+NOISE_SIGMA = NOISE_MEAN * 50e-2
 NOISE_PARAM = ('Gaussian',(NOISE_MEAN,NOISE_SIGMA))
 # sigma of seeing
-SEEING_SIGMA = 5       
+SEEING_SIGMA = 3       
 ATM_PARAM = ('Gaussian',SEEING_SIGMA)                                                                                     
 ##
 
@@ -348,7 +349,7 @@ def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m
     # generating masses
     m = generate_mass_array(m_inf, m_sup, alpha=alpha, sdim=sdim)
     # evaluating corrisponding luminosities
-    L = m**beta
+    L = m**beta * K 
     # locating the stars
     star_pos = star_location(sdim=sdim, dim=dim, overlap=overlap)
     # updating the field matrix
@@ -379,7 +380,7 @@ def atm_seeing(field: np.ndarray, sigma: float = SEEING_SIGMA, display_fig: bool
     n = len(field)
     # coping the field in order to preserve it
     field = np.copy(field)
-    kernel = Gaussian(sigma).kernel(n)
+    # kernel = Gaussian(sigma).kernel(n)
     # convolution with gaussian seeing
     # see_field = fftconvolve(field, kernel, mode='same')
     see_field = gaussian_filter(field,sigma)
@@ -411,7 +412,9 @@ def noise(params: tuple[str, float | tuple], dim: int = N, infos: bool = False, 
         plt.title('Distribution')
         plt.hist(n.flatten(),len(n.flatten())//100)
         plt.show()
-    return np.abs(n)**2
+    if len(np.where(n < 0)) != 0:
+        n = np.sqrt(n**2)
+    return n * K
 
 def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, back_param: tuple[str, float | tuple] = BACK_PARAM, det_param: tuple[str, float | tuple] = NOISE_PARAM, overlap: bool = False, results: str | None = None, display_fig: bool = False, **kwargs) -> list[np.ndarray]:
     """Constructor of the field
@@ -444,7 +447,7 @@ def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (MI
     SEP = '-'*10 + '\n'
     print(SEP+f'Initialization of the field\nDimension:\t{dim} x {dim}\nNumber of stars:\t{stnum}')
     # creating the starting field
-    F, S = initialize(dim,stnum,masses,*star_param,overlap=overlap,display_fig=display_fig)
+    F, S = initialize(dim,stnum,masses,*star_param,overlap=overlap,display_fig=display_fig,**kwargs)
     # background
     print('\nBackground:')
     kwargs['title'] = 'Background'
