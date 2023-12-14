@@ -3,7 +3,7 @@ import numpy as np
 from scipy.signal import find_peaks
 
 from .display import fast_image
-from .field import Gaussian, N, Uniform, check_field, noise
+from .field import Gaussian, N, Uniform, noise
 
 
 def peak_pos(field: np.ndarray) -> int | tuple[int,int]:
@@ -61,27 +61,74 @@ def bkg_est(field: np.ndarray, display_fig: bool = False) -> float:
     :return: estimated background value
     :rtype: float
     """
-    field = np.copy(field).flatten()
+    from .field import K
+    field = np.copy(field).flatten() 
     field = field[np.where(field > 0)[0]]
     num = np.sqrt(len(field))
-    bins = np.arange(np.log10(field).min(),np.log10(field).max(),1/num)
-    counts, bins = np.histogram(np.log10(field),bins=bins)
+    print(field.max())
+    bins = np.linspace(field.min(),field.max(),len(field)//3)
+    counts, bins = np.histogram(field,bins=bins)
     tmp = counts[counts.argmax()+1:]
     dist = abs(tmp[:-2] - tmp[2:])
     pos = np.where(counts == tmp[dist.argmax()+2])[0]
     mbin = (max(bins[pos])+bins[counts.argmax()])/2
+    maxval = bins[counts.argmax()]
+    shift = 1
+    while bins[counts.argmax()+shift] == maxval:
+        shift += 1
+    ebkg = bins[counts.argmax()+shift]
+
+    mean = (maxval+ebkg)/2
+    hm = counts.max()//2
+    cutbin = bins[:counts.argmax()]
+    cutcnt = counts[:counts.argmax()]
+    hm = abs(cutcnt-hm).argmin()
+    hw = mean - cutbin[hm]
+    print(hw/K)
+    sigma = hw / np.sqrt(2*np.log(2))
+    print('sigma ',sigma)
+    print('sigma ',sigma/K)
+
+    def gauss_fit(x,*args):
+        k, sigma, mu = args
+        return k * np.exp(-((x-mu)/sigma)**2/2)
+    
+    from scipy.optimize import curve_fit
+    from scipy.stats import norm
+    k = counts.max() 
+    initial_values = [k,sigma,mean]
+    # pop, pcov = curve_fit(gauss_fit,cutbin,cutcnt,initial_values)
+    # k, sigma, mu = pop
+    # Dk, Dsigma, Dmu = np.sqrt(pcov.diagonal())
+    # print('k ',k,Dk)
+    data = np.sort(field)
+    mid = abs(data-mean).argmin()
+    data = data[:2*mid]
+    (mu, sigma) = norm.fit(data,loc=mean,scale=sigma)
+    print('mean ',mu/K)#,Dmu/K)
+    print('sigma ',sigma/K)#,Dsigma/K)
+
     if display_fig:
+        # bins = np.log10(bins)
         plt.figure(figsize=(14,10))
         plt.stairs(counts, bins,fill=True)
-        plt.axvline(max(bins[pos]),0,1,linestyle='--',color='yellow')
-        plt.axvline(bins[counts.argmax()],0,1,linestyle='--',color='red')
-        plt.axvline(mbin,0,1,linestyle='--',color='orange')
-        from .field import BACK_MEAN
-        plt.axvline(np.log10(BACK_MEAN),0,1,linestyle=':')
-        plt.xlabel('$\\log_{10}(F_{sn})$')
+        # plt.axvline(np.log10(ebkg),0,1,linestyle='--',color='red')
+        plt.axvline(mean,0,1,linestyle='--',color='red')
+        if shift != 1:
+            plt.axvline(maxval,0,1,linestyle='--',color='yellow')
+        # plt.axvline(max(bins[pos]),0,1,linestyle='--',color='yellow')
+        # plt.axvline((bins[counts.argmax()]+field.min())/2,0,1,linestyle='--',color='blue')
+        # plt.axvline(mbin,0,1,linestyle='--',color='orange')
+        plt.axvline(cutbin[hm],0,1,color='green',alpha=0.5)
+        # plt.axvline(2*mean - cutbin[hm],0,1,color='green',alpha=0.5)
+        # plt.axhline(cutcnt[hm],0,1,color='black',alpha=0.5)
+        xx = np.linspace(cutbin.min(),2*mu-cutbin.min(),500)
+        plt.plot(xx,gauss_fit(xx,k,sigma,mu),'black',linewidth=2)
+        plt.xlabel('$F_{sn}$')
         plt.ylabel('counts')
+        # plt.xscale('log')
         plt.show()
-    return bins[counts.argmax()] #mbin
+    return mu
 
 def moving(direction: str, field: np.ndarray, index: tuple[int,int], size: int = 3) -> list[int]:
     """Looking in one direction
