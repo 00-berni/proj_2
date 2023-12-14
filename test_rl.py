@@ -48,6 +48,11 @@ def initialize(dim: int, num: int, display_fig: bool = False, **kwargs):
 
 def add_effects(F,masses,coor,back,atm,det,**kwargs):
     N = len(F)
+    if 'results' not in kwargs: kwargs['results'] = False
+    if 'figure' not in kwargs: kwargs['figure'] = False
+    if 'norm' not in kwargs: kwargs['norm'] = 'log'
+    if 'v' not in kwargs: kwargs['v'] = 0
+    results = kwargs['results']
     figure = kwargs['figure']
     norm = kwargs['norm']
     v = kwargs['v']
@@ -62,27 +67,27 @@ def add_effects(F,masses,coor,back,atm,det,**kwargs):
     Fbsn = Fbs + field.noise(det,dim=N,infos=True,display_fig=figure,title='Noise',norm=norm,v=v)
     if figure:
         field.fast_image(Fbsn,v=0,norm='linear',title='Field')
+    if results:
+        fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(2,2,figsize=(15,15))
+        plt.subplots_adjust(wspace=0.01)
+        fig.suptitle('Initialization Process',fontsize=20)
 
-    fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(2,2,figsize=(15,15))
-    plt.subplots_adjust(wspace=0.01)
-    fig.suptitle('Initialization Process',fontsize=20)
+        ax1.set_title('Initial Field',fontsize=14)
+        display.field_image(fig,ax1,F,v=2,norm=norm)
+        x,y = coor
+        for i in range(len(masses)):
+            ax1.annotate(f'{masses[i]:.1f}',(x[i],y[i]),(x[i]-4,y[i]-3),fontsize=12)
 
-    ax1.set_title('Initial Field',fontsize=14)
-    display.field_image(fig,ax1,F,v=2,norm=norm)
-    x,y = coor
-    for i in range(len(masses)):
-        ax1.annotate(f'{masses[i]:.1f}',(x[i],y[i]),(x[i]-4,y[i]-3),fontsize=12)
-
-    ax2.set_title('Field and Background',fontsize=14)
-    display.field_image(fig,ax2,Fb,v=v,norm=norm)
-    
-    ax3.set_title('Seeing',fontsize=14)
-    display.field_image(fig,ax3,Fbs,v=v,norm=norm)
-    
-    ax4.set_title('Field and Noise',fontsize=14)
-    display.field_image(fig,ax4,Fbsn,v=v,norm=norm)
-    
-    plt.show()
+        ax2.set_title('Field and Background',fontsize=14)
+        display.field_image(fig,ax2,Fb,v=v,norm=norm)
+        
+        ax3.set_title('Seeing',fontsize=14)
+        display.field_image(fig,ax3,Fbs,v=v,norm=norm)
+        
+        ax4.set_title('Field and Noise',fontsize=14)
+        display.field_image(fig,ax4,Fbsn,v=v,norm=norm)
+        
+        plt.show()
 
 
     return Fbsn
@@ -99,10 +104,26 @@ if __name__ == '__main__':
     
     print('\nI RUN')
     back = field.BACK_PARAM
+    # back = ('Gaussian',(field.BACK_MEAN*1e1,field.BACK_MEAN*1e1*20e-2))
     det = field.NOISE_PARAM
     atm = field.SEEING_SIGMA
-    I = add_effects(F,masses,coor,back,atm,det,figure=figure,norm=norm,v=v)
 
+    iter = 2
+    results = []
+    nn = []
+    for _ in range(iter):
+        I = add_effects(F,masses,coor,back,atm,det,figure=figure,norm=norm,v=v,results=False)
+        results += [I]
+        n = restore.bkg_est(I,True)
+        print(n)
+        print(n/K)
+        nn += [n]
+    
+    n0 = sum(nn)/len(nn)
+    nm = (max(nn)+min(nn))/2
+    print('n0 ',n0/K)
+    print('nm ',nm/K)
+    print('min',min(nn)/K)
     # print('\nII RUN')
     # back = ('Gaussian',(0.2, field.BACK_SIGMA))
     # det = ('Gaussian',(field.NOISE_MEAN,field.NOISE_SIGMA))
