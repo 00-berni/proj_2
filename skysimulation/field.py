@@ -30,12 +30,16 @@ class Star():
             ## Plot data for masses
             plt.figure(figsize=(12,8))
             plt.title(f'Mass distribution with $\\alpha = {alpha}$ and {nstars} stars')
-            bins = np.linspace(min(self.m),max(self.m),nstars//3*2)
-            plt.hist(self.m,bins=bins)
+            # bins = np.linspace(min(self.m),max(self.m),nstars//3*2)
+            cnts, bins = np.histogram(self.m,bins=nstars//3*2)
+            norm = (cnts.sum() * (np.diff(bins).mean()))
+            plt.stairs(cnts,bins,fill=True)
             mm = np.linspace(self.m.min(),self.m.max(),len(self.m))
             fm = lambda m: m**(-alpha)
+            from scipy.integrate import quad
             imf = fm(mm)
-            # imf /= quad(fm,mm.min(),mm.max())[0]
+            imf /= quad(fm,mm.min(),mm.max())[0]
+            imf *= norm
             plt.plot(mm,imf,label='$IMF = m^{-\\alpha}$')
             plt.xscale('log')
             plt.xlabel('m [$M_\odot$]')
