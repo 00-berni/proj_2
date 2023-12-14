@@ -51,7 +51,7 @@ class Star():
             # plt.yscale('log')
             plt.figure(figsize=(12,8))
             plt.title(f'Luminosity distribution with $\\beta = {beta}$ for {nstars} stars')
-            bins = np.linspace(min(L),max(L),nstars//2)
+            bins = np.linspace(min(L),max(L),nstars//3)
             plt.hist(L,bins=bins)
             plt.xlabel('$\log{(L)}$ [$L_\odot$]')
             plt.ylabel('counts')
@@ -222,7 +222,7 @@ BACK_MEAN = MAX_m**BETA * 0.01e-2
 BACK_SIGMA = BACK_MEAN * 20e-2
 BACK_PARAM = ('Gaussian',(BACK_MEAN, BACK_SIGMA))
 # mean detector noise
-NOISE_MEAN = MIN_m**BETA 
+NOISE_MEAN = 1e-1
 NOISE_SIGMA = NOISE_MEAN * 50e-2
 NOISE_PARAM = ('Gaussian',(NOISE_MEAN,NOISE_SIGMA))
 # sigma of seeing
@@ -310,19 +310,6 @@ def star_location(sdim: int = M, dim: int = N, overlap: bool = False) -> tuple[n
 #     # uppdating the field
 #     F[pos] += lum
 #     return F
-
-def check_field(field: np.ndarray) -> np.ndarray:
-    """Check the presence of negative values.
-    The function finds possible negative values
-    and substitutes them with 0.0
-
-    :param field: field matrix
-    :type field: ndarray
-
-    :return: checked field matrix
-    :rtype: ndarray
-    """
-    return np.where(field < 0, 0.0, field)
 
 def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m,MAX_m), alpha: float = ALPHA, beta: float = BETA, overlap: bool = False, display_fig: bool = False, **kwargs) -> tuple[np.ndarray, Star]:
     """Initialization function for the generation of the "perfect" sky
@@ -416,9 +403,8 @@ def noise(params: tuple[str, float | tuple], dim: int = N, infos: bool = False, 
         n = np.sqrt(n**2)
     return n * K
 
-def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, back_param: tuple[str, float | tuple] = BACK_PARAM, det_param: tuple[str, float | tuple] = NOISE_PARAM, overlap: bool = False, results: str | None = None, display_fig: bool = False, **kwargs) -> list[np.ndarray]:
+def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, back_param: tuple[str, float | tuple] = BACK_PARAM, det_param: tuple[str, float | tuple] = NOISE_PARAM, overlap: bool = False, results: str | None = None, display_fig: bool = False, **kwargs) -> list[Star | np.ndarray]:
     """Constructor of the field
-
 
     :param dim: size of the field, defaults to N
     :type dim: int, optional
@@ -469,9 +455,9 @@ def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (MI
     kwargs['title'] = 'Detector noise'
     n_d = noise(det_param,dim,infos=True,display_fig=display_fig,**kwargs)
     F_bsd = F_bs + n_d 
-    if display_fig:
-        kwargs['title'] = 'Final Field'
-        fast_image(F_bsd,**kwargs)        
+    # if display_fig:
+    kwargs['title'] = 'Final Field'
+    fast_image(F_bsd,**kwargs)        
     
     ret_val = [S, F_bsd]
     if results is not None:
