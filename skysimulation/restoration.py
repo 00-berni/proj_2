@@ -66,23 +66,34 @@ def bkg_est(field: np.ndarray, display_fig: bool = False) -> float:
     field = field[np.where(field > 0)[0]]
     num = np.sqrt(len(field))
     print(field.max())
-    bins = np.linspace(field.min(),field.max(),len(field)//3)
-    counts, bins = np.histogram(field,bins=bins)
-    tmp = counts[counts.argmax()+1:]
+    # bins = np.linspace(field.min(),field.max(),len(field)//3)
+    counts, bins = np.histogram(field,bins=np.sqrt(len(field)).astype(int))
+    k = (counts.sum()*np.diff(bins).mean())
+    maxpos = counts.argmax()
+    if maxpos == 0: maxpos = counts[1:].argmax()
+
+    tmp = counts[maxpos+1:]
     dist = abs(tmp[:-2] - tmp[2:])
     pos = np.where(counts == tmp[dist.argmax()+2])[0]
-    mbin = (max(bins[pos])+bins[counts.argmax()])/2
-    maxval = bins[counts.argmax()]
+    mbin = (max(bins[pos])+bins[maxpos])/2
+    maxval = bins[maxpos]
     shift = 1
-    while bins[counts.argmax()+shift] == maxval:
+    while bins[maxpos+shift] == maxval:
         shift += 1
-    ebkg = bins[counts.argmax()+shift]
+    ebkg = bins[maxpos+shift]
 
     mean = (maxval+ebkg)/2
     hm = counts.max()//2
-    cutbin = bins[:counts.argmax()]
-    cutcnt = counts[:counts.argmax()]
-    hm = abs(cutcnt-hm).argmin()
+    cutbin = bins[:maxpos]
+    cutcnt = counts[:maxpos]
+    try:
+        hm = abs(cutcnt-hm).argmin()
+    except ValueError:
+        print('Error')
+        print(maxpos)
+        print(counts.argmax())
+        print(len(cutcnt))
+        raise
     hw = mean - cutbin[hm]
     print(hw/K)
     sigma = hw / np.sqrt(2*np.log(2))
@@ -90,21 +101,25 @@ def bkg_est(field: np.ndarray, display_fig: bool = False) -> float:
     print('sigma ',sigma/K)
 
     def gauss_fit(x,*args):
-        k, sigma, mu = args
-        return k * np.exp(-((x-mu)/sigma)**2/2)
+        sigma, mu = args
+        return np.exp(-((x-mu)/sigma)**2/2)
     
     from scipy.optimize import curve_fit
     from scipy.stats import norm
-    k = counts.max() 
-    initial_values = [k,sigma,mean]
-    # pop, pcov = curve_fit(gauss_fit,cutbin,cutcnt,initial_values)
-    # k, sigma, mu = pop
-    # Dk, Dsigma, Dmu = np.sqrt(pcov.diagonal())
+    # k = counts.max() 
+    initial_values = [sigma,mean]
+    pop, pcov = curve_fit(gauss_fit,cutbin,cutcnt,initial_values)
+    s, m = pop
+    Ds, Dm = np.sqrt(pcov.diagonal())
+    print('curve fit')
+    print('mu ',m/K,Dm/K)
+    print('sigma ',s/K,Ds/K)
     # print('k ',k,Dk)
     data = np.sort(field)
     mid = abs(data-mean).argmin()
     data = data[:2*mid]
-    (mu, sigma) = norm.fit(data,loc=mean,scale=sigma)
+    (mu, sigma) = norm.fit(data,loc=mean,scale=sigma,method='MM')
+    print('Different fit')
     print('mean ',mu/K)#,Dmu/K)
     print('sigma ',sigma/K)#,Dsigma/K)
 
@@ -122,8 +137,11 @@ def bkg_est(field: np.ndarray, display_fig: bool = False) -> float:
         plt.axvline(cutbin[hm],0,1,color='green',alpha=0.5)
         # plt.axvline(2*mean - cutbin[hm],0,1,color='green',alpha=0.5)
         # plt.axhline(cutcnt[hm],0,1,color='black',alpha=0.5)
-        xx = np.linspace(cutbin.min(),2*mu-cutbin.min(),500)
-        plt.plot(xx,gauss_fit(xx,k,sigma,mu),'black',linewidth=2)
+        xx = np.linspace(cutbin.min()/2,2*mu-cutbin.min()/2,500)
+        yy = gauss_fit(xx,sigma,mu)
+        from scipy.integrate import quad
+        gauss = lambda x : gauss_fit(x,sigma,mu)
+        plt.plot(xx,yy/quad(gauss,xx.min(),xx.max())[0]*k,'black',linewidth=2)
         plt.xlabel('$F_{sn}$')
         plt.ylabel('counts')
         # plt.xscale('log')
