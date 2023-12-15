@@ -104,11 +104,10 @@ if __name__ == '__main__':
     
     print('\nI RUN')
     back = field.BACK_PARAM
-    # back = ('Gaussian',(field.BACK_MEAN*1e1,field.BACK_MEAN*1e1*20e-2))
     det = field.NOISE_PARAM
     atm = field.SEEING_SIGMA
 
-    iter = 2
+    iter = 1
     results = []
     nn = []
     for _ in range(iter):
@@ -124,6 +123,14 @@ if __name__ == '__main__':
     print('n0 ',n0/K)
     print('nm ',nm/K)
     print('min',min(nn)/K)
+
+    dark = restore.dark_elaboration(det)
+    bkg = nn[0]
+    I = results[0]
+
+    obj = restore.object_isolation(I,max(bkg,dark.mean()),size=5,objnum=15,reshape=True,reshape_corr=True,display_fig=True)
+
+
     # print('\nII RUN')
     # back = ('Gaussian',(0.2, field.BACK_SIGMA))
     # det = ('Gaussian',(field.NOISE_MEAN,field.NOISE_SIGMA))
