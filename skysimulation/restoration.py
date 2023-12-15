@@ -62,66 +62,80 @@ def bkg_est(field: np.ndarray, display_fig: bool = False) -> float:
     :rtype: float
     """
     from .field import K
+    # flattening the field
     field = np.copy(field).flatten() 
+    # checking the field
     field = field[np.where(field > 0)[0]]
     num = np.sqrt(len(field))
     print(field.max())
+    # binning
     # bins = np.linspace(field.min(),field.max(),len(field)//3)
-    counts, bins = np.histogram(field,bins=np.sqrt(len(field)).astype(int))
+    counts, bins = np.histogram(field,bins=num.astype(int))
+    # normalization coefficient
     k = (counts.sum()*np.diff(bins).mean())
+    # position of the maximum
     maxpos = counts.argmax()
+    #? checking 
     if maxpos == 0: maxpos = counts[1:].argmax()
+    # maximum value
+    maxval = bins[maxpos]    
+    # taking the bin next the maximum
+    shift = 1
+    while bins[maxpos+shift] == maxval:
+        shift += 1
+    # storing this value
+    ebkg = bins[maxpos+shift]
 
+    ## Old sequence
     tmp = counts[maxpos+1:]
     dist = abs(tmp[:-2] - tmp[2:])
     pos = np.where(counts == tmp[dist.argmax()+2])[0]
     mbin = (max(bins[pos])+bins[maxpos])/2
-    maxval = bins[maxpos]
-    shift = 1
-    while bins[maxpos+shift] == maxval:
-        shift += 1
-    ebkg = bins[maxpos+shift]
+    ##
 
+    ## Gaussian fit
+    # saving the mean
     mean = (maxval+ebkg)/2
-    hm = counts.max()//2
-    cutbin = bins[:maxpos]
-    cutcnt = counts[:maxpos]
-    try:
-        hm = abs(cutcnt-hm).argmin()
-    except ValueError:
-        print('Error')
-        print(maxpos)
-        print(counts.argmax())
-        print(len(cutcnt))
-        raise
-    hw = mean - cutbin[hm]
-    print(hw/K)
-    sigma = hw / np.sqrt(2*np.log(2))
-    print('sigma ',sigma)
-    print('sigma ',sigma/K)
+    # hm = counts.max()//2
+    # cutbin = bins[:maxpos]
+    # cutcnt = counts[:maxpos]
+    # try:
+    #     hm = abs(cutcnt-hm).argmin()
+    # except ValueError:
+    #     print('Error')
+    #     print(maxpos)
+    #     print(counts.argmax())
+    #     print(len(cutcnt))
+    #     raise
+    # hw = mean - cutbin[hm]
+    # print(hw/K)
+    # sigma = hw / np.sqrt(2*np.log(2))
+    # print('sigma ',sigma)
+    # print('sigma ',sigma/K)
 
-    def gauss_fit(x,*args):
-        sigma, mu = args
-        return np.exp(-((x-mu)/sigma)**2/2)
+    # def gauss_fit(x,*args):
+    #     sigma, mu = args
+    #     return np.exp(-((x-mu)/sigma)**2/2)
     
-    from scipy.optimize import curve_fit
-    from scipy.stats import norm
-    # k = counts.max() 
-    initial_values = [sigma,mean]
-    pop, pcov = curve_fit(gauss_fit,cutbin,cutcnt,initial_values)
-    s, m = pop
-    Ds, Dm = np.sqrt(pcov.diagonal())
-    print('curve fit')
-    print('mu ',m/K,Dm/K)
-    print('sigma ',s/K,Ds/K)
-    # print('k ',k,Dk)
-    data = np.sort(field)
-    mid = abs(data-mean).argmin()
-    data = data[:2*mid]
-    (mu, sigma) = norm.fit(data,loc=mean,scale=sigma,method='MM')
-    print('Different fit')
-    print('mean ',mu/K)#,Dmu/K)
-    print('sigma ',sigma/K)#,Dsigma/K)
+    # from scipy.optimize import curve_fit
+    # from scipy.stats import norm
+    # # k = counts.max() 
+    # initial_values = [sigma,mean]
+    # pop, pcov = curve_fit(gauss_fit,cutbin,cutcnt,initial_values)
+    # s, m = pop
+    # Ds, Dm = np.sqrt(pcov.diagonal())
+    # print('curve fit')
+    # print('mu ',m/K,Dm/K)
+    # print('sigma ',s/K,Ds/K)
+    # # print('k ',k,Dk)
+    # data = np.sort(field)
+    # mid = abs(data-mean).argmin()
+    # data = data[:2*mid]
+    # (mu, sigma) = norm.fit(data,loc=mean,scale=sigma,method='MM')
+    # print('Different fit')
+    # print('mean ',mu/K)#,Dmu/K)
+    # print('sigma ',sigma/K)#,Dsigma/K)
+    ##
 
     if display_fig:
         # bins = np.log10(bins)
@@ -134,19 +148,19 @@ def bkg_est(field: np.ndarray, display_fig: bool = False) -> float:
         # plt.axvline(max(bins[pos]),0,1,linestyle='--',color='yellow')
         # plt.axvline((bins[counts.argmax()]+field.min())/2,0,1,linestyle='--',color='blue')
         # plt.axvline(mbin,0,1,linestyle='--',color='orange')
-        plt.axvline(cutbin[hm],0,1,color='green',alpha=0.5)
+        # plt.axvline(cutbin[hm],0,1,color='green',alpha=0.5)
         # plt.axvline(2*mean - cutbin[hm],0,1,color='green',alpha=0.5)
         # plt.axhline(cutcnt[hm],0,1,color='black',alpha=0.5)
-        xx = np.linspace(cutbin.min()/2,2*mu-cutbin.min()/2,500)
-        yy = gauss_fit(xx,sigma,mu)
-        from scipy.integrate import quad
-        gauss = lambda x : gauss_fit(x,sigma,mu)
-        plt.plot(xx,yy/quad(gauss,xx.min(),xx.max())[0]*k,'black',linewidth=2)
+        # xx = np.linspace(cutbin.min()/2,2*mu-cutbin.min()/2,500)
+        # yy = gauss_fit(xx,sigma,mu)
+        # from scipy.integrate import quad
+        # gauss = lambda x : gauss_fit(x,sigma,mu)
+        # plt.plot(xx,yy/quad(gauss,xx.min(),xx.max())[0]*k,'black',linewidth=2)
         plt.xlabel('$F_{sn}$')
         plt.ylabel('counts')
         # plt.xscale('log')
         plt.show()
-    return mu
+    return mean
 
 def moving(direction: str, field: np.ndarray, index: tuple[int,int], size: int = 3) -> list[int]:
     """Looking in one direction
@@ -171,6 +185,7 @@ def moving(direction: str, field: np.ndarray, index: tuple[int,int], size: int =
     :return: the size of the object in different directions
     :rtype: list[int]
     """
+    print(':: Results of moving() func ::')
     tmp_field = field.copy()
     dim = len(tmp_field)
     x, y = index
@@ -199,20 +214,12 @@ def moving(direction: str, field: np.ndarray, index: tuple[int,int], size: int =
         yd = 1
         ymax = min(size, dim-1-y)
         print(ymax)
-        if ymax == 0: 
-            # if len(results) == 1:
-            #     results = [[0,0]]
-            # else: results += [0]
-            results += [0]
+        if ymax == 0: results += [0]
         else: ycond = lambda yval, ylim: yval < ylim 
     elif 'by' in direction:
         yd = -1
         ymax = min(size, y)
-        if ymax == 0: 
-            # if len(results) == 1:
-            #     results = [[0,0]]
-            # else: results += [0]
-            results += [0]
+        if ymax == 0: results += [0]
         else: ycond = lambda yval, ylim: yval < ylim 
     print('1 result',results)
     if len(results) == 0:
@@ -239,6 +246,7 @@ def moving(direction: str, field: np.ndarray, index: tuple[int,int], size: int =
             results = [0,0]        
     if len(results) == 1: results = results[0] 
     print('2 result',results)
+    print(':: End ::')
     return results
 
 
@@ -258,6 +266,7 @@ def grad_check(field: np.ndarray, index: tuple[int,int], size: int = 3) -> tuple
     mov = lambda val: moving(val,field,index,size)
     xy_dir = ['fxfy','fxby','bxfy','bxby'] 
     a_xysize = np.array([mov(dir) for dir in xy_dir])
+    print(':: Resutls of grad_check() ::')
     print('sizes',a_xysize)
     xf_size = a_xysize[:2,0]
     xb_size = a_xysize[2:,0]
@@ -267,6 +276,7 @@ def grad_check(field: np.ndarray, index: tuple[int,int], size: int = 3) -> tuple
     a_size = np.array([[[mov('fx'),*xf_size],[mov('bx'),*xb_size]],
                        [[mov('fy'),*yf_size],[mov('by'),*yb_size]]])
     x_size, y_size = a_size.min(axis=2)
+    print(':: End ::')
     return x_size, y_size
     
 
@@ -291,13 +301,17 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
     :param display_fig: if `True` pictures are shown, defaults to False
     :type display_fig: bool, optional
     
-    :return: the size or `None`
+    :return: the extracted objects or `None`
     :rtype: np.ndarray | None
     """
     tmp_field = field.copy()
+    display_field = field.copy()
 
     extraction = []
     
+    if display_fig: 
+        tmp_kwargs = {key: kwargs[key] for key in kwargs.keys() - {'title'}} 
+
     k = 0 
     while k < objnum:
         # finding the peak
@@ -309,7 +323,9 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
         # computing size
         x, y = index
         a_size = grad_check(field,index,size)
+        print(f':: Iteration {k} of object_isolation :: ')
         print('a_size',a_size)
+        remove_cond = True 
         if reshape:
             a_size = np.array(a_size)
             pos = np.where(a_size != 0)
@@ -317,6 +333,7 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
             if len(pos[0]) != 0:
                 min_size = a_size[pos].min()
                 a_size[pos] = min_size
+            else: remove_cond = False
         x_size, y_size = a_size
         xu, xd = x_size
         yu, yd = y_size
@@ -337,18 +354,21 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
                     elif xd == 0: xpad_pos = (xu,0)
                     if yu == 0: ypad_pos = (0,yd)
                     elif yd == 0: ypad_pos = (yu,0)
-                    print('PAd',xpad_pos,ypad_pos)
+                    print('Pad',xpad_pos,ypad_pos)
                     obj = np.pad(obj,(xpad_pos,ypad_pos),'reflect')
+            if remove_cond:
+                display_field[xr,yr] = 0.0
             extraction += [obj]
             if display_fig: 
-                if 'title' not in kwargs:
-                    kwargs['title'] = f'{k} object'
-                fast_image(obj,**kwargs) 
+                tmp_kwargs['title'] = f'N. {k+1} object'
+                fast_image(obj,**tmp_kwargs) 
             k += 1
-    kwargs['title'] = 'Field after extraction'
-    fast_image(tmp_field,**kwargs)
+    if 'title' not in kwargs:
+        kwargs['title'] = 'Field after extraction'
+    fast_image(display_field,**kwargs)
 
     if len(extraction) == 0: extraction = None
+    print(':: End ::')
     return extraction
 
 def kernel_fit(obj: np.ndarray, back: float, noise: float) -> float:
@@ -376,9 +396,9 @@ def kernel_fit(obj: np.ndarray, back: float, noise: float) -> float:
     k0 = obj.max()
 
     def fit_func(x,sigma,k):
-        return k * Gaussian(sigma).value(x) + back + noise
+        return k * Gaussian(sigma).value(x)
     
-    err = (back+noise)*np.ones(obj.shape)
+    err = np.sqrt(back**2 + noise**2)*np.ones(obj.shape)
     from scipy.optimize import curve_fit
     initial_values = [sigma0,k0]
     pop, pcov = curve_fit(fit_func,r.flatten(),obj.flatten(),initial_values,sigma=err.flatten())
@@ -390,7 +410,7 @@ def kernel_fit(obj: np.ndarray, back: float, noise: float) -> float:
     print(f'chi_sq = {chi_sq/chi0*100:.2f} +- {np.sqrt(2/chi0)*100:.2f} %')
     return sigma
 
-def kernel_extimation(extraction: list[np.ndarray], back: float, noise: float, dim: int, all_results: bool = False, display_plot: bool = False, **kwargs) -> np.ndarray | tuple[np.ndarray,tuple[float,float]]:
+def kernel_estimation(extraction: list[np.ndarray], back: float, noise: float, dim: int, all_results: bool = False, display_plot: bool = False, **kwargs) -> np.ndarray | tuple[np.ndarray,tuple[float,float]]:
     """Estimation of the kernel from a Gaussian model
 
     :param extraction: extracted objects
@@ -428,7 +448,6 @@ def kernel_extimation(extraction: list[np.ndarray], back: float, noise: float, d
         return kernel,(sigma,Dsigma)
     else:
         return kernel
-
 
 
 def LR_deconvolution(field: np.ndarray, kernel: np.ndarray, back: float, noise: float, iter: int = 17) -> np.ndarray:
