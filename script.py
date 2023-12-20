@@ -5,9 +5,9 @@ import skysimulation.restoration as restore
 
 if __name__ == '__main__':
     N = 100
-    M = 2500
+    M = 4500
     figure = False
-    norm = 'log'
+    norm = 'linear'
     back = field.BACK_PARAM
     det = field.NOISE_PARAM
 
@@ -23,7 +23,7 @@ if __name__ == '__main__':
     print(bkg/field.K)
 
     print('\n--- Objects Extraction ---')
-    obj = restore.object_isolation(I,max(bkg,dark.mean()),size=5,reshape=True,reshape_corr=True,display_fig=True,norm='linear')
+    obj = restore.object_isolation(I,max(bkg,dark.mean()),size=7,reshape=True,reshape_corr=True,display_fig=True,norm='linear')
 
     print('\n--- Kernel Estimation ---')
     # kernel = restore.kernel_estimation()

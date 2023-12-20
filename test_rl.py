@@ -38,7 +38,8 @@ def initialize(dim: int, num: int, display_fig: bool = False, **kwargs):
         diff = xnum*ynum - num
         lums = np.append(lums,[0]*diff)
     F[y,x] = lums * K
-
+    F[5,-1] = 7**beta * K
+    F[0,2] = 6.5**beta * K
     if display_fig:
         if 'title' not in kwargs:
             kwargs['title'] = f'Inizialized Field\nMass range [{masses.min():.1f}, {masses.max():.1f}]'
@@ -73,7 +74,7 @@ def add_effects(F,masses,coor,back,atm,det,**kwargs):
         fig.suptitle('Initialization Process',fontsize=20)
 
         ax1.set_title('Initial Field',fontsize=14)
-        display.field_image(fig,ax1,F,v=2,norm=norm)
+        display.field_image(fig,ax1,F,v=2,norm='log')
         x,y = coor
         for i in range(len(masses)):
             ax1.annotate(f'{masses[i]:.1f}',(x[i],y[i]),(x[i]-4,y[i]-3),fontsize=12)
@@ -97,7 +98,7 @@ if __name__ == '__main__':
     N = 100
     M = 20
     figure = False
-    norm = 'log'
+    norm = 'linear'
     v = 0
     print('Initializing')
     F, masses, coor = initialize(N,M,display_fig=figure,v=1,norm=norm)
@@ -111,7 +112,7 @@ if __name__ == '__main__':
     results = []
     nn = []
     for _ in range(iter):
-        I = add_effects(F,masses,coor,back,atm,det,figure=figure,norm=norm,v=v,results=False)
+        I = add_effects(F,masses,coor,back,atm,det,figure=figure,norm=norm,v=v,results=True)
         results += [I]
         n = restore.bkg_est(I,True)
         print(n)
@@ -127,8 +128,45 @@ if __name__ == '__main__':
     dark = restore.dark_elaboration(det)
     bkg = nn[0]
     I = results[0]
+    
+    diff1 = I[1:]/I[:-1]
+    diff2 = I[:,1:]/I[:,:-1]
+    diff = np.append(diff1,diff2) - 1
+    bins = np.linspace(min(diff),max(diff),np.sqrt(len(diff)).astype(int))
+    counts, bins = np.histogram(diff,bins=bins)
+    maxpos = counts.argmax()
+    maxval = (bins[maxpos+1] + bins[maxpos])/2
+    from scipy import stats
+    # x = bins[:-1]
+    # y = counts
+    def gauss_fit(x,*args):
+        k,mu,sigma = args
+        r = (x-mu)/sigma
+        return k * np.exp(-r**2/2)
+    # from scipy.optimize import curve_fit
+    # cut = np.where(counts >= 500)[0]
+    # edges = (bins[cut].min(), bins[cut].max())
+    # cut = np.where(np.logical_and(edges[0] <= diff , diff <= edges[1]))[0]
+    cut = None
+    (mu, sigma) = stats.norm.fit(diff[cut],loc=maxval,scale=1)
+    khist = counts.sum()*(bins[1]-bins[0])
+    k = khist / np.sqrt(2*np.pi) / sigma
+    # initial_values = [max(y),maxval,0.5]
+    # pop, pcov = curve_fit(gauss_fit,x,y,initial_values)
+    # k,mu,sigma = pop
+    print('maxval',maxval)
+    print('mu',mu)
+    print('sigma',sigma)
+    pop = [k,mu,sigma]
+    plt.figure()
+    plt.stairs(counts,bins,fill=True)
+    xx = np.linspace(min(bins),max(bins),1000)
+    plt.plot(xx,gauss_fit(xx,*pop),color='orange')
+    plt.axvline(maxval,0,1,linestyle='--',color='red')
+    plt.axvline(mu,0,1,linestyle='--',color='violet')
+    plt.show()
 
-    obj = restore.object_isolation(I,max(bkg,dark.mean()),size=5,objnum=15,reshape=True,reshape_corr=True,display_fig=True)
+    obj = restore.object_isolation(I,max(bkg,dark.mean()),size=7,objnum=15,reshape=True,reshape_corr=True,display_fig=True,norm=norm)
 
 
     # print('\nII RUN')
