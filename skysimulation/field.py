@@ -374,7 +374,9 @@ def atm_seeing(field: np.ndarray, sigma: float = SEEING_SIGMA, display_fig: bool
     # kernel = Gaussian(sigma).kernel(n)
     # convolution with gaussian seeing
     # see_field = fftconvolve(field, kernel, mode='same')
-    see_field = gaussian_filter(field,sigma)
+    # see_field = gaussian_filter(field,sigma,mode='nearest')
+    from astropy.convolution import convolve_fft, Gaussian2DKernel
+    see_field = convolve_fft(field, Gaussian2DKernel(sigma))
     if display_fig:
         if 'title' not in kwargs:
             kwargs['title'] = 'Atmospheric Seeing'
