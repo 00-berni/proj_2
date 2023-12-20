@@ -162,7 +162,7 @@ def bkg_est(field: np.ndarray, display_fig: bool = False) -> float:
         plt.show()
     return mean
 
-def moving(direction: str, field: np.ndarray, index: tuple[int,int], size: int = 3) -> list[int]:
+def moving(direction: str, field: np.ndarray, index: tuple[int,int], back: float, size: int = 3, acc: float = 1e-5) -> list[int]:
     """Looking in one direction
 
     `direction` is a string and contains two parameters:
@@ -185,72 +185,116 @@ def moving(direction: str, field: np.ndarray, index: tuple[int,int], size: int =
     :return: the size of the object in different directions
     :rtype: list[int]
     """
-    print(':: Results of moving() func ::')
+    print(f':: Results of moving() func for {direction} direction ::')
     tmp_field = field.copy()
     dim = len(tmp_field)
+    # pixel coordinates
     x, y = index
     # size += 1
     
+    # list to store results
     results = []
+    # inizializing the variable for the direction
+    #    1 : forward
+    #    0 : ignored
+    #   -1 : backward
     xd = 0
     yd = 0
+    # initializing the limits
     xmax = x
     ymax = y
-    xcond = lambda xval, xlim: xlim == x
-    ycond = lambda yval, ylim: ylim == y
-
+    # initializing the conditions on x and y 
+    xcond = lambda xval, xlim: True
+    ycond = lambda yval, ylim: True
+    
+    # forward along x
     if 'fx' in direction:
         print('hey')
-        xd = 1
+        # computing the edge
         xmax = min(size, dim-1-x)
-        if xmax == 0: results += [0]
-        else: xcond = lambda xval, xlim: xval < xlim 
+        # impossible movement
+        if xmax == 0: 
+            results += [0]
+        # updating the condition on x
+        else: 
+            xd = 1
+            xcond = lambda xval, xlim: xval < xlim
+    # backward along x
     elif 'bx' in direction:
-        xd = -1
+        # computing the edge
         xmax = min(size, x)
+        # impossible movement
         if xmax == 0: results += [0]
-        else: xcond = lambda xval, xlim: xval < xlim 
+        # updating the condition on x
+        else: 
+            xd = -1
+            xcond = lambda xval, xlim: xval < xlim 
+    
+    # forward along y
     if 'fy' in direction:
-        yd = 1
+        # computing the edge
         ymax = min(size, dim-1-y)
-        print(ymax)
+        # impossible movement
         if ymax == 0: results += [0]
-        else: ycond = lambda yval, ylim: yval < ylim 
+        # updating the condition on y
+        else: 
+            yd = 1
+            ycond = lambda yval, ylim: yval < ylim 
+    # backward along y
     elif 'by' in direction:
-        yd = -1
+        # computing the edge
         ymax = min(size, y)
+        # impossible movement
         if ymax == 0: results += [0]
-        else: ycond = lambda yval, ylim: yval < ylim 
+        # updating the condition on y
+        else: 
+            yd = -1
+            ycond = lambda yval, ylim: yval < ylim 
+    
     print('1 result',results)
-    if len(results) == 0:
+    # if there are no forbidden directions
+    if xd != 0 or yd != 0:
+        # inizilizing the variables for the size
         xsize = 0
         ysize = 0
         condition = xcond(xsize,xmax) and ycond(ysize,ymax)
         print(xcond(xsize,xmax),xmax)
+        # routine to compute the size
         while condition:
+            # near pixels
             step0 = tmp_field[x + xsize*xd, y + ysize*yd]
             step1 = tmp_field[x + (xsize+1)*xd, y + (ysize+1)*yd]
+            # gradient
             grad = step1 - step0
-            if grad >= 0 or step1 == 0:
-                print(grad,step1)
-                print(xsize,ysize)
+            # ratio
+            ratio = step1/step0
+            # condition to stop
+            if step1 == 0 or step1 < back or (ratio - 1) >= acc:
+                print('ratio',ratio)
+                print('grad and step',grad,step1)
+                print('size',xsize,ysize)
                 break
+            # condition to go on
             else:
                 xsize += 1
                 ysize += 1
                 condition = xcond(xsize,xmax) and ycond(ysize,ymax)
-        if 'x' in direction: results += [xsize]
-        if 'y' in direction: results += [ysize]
-    elif len(results) == 1:
-        if 'x' in direction and 'y' in direction:
-            results = [0,0]        
+        # saving the results
+        if 'x' in direction and xd != 0: results = [xsize] + results
+        if 'y' in direction and yd != 0: results += [ysize]
+    # # if there is a forbidden direction
+    # elif len(results) == 1:
+    #     # fixing the shape for diagonal movements
+    #     if 'x' in direction and 'y' in direction:
+    #         results = [0,0]        
+    
     if len(results) == 1: results = results[0] 
     print('2 result',results)
     print(':: End ::')
     return results
 
 
-def grad_check(field: np.ndarray, index: tuple[int,int], size: int = 3) -> tuple[np.ndarray,np.ndarray]:
+def grad_check(field: np.ndarray, index: tuple[int,int], back: float, size: int = 3) -> tuple[np.ndarray,np.ndarray]:
     """Checking the gradient trend around an object
 
     :param field: the field
@@ -263,7 +307,7 @@ def grad_check(field: np.ndarray, index: tuple[int,int], size: int = 3) -> tuple
     :return: size of the object (x,y)
     :rtype: tuple[np.ndarray,np.ndarray]
     """
-    mov = lambda val: moving(val,field,index,size)
+    mov = lambda val: moving(val,field,index,back,size)
     xy_dir = ['fxfy','fxby','bxfy','bxby'] 
     a_xysize = np.array([mov(dir) for dir in xy_dir])
     print(':: Resutls of grad_check() ::')
@@ -275,6 +319,7 @@ def grad_check(field: np.ndarray, index: tuple[int,int], size: int = 3) -> tuple
 
     a_size = np.array([[[mov('fx'),*xf_size],[mov('bx'),*xb_size]],
                        [[mov('fy'),*yf_size],[mov('by'),*yb_size]]])
+    print('matrix',a_size)
     x_size, y_size = a_size.min(axis=2)
     print(':: End ::')
     return x_size, y_size
@@ -316,53 +361,70 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
     while k < objnum:
         # finding the peak
         index = peak_pos(tmp_field)
+        ctrl = False
+        if 0 in index or (len(field)-1) in index: 
+            print(index)
+            ctrl = True
         peak = tmp_field[index]
         # checking the value
         if peak <= thr:
             break
         # computing size
         x, y = index
-        a_size = grad_check(field,index,size)
+        a_size = grad_check(field,index,thr,size)
+        if ctrl: 
+            print(index)
+            print(a_size)
+            # raise
         print(f':: Iteration {k} of object_isolation :: ')
         print('a_size',a_size)
-        remove_cond = True 
-        if reshape:
-            a_size = np.array(a_size)
-            pos = np.where(a_size != 0)
-            print('POS: ',pos)
-            if len(pos[0]) != 0:
-                min_size = a_size[pos].min()
-                a_size[pos] = min_size
-            else: remove_cond = False
         x_size, y_size = a_size
         xu, xd = x_size
         yu, yd = y_size
         xr = slice(x-xd, x+xu+1) 
         yr = slice(y-yd, y+yu+1)
         print('Slices: ',xr,yr)
-        obj = field[xr,yr].copy() 
         tmp_field[xr,yr] = 0.0
         print('a_size 2',a_size)
         if all([0,0] == a_size[0]) or all([0,0] == a_size[1]):
             print(f'Remove obj: ({x},{y})')
         else: 
-            if reshape and reshape_corr:
-                if 0 in [xu,xd,yu,yd]:
-                    xpad_pos = (0,0)
-                    ypad_pos = (0,0)
-                    if xu == 0: xpad_pos = (0,xd)
-                    elif xd == 0: xpad_pos = (xu,0)
-                    if yu == 0: ypad_pos = (0,yd)
-                    elif yd == 0: ypad_pos = (yu,0)
-                    print('Pad',xpad_pos,ypad_pos)
-                    obj = np.pad(obj,(xpad_pos,ypad_pos),'reflect')
+            remove_cond = True 
+            if reshape:
+                a_size = np.array(a_size)
+                pos = np.where(a_size != 0)
+                print('POS: ',pos)
+                if len(pos[0]) != 0:
+                    min_size = a_size[pos].min()
+                    a_size[pos] = min_size
+                    x_size, y_size = a_size
+                    xu, xd = x_size
+                    yu, yd = y_size
+                    xr = slice(x-xd, x+xu+1) 
+                    yr = slice(y-yd, y+yu+1)
+                else: remove_cond = False
+            
+            obj = field[xr,yr].copy() 
+
+            if reshape_corr and (0 in [xu,xd,yu,yd]):
+                xpad_pos = (0,0)
+                ypad_pos = (0,0)
+                if xu == 0: xpad_pos = (0,xd)
+                elif xd == 0: xpad_pos = (xu,0)
+                if yu == 0: ypad_pos = (0,yd)
+                elif yd == 0: ypad_pos = (yu,0)
+                print('Pad',xpad_pos,ypad_pos)
+                obj = np.pad(obj,(xpad_pos,ypad_pos),'reflect')
+            
             if remove_cond:
                 display_field[xr,yr] = 0.0
+            
             extraction += [obj]
             if display_fig: 
-                tmp_kwargs['title'] = f'N. {k+1} object'
+                tmp_kwargs['title'] = f'N. {k+1} object {index}'
                 fast_image(obj,**tmp_kwargs) 
             k += 1
+    
     if 'title' not in kwargs:
         kwargs['title'] = 'Field after extraction'
     fast_image(display_field,**kwargs)
