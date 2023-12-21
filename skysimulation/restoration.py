@@ -319,9 +319,24 @@ def grad_check(field: np.ndarray, index: tuple[int,int], back: float, size: int 
     print(':: End ::')
     return x_size, y_size
     
+def selection(objs: list[np.ndarray], apos: np.ndarray, size: int, maxdist: int = 3) -> np.ndarray:
+    dist = lambda x,y: np.sqrt(x**2 + y**2)
+    x = apos[:,0]
+    y = apos[:,1]
+    adist = np.array( [dist(x[i]-x, y[i]-y) for i in range(len(x))] )
+    del_obj = []
+    maxdist += size
+    pos = np.where(np.logical_and(adist < maxdist, adist != 0))
+    if len(pos) != 0:
+        pos = np.array(pos)
+        print('adist',adist)
+        print('pos',pos)
+
+
+
 
 ##*
-def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, display_fig: bool = False,**kwargs) -> np.ndarray | None:
+def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, display_fig: bool = False,**kwargs) -> np.ndarray | None:
     """To isolate the most luminous star object.
     The function calls the `size_est()` function to compute the size of the object and
     then to extract it from the field.
@@ -348,6 +363,7 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
     display_field = field.copy()
 
     extraction = []
+    a_pos = []
     
     if display_fig: 
         tmp_kwargs = {key: kwargs[key] for key in kwargs.keys() - {'title'}} 
@@ -402,12 +418,13 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
             obj = field[xr,yr].copy() 
 
             if reshape_corr and (0 in [xu,xd,yu,yd]):
-                xpad_pos = (0,0)
-                ypad_pos = (0,0)
-                if xu == 0: xpad_pos = (0,xd)
-                elif xd == 0: xpad_pos = (xu,0)
-                if yu == 0: ypad_pos = (0,yd)
-                elif yd == 0: ypad_pos = (yu,0)
+                xpadu = 0 if xd != 0 else xu
+                xpadd = 0 if xu != 0 else xd
+                ypadu = 0 if yd != 0 else yu
+                ypadd = 0 if yu != 0 else yd
+
+                xpad_pos = (xpadu,xpadd)
+                ypad_pos = (ypadu,ypadd)
                 print('Pad',xpad_pos,ypad_pos)
                 obj = np.pad(obj,(xpad_pos,ypad_pos),'reflect')
             
@@ -415,11 +432,16 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
                 display_field[xr,yr] = 0.0
             
             extraction += [obj]
+            a_pos += [[x,y]]
+
+
             if display_fig: 
                 tmp_kwargs['title'] = f'N. {k+1} object {index}'
                 fast_image(obj,**tmp_kwargs) 
             k += 1
-    
+    a_pos = np.array(a_pos)
+    if sel_cond:
+        selection(extraction,a_pos,size)
     if 'title' not in kwargs:
         kwargs['title'] = 'Field after extraction'
     fast_image(display_field,**kwargs)
