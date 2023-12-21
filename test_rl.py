@@ -5,27 +5,11 @@ from skysimulation import display
 import skysimulation.restoration as restore
 
 
-# def field_maker(num_obj: int, dim: int = field.N, beta: float = field.BETA, back: float = field.BACK, noise: float = field.NOISE, sigma: float = field.SIGMA):
-#     masses = np.linspace(field.MIN_m, field.MAX_m,num_obj)
-#     print('masses:\t',masses)
-#     lums = masses**beta
-#     print('brightnesses:\t',lums)
-#     F = np.zeros((dim,dim))
-#     for i in range(num_obj):
-#         print(f'{masses[i]:.2f} Msol -> ({x[i]:02d},{y[i]:02d})')
-#     field.fast_image(F, v=1)
-#     n_b = field.noise(field.Uniform(back),dim)
-#     Ff = F + n_b
-#     Ff = field.atm_seeing(Ff,sigma)
-#     Ff = Ff + field.noise(field.Uniform(noise),dim)
-#     field.fast_image(Ff, v=1)
-#     return F, Ff
-
 K = field.K
 
 def initialize(dim: int, num: int, display_fig: bool = False, **kwargs):
     beta = field.BETA
-    masses = np.linspace(field.MIN_m,8, num)
+    masses = np.linspace(field.MIN_m,9, num)
     lums = masses**beta
     F = np.zeros((dim,dim))
     ynum = 5
@@ -38,8 +22,8 @@ def initialize(dim: int, num: int, display_fig: bool = False, **kwargs):
         diff = xnum*ynum - num
         lums = np.append(lums,[0]*diff)
     F[y,x] = lums * K
-    F[5,-1] = 7**beta * K
-    F[0,2] = 6.5**beta * K
+    F[5,-1] = 8.6**beta * K
+    F[5,-9] = 8.5**beta * K
     if display_fig:
         if 'title' not in kwargs:
             kwargs['title'] = f'Inizialized Field\nMass range [{masses.min():.1f}, {masses.max():.1f}]'
@@ -166,7 +150,7 @@ if __name__ == '__main__':
     plt.axvline(mu,0,1,linestyle='--',color='violet')
     plt.show()
 
-    obj = restore.object_isolation(I,max(bkg,dark.mean()),size=7,objnum=15,reshape=True,reshape_corr=True,display_fig=True,norm=norm)
+    obj = restore.object_isolation(I,max(bkg,dark.mean()),size=7,objnum=15,reshape=True,reshape_corr=True,sel_cond=True,display_fig=True,norm=norm)
 
 
     # print('\nII RUN')
