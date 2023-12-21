@@ -20,10 +20,10 @@ def field_image(fig, image, F: np.ndarray, v: int = 0, sct: tuple = (0,None), no
     # extracting the edges of image
     a,b = sct
     # setting the color map through `v` param
-    if v == 0: color = 'gray'
+    if v == -1:  color = 'gray_r' 
+    elif v == 0: color = 'gray'
     elif v == 1: color = 'viridis' 
     elif v == 2: color = 'brg'
-    else: color = 'gray_r' 
     # generating the image
     pic = image.imshow(F[a:b,a:b], cmap=color, norm=norm)
     # adjusting the position and the size of colorbar
