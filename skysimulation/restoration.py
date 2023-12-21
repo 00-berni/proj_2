@@ -282,11 +282,6 @@ def moving(direction: str, field: np.ndarray, index: tuple[int,int], back: float
         # saving the results
         if 'x' in direction and xd != 0: results = [xsize] + results
         if 'y' in direction and yd != 0: results += [ysize]
-    # # if there is a forbidden direction
-    # elif len(results) == 1:
-    #     # fixing the shape for diagonal movements
-    #     if 'x' in direction and 'y' in direction:
-    #         results = [0,0]        
     
     if len(results) == 1: results = results[0] 
     print('2 result',results)
@@ -320,7 +315,7 @@ def grad_check(field: np.ndarray, index: tuple[int,int], back: float, size: int 
     a_size = np.array([[[mov('fx'),*xf_size],[mov('bx'),*xb_size]],
                        [[mov('fy'),*yf_size],[mov('by'),*yb_size]]])
     print('matrix',a_size)
-    x_size, y_size = a_size.min(axis=2)
+    x_size, y_size = a_size.max(axis=2)
     print(':: End ::')
     return x_size, y_size
     
@@ -362,7 +357,7 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
         # finding the peak
         index = peak_pos(tmp_field)
         ctrl = False
-        if 0 in index or (len(field)-1) in index: 
+        if 0 in index: 
             print(index)
             ctrl = True
         peak = tmp_field[index]
@@ -375,7 +370,7 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
         if ctrl: 
             print(index)
             print(a_size)
-            # raise
+            # raise Exception('Ci fermiamo un attimo') 
         print(f':: Iteration {k} of object_isolation :: ')
         print('a_size',a_size)
         x_size, y_size = a_size
@@ -428,6 +423,7 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
     if 'title' not in kwargs:
         kwargs['title'] = 'Field after extraction'
     fast_image(display_field,**kwargs)
+    fast_image(tmp_field,**kwargs)
 
     if len(extraction) == 0: extraction = None
     print(':: End ::')
