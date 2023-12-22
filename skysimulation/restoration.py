@@ -319,18 +319,43 @@ def grad_check(field: np.ndarray, index: tuple[int,int], back: float, size: int 
     print(':: End ::')
     return x_size, y_size
     
-def selection(objs: list[np.ndarray], apos: np.ndarray, size: int, maxdist: int = 3) -> np.ndarray:
+def selection(objs: list[np.ndarray], apos: np.ndarray, size: int, maxdist: int = 5) -> tuple[list[np.ndarray], list[None | np.ndarray]]:
     dist = lambda x,y: np.sqrt(x**2 + y**2)
     x = apos[:,0]
     y = apos[:,1]
     adist = np.array( [dist(x[i]-x, y[i]-y) for i in range(len(x))] )
     del_obj = []
+    sel_obj = [*objs]
+    sel_pos = [i for i in range(len(objs))]
+    a_objs = np.array( [np.copy(obj) for obj in objs] , dtype='object' )
     maxdist += size
     pos = np.where(np.logical_and(adist < maxdist, adist != 0))
-    if len(pos) != 0:
+    dim = len(pos)
+    if dim != 0:
         pos = np.array(pos)
-        print('adist',adist)
+        # print('adist',adist)
         print('pos',pos)
+        pos = np.unique(pos[0,:])
+        dim = len(pos)
+        if dim % 2 == 0:
+            mid = dim//2-1
+            pos = pos[:mid:-1]
+            print('del',(x[pos],y[pos]))
+            # pos = pos[:mid]
+            print('pos_cut',pos)
+            del_obj = [a_objs[i] for i in pos]
+            sel_obj = list(np.delete(a_objs,pos,axis=0))
+            sel_pos.remove(pos)
+            del mid
+    del pos,dim
+    # if size != 1:
+    #     tmp_sizes = np.array([len(obj) for obj in objs])
+    #     pos = np.where(tmp_sizes <= 3)[0]
+    #     if len(pos) != 0:
+    #         del_obj += [np.copy(objs[i]) for i in pos]
+
+    return sel_obj, sel_pos, del_obj
+
 
 
 
@@ -440,8 +465,15 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
                 fast_image(obj,**tmp_kwargs) 
             k += 1
     a_pos = np.array(a_pos)
-    if sel_cond:
-        selection(extraction,a_pos,size)
+    
+    if sel_cond and len(extraction) > 1:
+        asel,aselpos, adel = selection(extraction,a_pos,size)
+        print(':: Results of selection ::')
+        print(len(extraction),len(asel),len(adel))
+        if len(adel) != 0:
+            for elem in adel:
+                fast_image(elem,title='Removed object',**kwargs)
+
     if 'title' not in kwargs:
         kwargs['title'] = 'Field after extraction'
     fast_image(display_field,**kwargs)
