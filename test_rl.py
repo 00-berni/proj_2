@@ -9,7 +9,7 @@ K = field.K
 
 def initialize(dim: int, num: int, display_fig: bool = False, **kwargs):
     beta = field.BETA
-    masses = np.linspace(field.MIN_m,9, num)
+    masses = np.linspace(field.MIN_m,20, num)
     lums = masses**beta
     F = np.zeros((dim,dim))
     ynum = 5
@@ -150,7 +150,7 @@ if __name__ == '__main__':
     plt.axvline(mu,0,1,linestyle='--',color='violet')
     plt.show()
 
-    obj = restore.object_isolation(I,max(bkg,dark.mean()),size=7,objnum=15,reshape=True,reshape_corr=True,sel_cond=True,display_fig=True,norm=norm)
+    obj = restore.object_isolation(I,max(bkg,dark.mean()),size=7,objnum=20,reshape=True,reshape_corr=True,sel_cond=True,display_fig=True,norm=norm)
 
 
     # print('\nII RUN')
