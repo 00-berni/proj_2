@@ -320,13 +320,29 @@ def grad_check(field: np.ndarray, index: tuple[int,int], back: float, size: int 
     return x_size, y_size
     
 def selection(objs: list[np.ndarray], apos: np.ndarray, size: int, maxdist: int = 5) -> tuple[list[np.ndarray], list[None | np.ndarray]]:
+    """Selecting the objects for the fit
+
+    :param objs: list of extracted objects
+    :type objs: list[np.ndarray]
+    :param apos: positions array
+    :type apos: np.ndarray
+    :param size: max selected size
+    :type size: int
+    :param maxdist: max accepted distance between objects, defaults to 5
+    :type maxdist: int, optional
+    :return: list of the selected and rejected objects 
+    :rtype: tuple[list[np.ndarray], list[None | np.ndarray]]
+    """
+    #: method to compute the length
     dist = lambda x,y: np.sqrt(x**2 + y**2)
-    x = apos[:,0]
-    y = apos[:,1]
+    # extracting positions
+    x = np.copy(apos[:,0])
+    y = np.copy(apos[:,1])
+    # computing distances
     adist = np.array( [dist(x[i]-x, y[i]-y) for i in range(len(x))] )
+    # initializing variables
     del_obj = []
     sel_obj = [*objs]
-    sel_pos = [i for i in range(len(objs))]
     a_objs = np.array( [np.copy(obj) for obj in objs] , dtype='object' )
     maxdist += size
     pos = np.where(np.logical_and(adist < maxdist, adist != 0))
@@ -344,20 +360,21 @@ def selection(objs: list[np.ndarray], apos: np.ndarray, size: int, maxdist: int 
             # pos = pos[:mid]
             print('pos_cut',pos)
             del_obj = [a_objs[i] for i in pos]
-            sel_obj = list(np.delete(a_objs,pos,axis=0))
-            sel_pos.remove(pos)
+            a_objs = np.delete(a_objs,pos,axis=0)
+            x = np.delete(x,pos)
+            y = np.delete(y,pos)
             del mid
     del pos,dim
-    # if size != 1:
-    #     tmp_sizes = np.array([len(obj) for obj in objs])
-    #     pos = np.where(tmp_sizes <= 3)[0]
-    #     if len(pos) != 0:
-    #         del_obj += [np.copy(objs[i]) for i in pos]
-
-    return sel_obj, sel_pos, del_obj
-
-
-
+    if size != 1:
+        tmp_sizes = np.array([len(obj) for obj in a_objs])
+        pos = np.where(tmp_sizes <= 3)[0]
+        if len(pos) != 0:
+            del_obj += [np.copy(a_objs[i]) for i in pos]
+            a_objs = np.delete(a_objs,pos,axis=0)
+            x = np.delete(x,pos)
+            y = np.delete(y,pos)
+    sel_obj = list(a_objs)
+    return sel_obj, [x,y], del_obj
 
 
 ##*
