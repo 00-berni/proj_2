@@ -23,7 +23,7 @@ if __name__ == '__main__':
     print(bkg/field.K)
 
     print('\n--- Objects Extraction ---')
-    obj = restore.object_isolation(I,max(bkg,dark.mean()),size=7,reshape=True,reshape_corr=True,display_fig=True,norm=norm)
+    obj = restore.object_isolation(I,max(bkg,dark.mean()),size=7,objnum=15,reshape=True,reshape_corr=True,sel_cond=True,display_fig=True,norm=norm)
 
     print('\n--- Kernel Estimation ---')
     # kernel = restore.kernel_estimation()
