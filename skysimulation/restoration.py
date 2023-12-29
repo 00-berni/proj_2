@@ -369,9 +369,41 @@ def selection(objs: list[np.ndarray], apos: np.ndarray, size: int, maxdist: int 
             y = np.delete(y,pos)
             del mid
     del pos,dim
+
     if size != 1:
         tmp_sizes = np.array([len(obj) for obj in a_objs])
         pos = np.where(tmp_sizes <= 3)[0]
+        if len(pos) != 0:
+            del_obj += [np.copy(a_objs[i]) for i in pos]
+            a_objs = np.delete(a_objs,pos,axis=0)
+            xdel = np.append(xdel,x[pos])
+            ydel = np.append(ydel,y[pos])
+            x = np.delete(x,pos)
+            y = np.delete(y,pos)
+        del pos
+    
+    if len(a_objs) > 1:
+        pos = np.array([],dtype='int')
+        for k in range(len(a_objs)):
+            obj = a_objs[k]
+            xmax,ymax = peak_pos(obj)
+            print(f'Max positions:\n\t{xmax} and {ymax}')
+            if xmax != len(obj)//2 or ymax != len(obj)//2:
+                print(f'! The {k} object is uncorrect !')
+            lim = 5 if len(obj) > 10 else len(obj)//2 
+            for i in range(lim):
+                i += 1
+                r = obj[xmax+i,ymax]
+                l = obj[xmax-i,ymax]
+                u = obj[xmax,ymax+i]
+                d = obj[xmax,ymax-i]
+                diff1 = abs(r/l - u/d) 
+                diff2 = abs(r/d - u/l)
+                if diff1 >= 0.2 or diff2 >= 0.2 or (diff1 > 0.16 and diff2 > 0.16):
+                    print(f'\tDifferences:\n\t{diff1}\t{diff2}')
+                    pos = np.append(pos,k)
+                    break
+        print(pos,len(pos))
         if len(pos) != 0:
             del_obj += [np.copy(a_objs[i]) for i in pos]
             a_objs = np.delete(a_objs,pos,axis=0)
@@ -506,6 +538,13 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
         kwargs.pop('title',None)
         field_image(fig,ax,display_field,**kwargs)
         ax.plot(adelpos[1],adelpos[0],'.',color='red',label='removed objects')
+        ax.legend()
+        plt.show()
+        fig, ax = plt.subplots(1,1)
+        kwargs.pop('title',None)
+        field_image(fig,ax,field,**kwargs)
+        ax.plot(adelpos[1],adelpos[0],'.',color='red',label='removed objects')
+        ax.plot(aselpos[1],aselpos[0],'.',color='blue',label='chosen objects')
         ax.legend()
         plt.show()
 
