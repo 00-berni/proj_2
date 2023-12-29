@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import find_peaks
 
-from .display import fast_image
+from .display import fast_image, field_image
 from .field import Gaussian, N, Uniform, noise
 
 
@@ -319,7 +319,7 @@ def grad_check(field: np.ndarray, index: tuple[int,int], back: float, size: int 
     print(':: End ::')
     return x_size, y_size
     
-def selection(objs: list[np.ndarray], apos: np.ndarray, size: int, maxdist: int = 5) -> tuple[list[np.ndarray], list[None | np.ndarray]]:
+def selection(objs: list[np.ndarray], apos: np.ndarray, size: int, maxdist: int = 5) -> tuple[list[np.ndarray], list[np.ndarray], list[None | np.ndarray]]:
     """Selecting the objects for the fit
 
     :param objs: list of extracted objects
@@ -342,6 +342,8 @@ def selection(objs: list[np.ndarray], apos: np.ndarray, size: int, maxdist: int 
     adist = np.array( [dist(x[i]-x, y[i]-y) for i in range(len(x))] )
     # initializing variables
     del_obj = []
+    xdel = np.array([])
+    ydel = np.array([])
     sel_obj = [*objs]
     a_objs = np.array( [np.copy(obj) for obj in objs] , dtype='object' )
     maxdist += size
@@ -361,6 +363,8 @@ def selection(objs: list[np.ndarray], apos: np.ndarray, size: int, maxdist: int 
             print('pos_cut',pos)
             del_obj = [a_objs[i] for i in pos]
             a_objs = np.delete(a_objs,pos,axis=0)
+            xdel = np.append(xdel,x[pos])
+            ydel = np.append(ydel,y[pos])
             x = np.delete(x,pos)
             y = np.delete(y,pos)
             del mid
@@ -371,10 +375,12 @@ def selection(objs: list[np.ndarray], apos: np.ndarray, size: int, maxdist: int 
         if len(pos) != 0:
             del_obj += [np.copy(a_objs[i]) for i in pos]
             a_objs = np.delete(a_objs,pos,axis=0)
+            xdel = np.append(xdel,x[pos])
+            ydel = np.append(ydel,y[pos])
             x = np.delete(x,pos)
             y = np.delete(y,pos)
     sel_obj = list(a_objs)
-    return sel_obj, [x,y], del_obj
+    return sel_obj, [x,y], del_obj, [xdel,ydel]
 
 
 ##*
@@ -484,7 +490,7 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
     a_pos = np.array(a_pos)
     
     if sel_cond and len(extraction) > 1:
-        asel,aselpos, adel = selection(extraction,a_pos,size)
+        asel,aselpos, adel, adelpos = selection(extraction,a_pos,size)
         print(':: Results of selection ::')
         print(len(extraction),len(asel),len(adel))
         if len(adel) != 0:
@@ -495,6 +501,13 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
         kwargs['title'] = 'Field after extraction'
     fast_image(display_field,**kwargs)
     fast_image(tmp_field,**kwargs)
+    if sel_cond and len(extraction) > 1:
+        fig, ax = plt.subplots(1,1)
+        kwargs.pop('title',None)
+        field_image(fig,ax,display_field,**kwargs)
+        ax.plot(adelpos[1],adelpos[0],'.',color='red',label='removed objects')
+        ax.legend()
+        plt.show()
 
     if len(extraction) == 0: extraction = None
     print(':: End ::')
