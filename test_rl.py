@@ -9,7 +9,7 @@ K = field.K
 
 def initialize(dim: int, num: int, display_fig: bool = False, **kwargs):
     beta = field.BETA
-    masses = np.linspace(field.MIN_m,20, num)
+    masses = np.linspace(field.MIN_m,5, num)
     lums = masses**beta
     F = np.zeros((dim,dim))
     ynum = 5
@@ -22,8 +22,8 @@ def initialize(dim: int, num: int, display_fig: bool = False, **kwargs):
         diff = xnum*ynum - num
         lums = np.append(lums,[0]*diff)
     F[y,x] = lums * K
-    F[5,-1] = 8.6**beta * K
-    F[5,-9] = 8.5**beta * K
+    # F[5,-1] = 8.6**beta * K
+    # F[5,-9] = 8.5**beta * K
     if display_fig:
         if 'title' not in kwargs:
             kwargs['title'] = f'Inizialized Field\nMass range [{masses.min():.1f}, {masses.max():.1f}]'
