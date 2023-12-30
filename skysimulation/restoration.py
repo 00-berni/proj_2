@@ -319,7 +319,7 @@ def grad_check(field: np.ndarray, index: tuple[int,int], back: float, size: int 
     print(':: End ::')
     return x_size, y_size
     
-def selection(objs: list[np.ndarray], apos: np.ndarray, size: int, maxdist: int = 5) -> tuple[list[np.ndarray], list[np.ndarray], list[None | np.ndarray]]:
+def selection(obj: np.ndarray, index: tuple[int,int], apos: np.ndarray, size: int, mindist: int = 5, minsize: int = 3, cutsize: int = 5) -> bool:
     """Selecting the objects for the fit
 
     :param objs: list of extracted objects
@@ -333,86 +333,42 @@ def selection(objs: list[np.ndarray], apos: np.ndarray, size: int, maxdist: int 
     :return: list of the selected and rejected objects 
     :rtype: tuple[list[np.ndarray], list[None | np.ndarray]]
     """
-    #: method to compute the length
-    dist = lambda x,y: np.sqrt(x**2 + y**2)
-    # extracting positions
-    x = np.copy(apos[:,0])
-    y = np.copy(apos[:,1])
-    # computing distances
-    adist = np.array( [dist(x[i]-x, y[i]-y) for i in range(len(x))] )
-    # initializing variables
-    del_obj = []
-    xdel = np.array([])
-    ydel = np.array([])
-    sel_obj = [*objs]
-    a_objs = np.array( [np.copy(obj) for obj in objs] , dtype='object' )
-    maxdist += size
-    pos = np.where(np.logical_and(adist < maxdist, adist != 0))
-    dim = len(pos)
-    if dim != 0:
-        pos = np.array(pos)
-        # print('adist',adist)
-        print('pos',pos)
-        pos = np.unique(pos[0,:])
-        dim = len(pos)
-        if dim % 2 == 0:
-            mid = dim//2-1
-            pos = pos[:mid:-1]
-            print('del',(x[pos],y[pos]))
-            # pos = pos[:mid]
-            print('pos_cut',pos)
-            del_obj = [a_objs[i] for i in pos]
-            a_objs = np.delete(a_objs,pos,axis=0)
-            xdel = np.append(xdel,x[pos])
-            ydel = np.append(ydel,y[pos])
-            x = np.delete(x,pos)
-            y = np.delete(y,pos)
-            del mid
-    del pos,dim
+    obj = np.copy(obj)
+    dim = len(obj)
+    if size != 1 and dim <= minsize: 
+        print(f'\t:Selection:\tdim = {dim}')
+        return False
 
-    if size != 1:
-        tmp_sizes = np.array([len(obj) for obj in a_objs])
-        pos = np.where(tmp_sizes <= 3)[0]
-        if len(pos) != 0:
-            del_obj += [np.copy(a_objs[i]) for i in pos]
-            a_objs = np.delete(a_objs,pos,axis=0)
-            xdel = np.append(xdel,x[pos])
-            ydel = np.append(ydel,y[pos])
-            x = np.delete(x,pos)
-            y = np.delete(y,pos)
-        del pos
+    if len(apos[0]) > 0:    
+        #: method to compute the length
+        dist = lambda x,y: np.sqrt(x**2 + y**2)
+        # extracting positions
+        x, y = index
+        xi, yi = np.copy(apos[:,:])
+        # computing distances
+        mindist += size
+        adist = np.array( [dist(xi[i]-x, yi[i]-y) for i in range(len(xi))] )
+        pos = np.where(np.logical_and(adist <= mindist, adist != 0))  
+        if len(pos[0]) != 0: 
+            print(f'\t:Selection:\tdist = {adist[pos]} - adist = {adist} - mindist = {mindist}')
+            return False
+        del x, y, xi, yi, dist, adist, pos
     
-    if len(a_objs) > 1:
-        pos = np.array([],dtype='int')
-        for k in range(len(a_objs)):
-            obj = a_objs[k]
-            xmax,ymax = peak_pos(obj)
-            print(f'Max positions:\n\t{xmax} and {ymax}')
-            if xmax != len(obj)//2 or ymax != len(obj)//2:
-                print(f'! The {k} object is uncorrect !')
-            lim = 5 if len(obj) > 10 else len(obj)//2 
-            for i in range(lim):
-                i += 1
-                r = obj[xmax+i,ymax]
-                l = obj[xmax-i,ymax]
-                u = obj[xmax,ymax+i]
-                d = obj[xmax,ymax-i]
-                diff1 = abs(r/l - u/d) 
-                diff2 = abs(r/d - u/l)
-                if diff1 >= 0.2 or diff2 >= 0.2 or (diff1 > 0.16 and diff2 > 0.16):
-                    print(f'\tDifferences:\n\t{diff1}\t{diff2}')
-                    pos = np.append(pos,k)
-                    break
-        print(pos,len(pos))
-        if len(pos) != 0:
-            del_obj += [np.copy(a_objs[i]) for i in pos]
-            a_objs = np.delete(a_objs,pos,axis=0)
-            xdel = np.append(xdel,x[pos])
-            ydel = np.append(ydel,y[pos])
-            x = np.delete(x,pos)
-            y = np.delete(y,pos)
-    sel_obj = list(a_objs)
-    return sel_obj, [x,y], del_obj, [xdel,ydel]
+    x, y = peak_pos(obj)
+    if abs(x - dim//2) > 1 or abs(y - dim//2) > 1: 
+        print(f'\t:Selection:\t(x,y) = ({x},{y}) - dim//2 = {dim//2}')
+        return False 
+    lim = cutsize if dim > 2*cutsize else dim//2 
+    for i in range(lim):
+        i += 1
+        r, l, u, d = np.copy(obj[[x+i,x-i,x,x],[y,y,y+1,y-1]])
+        diff1 = abs(r/l - u/d) 
+        diff2 = abs(r/d - l/u)
+        if diff1 >= 0.3 or diff2 >= 0.3 or (diff1 > 0.25 and diff2 > 0.25): 
+            print(f'\t:Selection:\tdiff1 = {diff1} -  diff2 = {diff2}')
+            return False
+
+    return True
 
 
 ##*
@@ -442,13 +398,17 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
     tmp_field = field.copy()
     display_field = field.copy()
 
+    a_pos = np.array([[],[]],dtype=int)
     extraction = []
-    a_pos = []
+    sel_pos = np.array([[],[]],dtype=int)
+    rej_obj = []
+    rej_pos = np.array([[],[]],dtype=int)
     
     if display_fig: 
         tmp_kwargs = {key: kwargs[key] for key in kwargs.keys() - {'title'}} 
 
     k = 0 
+    ctrl = 0
     while k < objnum:
         # finding the peak
         index = peak_pos(tmp_field)
@@ -462,7 +422,7 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
             break
         # computing size
         x, y = index
-        a_size = grad_check(field,index,thr,size)
+        a_size = grad_check(tmp_field,index,thr,size)
         if ctrl: 
             print(index)
             print(a_size)
@@ -477,23 +437,23 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
         print('Slices: ',xr,yr)
         tmp_field[xr,yr] = 0.0
         print('a_size 2',a_size)
+        a_pos = np.append(a_pos,[[x],[y]],axis=1)
         if all([0,0] == a_size[0]) or all([0,0] == a_size[1]):
-            print(f'Remove obj: ({x},{y})')
+            rej_obj += [field[xr,yr].copy()]
+            rej_pos = np.append(rej_pos,[[x],[y]],axis=1)
+            print(f'Rejected obj: ({x},{y})')
         else: 
-            remove_cond = True 
             if reshape:
                 a_size = np.array(a_size)
                 pos = np.where(a_size != 0)
                 print('POS: ',pos)
-                if len(pos[0]) != 0:
-                    min_size = a_size[pos].min()
-                    a_size[pos] = min_size
-                    x_size, y_size = a_size
-                    xu, xd = x_size
-                    yu, yd = y_size
-                    xr = slice(x-xd, x+xu+1) 
-                    yr = slice(y-yd, y+yu+1)
-                else: remove_cond = False
+                min_size = a_size[pos].min()
+                a_size[pos] = min_size
+                x_size, y_size = a_size
+                xu, xd = x_size
+                yu, yd = y_size
+                xr = slice(x-xd, x+xu+1) 
+                yr = slice(y-yd, y+yu+1)
             
             obj = field[xr,yr].copy() 
 
@@ -508,43 +468,48 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
                 print('Pad',xpad_pos,ypad_pos)
                 obj = np.pad(obj,(xpad_pos,ypad_pos),'reflect')
             
-            if remove_cond:
-                display_field[xr,yr] = 0.0
+            save_cond = selection(obj,index,a_pos,size) if sel_cond else True
             
-            extraction += [obj]
-            a_pos += [[x,y]]
-
+            if save_cond:
+                print(f'** OBJECT SELECTED ->\t{k}')
+                display_field[xr,yr] = 0.0
+                
+                extraction += [obj]
+                sel_pos = np.append(sel_pos,[[x],[y]],axis=1)
+                tmp_kwargs['title'] = f'N. {k+1} object {index}'
+                k += 1 
+            else: 
+                print(f'!! OBJECT REJECTED ->\t{k}')
+                rej_obj += [obj]
+                rej_pos = np.append(rej_pos,[[x],[y]],axis=1)
+                tmp_kwargs['title'] = f'Rejected object {index}'
 
             if display_fig: 
-                tmp_kwargs['title'] = f'N. {k+1} object {index}'
                 fast_image(obj,**tmp_kwargs) 
-            k += 1
-    a_pos = np.array(a_pos)
-    
-    if sel_cond and len(extraction) > 1:
-        asel,aselpos, adel, adelpos = selection(extraction,a_pos,size)
-        print(':: Results of selection ::')
-        print(len(extraction),len(asel),len(adel))
-        if len(adel) != 0:
-            for elem in adel:
-                fast_image(elem,title='Removed object',**kwargs)
+            
+            if (ctrl >= objnum and len(extraction) >= 3) or ctrl > 2*objnum and save_cond:
+                break
+
+            ctrl += 1
+    del tmp_kwargs
 
     if 'title' not in kwargs:
         kwargs['title'] = 'Field after extraction'
     fast_image(display_field,**kwargs)
-    fast_image(tmp_field,**kwargs)
-    if sel_cond and len(extraction) > 1:
+    fast_image(tmp_field,**kwargs)    
+
+    if sel_cond and len(extraction) > 0:
         fig, ax = plt.subplots(1,1)
         kwargs.pop('title',None)
         field_image(fig,ax,display_field,**kwargs)
-        ax.plot(adelpos[1],adelpos[0],'.',color='red',label='removed objects')
+        ax.plot(rej_pos[1],rej_pos[0],'.',color='red',label='rejected objects')
         ax.legend()
         plt.show()
         fig, ax = plt.subplots(1,1)
         kwargs.pop('title',None)
         field_image(fig,ax,field,**kwargs)
-        ax.plot(adelpos[1],adelpos[0],'.',color='red',label='removed objects')
-        ax.plot(aselpos[1],aselpos[0],'.',color='blue',label='chosen objects')
+        ax.plot(rej_pos[1],rej_pos[0],'.',color='red',label='rejected objects')
+        ax.plot(sel_pos[1],sel_pos[0],'.',color='blue',label='chosen objects')
         ax.legend()
         plt.show()
 
