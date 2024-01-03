@@ -25,7 +25,7 @@ def field_image(fig, image, F: np.ndarray, v: int = 0, sct: tuple = (0,None), no
     elif v == 1: color = 'viridis' 
     elif v == 2: color = 'brg'
     # generating the image
-    pic = image.imshow(F[a:b,a:b], cmap=color, norm=norm)
+    pic = image.imshow(F[a:b,a:b],  origin='lower', cmap=color, norm=norm)
     # adjusting the position and the size of colorbar
     from mpl_toolkits.axes_grid1 import make_axes_locatable
     divider = make_axes_locatable(image)
