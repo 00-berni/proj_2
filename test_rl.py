@@ -113,9 +113,20 @@ if __name__ == '__main__':
     bkg = nn[0]
     I = results[0]
     
-    diff1 = I[1:]/I[:-1]
-    diff2 = I[:,1:]/I[:,:-1]
-    diff = np.append(diff1,diff2) - 1
+    # diff1 = I[1:]/I[:-1]
+    # diff2 = I[:,1:]/I[:,:-1]
+    # diff = np.append(diff1,diff2) - 1
+    Iflat = I.flatten()
+    # diff = np.array([ Iflat[i]/np.delete(Iflat,i) for i in range(len(Iflat)) ]).flatten() - 1
+    diff = np.array([i/I for i in I])
+    print(f'diff = {diff.shape}')
+    print(f'diff -> {diff[0]}')
+    diff = diff.flatten()
+    print(f'diff = {diff.shape}')
+    pos = np.where(diff!=1.)[0]
+    print(len(np.where(diff==1.)[0]))
+    diff = diff[pos] -1
+    print(f'diff = {diff.shape}')
     bins = np.linspace(min(diff),max(diff),np.sqrt(len(diff)).astype(int))
     counts, bins = np.histogram(diff,bins=bins)
     maxpos = counts.argmax()
@@ -131,9 +142,18 @@ if __name__ == '__main__':
     # cut = np.where(counts >= 500)[0]
     # edges = (bins[cut].min(), bins[cut].max())
     # cut = np.where(np.logical_and(edges[0] <= diff , diff <= edges[1]))[0]
-    cut = None
+    thr = counts[maxpos] * 20e-2
+    edges = np.where(counts >= thr)[0][[0,-1]]
+    print('edges',edges)
+    edges = bins[edges]
+    print('edges',edges)
+    dlim = abs(edges[0]-diff).argmin()
+    ulim = abs(edges[1]-diff).argmin()
+    dlim, ulim = min(dlim,ulim), max(dlim,ulim)
+    print('lim',dlim,ulim)
+    cut = slice(dlim,ulim)
     (mu, sigma) = stats.norm.fit(diff[cut],loc=maxval,scale=1)
-    khist = counts.sum()*(bins[1]-bins[0])
+    khist = counts.sum()*np.mean(bins[1:]-bins[:-1])
     k = khist / np.sqrt(2*np.pi) / sigma
     # initial_values = [max(y),maxval,0.5]
     # pop, pcov = curve_fit(gauss_fit,x,y,initial_values)
@@ -146,12 +166,23 @@ if __name__ == '__main__':
     plt.stairs(counts,bins,fill=True)
     xx = np.linspace(min(bins),max(bins),1000)
     plt.plot(xx,gauss_fit(xx,*pop),color='orange')
+    plt.axhline(thr,0,1,color='black',linestyle='dotted')
     plt.axvline(maxval,0,1,linestyle='--',color='red')
     plt.axvline(mu,0,1,linestyle='--',color='violet')
     plt.show()
 
-    obj = restore.object_isolation(I,max(bkg,dark.mean()),size=7,objnum=20,reshape=True,reshape_corr=True,sel_cond=True,display_fig=True,norm=norm)
+    err = (mu+1)*np.mean(I)
+    print(f'!err={err}')
+    err = (mu+1)*max(bkg,dark.mean())#np.mean(I)
+    print(f'!err={err}')
+    print(max(bkg,dark.mean()))
+    raise
 
+    objs = restore.object_isolation(I,max(bkg,dark.mean()),size=7,objnum=20,reshape=True,reshape_corr=True,sel_cond=True,display_fig=False,norm=norm)
+
+    if objs is not None:
+        obj = objs[1]
+        sigma = restore.kernel_fit(obj,err,True)
 
     # print('\nII RUN')
     # back = ('Gaussian',(0.2, field.BACK_SIGMA))
