@@ -4,7 +4,7 @@ from scipy.signal import find_peaks
 
 from .display import fast_image, field_image
 from .field import Gaussian, N, Uniform, noise
-
+from .field import K as field_const
 
 def peak_pos(field: np.ndarray) -> int | tuple[int,int]:
     """Finding the coordinate/s of the maximum
@@ -408,7 +408,7 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
         tmp_kwargs = {key: kwargs[key] for key in kwargs.keys() - {'title'}} 
 
     k = 0 
-    ctrl = 0
+    ctrl_cnt = 0
     while k < objnum:
         # finding the peak
         index = peak_pos(tmp_field)
@@ -476,22 +476,23 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
                 
                 extraction += [obj]
                 sel_pos = np.append(sel_pos,[[x],[y]],axis=1)
-                tmp_kwargs['title'] = f'N. {k+1} object {index}'
+                if display_fig:
+                    tmp_kwargs['title'] = f'N. {k+1} object {index} - {ctrl_cnt}'
                 k += 1 
             else: 
                 print(f'!! OBJECT REJECTED ->\t{k}')
                 rej_obj += [obj]
                 rej_pos = np.append(rej_pos,[[x],[y]],axis=1)
-                tmp_kwargs['title'] = f'Rejected object {index}'
+                if display_fig:
+                    tmp_kwargs['title'] = f'Rejected object {index} - {ctrl_cnt}'
 
             if display_fig: 
                 fast_image(obj,**tmp_kwargs) 
             
-            if (ctrl >= objnum and len(extraction) >= 3) or ctrl > 2*objnum and save_cond:
+            if (ctrl_cnt >= objnum and len(extraction) >= 3) or ctrl_cnt > 2*objnum and sel_cond:
                 break
 
-            ctrl += 1
-    del tmp_kwargs
+            ctrl_cnt += 1
 
     if 'title' not in kwargs:
         kwargs['title'] = 'Field after extraction'
@@ -517,7 +518,7 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
     print(':: End ::')
     return extraction
 
-def kernel_fit(obj: np.ndarray, back: float, noise: float) -> float:
+def kernel_fit(obj: np.ndarray, err: float, display_fig: bool = False, **kwargs) -> float:
     """Estimating the sigma of the kernel
 
     :param obj: extracted objects
@@ -533,30 +534,73 @@ def kernel_fit(obj: np.ndarray, back: float, noise: float) -> float:
     dim = len(obj)
     m = np.arange(dim)
     x, y = np.meshgrid(m,m)
-    c = dim // 2
-    x -= c
-    y -= c
+    xmax, ymax = peak_pos(obj)
     r = np.sqrt(x**2 + y**2)
     sigma0 = 1
     print('sigma',sigma0)
     k0 = obj.max()
 
-    def fit_func(x,sigma,k):
-        return k * Gaussian(sigma).value(x)
+    def fit_func(pos: np.ndarray,*args) -> np.ndarray:
+        x, y = pos
+        k, sigma = args
+        x0, y0 = xmax, ymax 
+        kernel = Gaussian(sigma)
+        return k * kernel.value(x-x0)*kernel.value(y-y0)
     
-    err = np.sqrt(back**2 + noise**2)*np.ones(obj.shape)
+    err = np.full(obj.shape,err,dtype=float)
     from scipy.optimize import curve_fit
-    initial_values = [sigma0,k0]
-    pop, pcov = curve_fit(fit_func,r.flatten(),obj.flatten(),initial_values,sigma=err.flatten())
-    sigma, k = pop
-    Dsigma, _ = np.sqrt(pcov.diagonal())
-    print(f'sigma = {sigma} +- {Dsigma}')
-    chi_sq = (((obj-fit_func(r,sigma,k))/err)**2).sum()
-    chi0 = len(obj.flatten()) - 2
-    print(f'chi_sq = {chi_sq/chi0*100:.2f} +- {np.sqrt(2/chi0)*100:.2f} %')
+    initial_values = [k0,sigma0]
+    xfit = np.vstack((x.ravel(),y.ravel()))
+    yfit = obj.ravel()
+    errfit = err.ravel()
+    pop, pcov = curve_fit(fit_func,xfit[::-1],yfit,initial_values,sigma=errfit)
+    # sigma, k, x0, y0 = pop
+    # Dsigma, Dk, Dx0, Dy0 = np.sqrt(pcov.diagonal())
+    sigma, k, = pop
+    Dsigma, Dk = np.sqrt(pcov.diagonal())
+    print('FIT RESULTS')
+    print(f'\tsigma = {sigma} +- {Dsigma}\t{sigma/field_const}')
+    print(f'\tk = {k} +- {Dk}')
+    # print(f'\t(x0,y0) = ({x0},{y0}) +- ({Dx0},{Dy0})')
+    fit = fit_func((x,y),*pop)
+    chi_sq = (((obj-fit)/err)**2).sum()
+    chi0 = len(yfit)-len(pop)
+    print(f'\tred_chi = {chi_sq/chi0*100} +- {np.sqrt(2/chi0)*100} %')
+    # pop, pcov = curve_fit(fit_func,r.flatten(),obj.flatten(),initial_values,sigma=err.flatten())
+
+    # xfit = np.arange(len(obj))-c
+    # yfit = (obj[xmax,:]+obj[:,ymax]) / 2
+    # errfit = err[xmax,:]
+    # pop, pcov = curve_fit(fit_func,xfit,yfit,initial_values,sigma=errfit)
+    # sigma, k = pop
+    # Dsigma, _ = np.sqrt(pcov.diagonal())
+    # print(f'sigma = {sigma} +- {Dsigma}')
+    # chi_sq = (((obj-fit_func(r,sigma,k))/err)**2).sum()
+    # chi0 = len(obj.flatten()) - 2
+    # print(f'chi_sq = {chi_sq/chi0*100:.2f} +- {np.sqrt(2/chi0)*100:.2f} %')
+    if display_fig:
+        figsize = kwargs['figsize'] if 'figsize' in kwargs.keys() else None
+        title = kwargs['title'] if 'title' in kwargs.keys() else ''
+        fig, ax = plt.subplots(1,1,figsize=figsize)
+        ax.set_title(title)
+        field_image(fig,ax,obj)
+        mm = np.linspace(m[0],m[-1],100)
+        xx, yy = np.meshgrid(mm,mm)
+        ax.contour(xx,yy,fit_func((xx,yy),*pop),colors='b',linestyles='dashed',alpha=0.7)
+        # kwargs.pop('title')
+        # kwargs.pop('figsize')
+
+        plt.figure()
+        plt.subplot(1,2,1)
+        plt.errorbar(m,obj[xmax,:],yerr=err[xmax,:],fmt='.')
+        plt.plot(mm,fit_func([xmax,mm],*pop))
+        plt.subplot(1,2,2)
+        plt.errorbar(m,obj[:,ymax],yerr=err[:,ymax],fmt='.')
+        plt.plot(mm,fit_func([mm,ymax],*pop))
+        plt.show()
     return sigma
 
-def kernel_estimation(extraction: list[np.ndarray], back: float, noise: float, dim: int, all_results: bool = False, display_plot: bool = False, **kwargs) -> np.ndarray | tuple[np.ndarray,tuple[float,float]]:
+def kernel_estimation(extraction: list[np.ndarray], err: float, dim: int, selected: slice = slice(None), all_results: bool = False, display_plot: bool = False, **kwargs) -> np.ndarray | tuple[np.ndarray,tuple[float,float]]:
     """Estimation of the kernel from a Gaussian model
 
     :param extraction: extracted objects
@@ -575,9 +619,10 @@ def kernel_estimation(extraction: list[np.ndarray], back: float, noise: float, d
     :return: kernel (and sigma with the error)
     :rtype: np.ndarray | tuple[np.ndarray,tuple[float,float]]
     """
+    sel_extr = [*extraction[selected]]
     a_sigma = np.array([],dtype=float)
-    for obj in extraction:
-        sigma = kernel_fit(obj,back,noise)
+    for obj in sel_extr:
+        sigma = kernel_fit(obj,err)
         a_sigma = np.append(a_sigma,sigma)
         del sigma
     sigma = np.mean(a_sigma)
