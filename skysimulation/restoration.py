@@ -1,16 +1,17 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from numpy.typing import NDArray,ArrayLike
 from scipy.signal import find_peaks
-
+from typing import Callable, Any
 from .display import fast_image, field_image
 from .field import Gaussian, N, Uniform, noise
 from .field import K as field_const
 
-def peak_pos(field: np.ndarray) -> int | tuple[int,int]:
+def peak_pos(field: NDArray) -> int | tuple[int,int]:
     """Finding the coordinate/s of the maximum
 
     :param field: array
-    :type field: np.ndarray
+    :type field: NDArray
 
     :return: coordinate/s
     :rtype: int | tuple[int,int]
@@ -19,8 +20,37 @@ def peak_pos(field: np.ndarray) -> int | tuple[int,int]:
         return field.argmax()
     else:
         return np.unravel_index(field.argmax(),field.shape)
+
+def fit_routine(xdata: NDArray, ydata: NDArray, method: Callable[[NDArray,Any],NDArray], initial_values: list[float] | NDArray, err: NDArray | None = None, sel: str = 'pop', print_res: bool = True, names: list[str | None] = [] ,**kwargs) -> list[NDArray | float]:
+    from scipy.optimize import curve_fit
+    pop, pcov = curve_fit(method, xdata, ydata, initial_values,sigma=err,**kwargs)
+    Dpop = np.sqrt(pcov.diagonal())
+    if err is not None:
+        fit = method(xdata,*pop)
+        chisq = (((ydata-fit)/err)**2).sum()
+        chi0 = len(ydata) - len(pop)
+        # Dchi0 = np.sqrt(2*chi0)
+    if print_res:
+        if len(names) == 0:
+            names = [f'pop{i+1}' for i in range(len(pop))]
+        print('- FIT RESULTS -')
+        for i in range(len(pop)):
+            print('\t'+names[i]+f' = {pop[i]} +- {Dpop[i]}')
+        if err is not None:
+            print(f'\tred_chi = {chisq/chi0*100} +- {np.sqrt(2/chi0)*100} %')
+        print('- - - -')
+    results = []
+    if sel == 'all' or 'pop' in sel:
+        results += [pop, Dpop]
+    if sel == 'all' or 'pcov' in sel:
+        results += [pcov]
+    if sel == 'all' or 'chisq' in sel:
+        results += [chisq] 
+    return results
+
+
 ##*
-def dark_elaboration(params: tuple[str, float | tuple], iteration: int = 3, dim: int = N, display_fig: bool = False, **kwargs) -> np.ndarray:
+def dark_elaboration(params: tuple[str, float | tuple], iteration: int = 3, dim: int = N, display_fig: bool = False, **kwargs) -> NDArray:
     """The function computes a number (`iteration`) of darks
     and averages them in order to get a mean estimation 
     of the detector noise
@@ -35,7 +65,7 @@ def dark_elaboration(params: tuple[str, float | tuple], iteration: int = 3, dim:
     :type display_fig: bool, optional
     
     :return: mean dark
-    :rtype: np.ndarray
+    :rtype: NDArray
     """
     # generating the first dark
     dark = noise(params, dim=dim)
@@ -50,11 +80,11 @@ def dark_elaboration(params: tuple[str, float | tuple], iteration: int = 3, dim:
         fast_image(dark,**kwargs)
     return dark
 
-def bkg_est(field: np.ndarray, display_fig: bool = False) -> float:
+def bkg_est(field: NDArray, display_fig: bool = False) -> float:
     """Estimating a value for the background
 
     :param field: the field
-    :type field: np.ndarray
+    :type field: NDArray
     :param display_fig: if `True` pictures are shown, defaults to False
     :type display_fig: bool, optional
     
@@ -162,7 +192,7 @@ def bkg_est(field: np.ndarray, display_fig: bool = False) -> float:
         plt.show()
     return mean
 
-def moving(direction: str, field: np.ndarray, index: tuple[int,int], back: float, size: int = 3, acc: float = 1e-5) -> list[int]:
+def moving(direction: str, field: NDArray, index: tuple[int,int], back: float, size: int = 3, acc: float = 1e-5) -> list[int]:
     """Looking in one direction
 
     `direction` is a string and contains two parameters:
@@ -176,7 +206,7 @@ def moving(direction: str, field: np.ndarray, index: tuple[int,int], back: float
     :param direction: selected direction
     :type direction: str
     :param field: the field
-    :type field: np.ndarray
+    :type field: NDArray
     :param index: the coordinates of the object
     :type index: tuple[int,int]
     :param size: maximum size of the object, defaults to 3
@@ -289,18 +319,18 @@ def moving(direction: str, field: np.ndarray, index: tuple[int,int], back: float
     return results
 
 
-def grad_check(field: np.ndarray, index: tuple[int,int], back: float, size: int = 3) -> tuple[np.ndarray,np.ndarray]:
+def grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 3) -> tuple[NDArray,NDArray]:
     """Checking the gradient trend around an object
 
     :param field: the field
-    :type field: np.ndarray
+    :type field: NDArray
     :param index: coordinates of the object
     :type index: tuple[int,int]
     :param size: the maximum size of the object, defaults to 3
     :type size: int, optional
     
     :return: size of the object (x,y)
-    :rtype: tuple[np.ndarray,np.ndarray]
+    :rtype: tuple[NDArray,NDArray]
     """
     mov = lambda val: moving(val,field,index,back,size)
     xy_dir = ['fxfy','fxby','bxfy','bxby'] 
@@ -319,19 +349,19 @@ def grad_check(field: np.ndarray, index: tuple[int,int], back: float, size: int 
     print(':: End ::')
     return x_size, y_size
     
-def selection(obj: np.ndarray, index: tuple[int,int], apos: np.ndarray, size: int, mindist: int = 5, minsize: int = 3, cutsize: int = 5) -> bool:
+def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, mindist: int = 5, minsize: int = 3, cutsize: int = 5) -> bool:
     """Selecting the objects for the fit
 
     :param objs: list of extracted objects
-    :type objs: list[np.ndarray]
+    :type objs: list[NDArray]
     :param apos: positions array
-    :type apos: np.ndarray
+    :type apos: NDArray
     :param size: max selected size
     :type size: int
     :param maxdist: max accepted distance between objects, defaults to 5
     :type maxdist: int, optional
     :return: list of the selected and rejected objects 
-    :rtype: tuple[list[np.ndarray], list[None | np.ndarray]]
+    :rtype: tuple[list[NDArray], list[None | NDArray]]
     """
     obj = np.copy(obj)
     dim = len(obj)
@@ -372,13 +402,13 @@ def selection(obj: np.ndarray, index: tuple[int,int], apos: np.ndarray, size: in
 
 
 ##*
-def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, display_fig: bool = False,**kwargs) -> np.ndarray | None:
+def object_isolation(field: NDArray, thr: float, size: int = 3, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, display_fig: bool = False,**kwargs) -> NDArray | None:
     """To isolate the most luminous star object.
     The function calls the `size_est()` function to compute the size of the object and
     then to extract it from the field.
 
     :param field: the field
-    :type field: np.ndarray
+    :type field: NDArray
     :param thr: threshold value
     :type thr: float
     :param size: maximum size of the object, defaults to 3
@@ -393,7 +423,7 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
     :type display_fig: bool, optional
     
     :return: the extracted objects or `None`
-    :rtype: np.ndarray | None
+    :rtype: NDArray | None
     """
     tmp_field = field.copy()
     display_field = field.copy()
@@ -518,11 +548,11 @@ def object_isolation(field: np.ndarray, thr: float, size: int = 3, objnum: int =
     print(':: End ::')
     return extraction
 
-def kernel_fit(obj: np.ndarray, err: float, display_fig: bool = False, **kwargs) -> float:
+def kernel_fit(obj: NDArray, err: float | None = None, display_fig: bool = False, **kwargs) -> float:
     """Estimating the sigma of the kernel
 
     :param obj: extracted objects
-    :type obj: np.ndarray
+    :type obj: NDArray
     :param back: estimated value of the background
     :type back: float
     :param noise: mean noise value
@@ -540,44 +570,22 @@ def kernel_fit(obj: np.ndarray, err: float, display_fig: bool = False, **kwargs)
     print('sigma',sigma0)
     k0 = obj.max()
 
-    def fit_func(pos: np.ndarray,*args) -> np.ndarray:
+    def fit_func(pos: NDArray,*args) -> NDArray:
         x, y = pos
         k, sigma = args
         x0, y0 = xmax, ymax 
         kernel = Gaussian(sigma)
         return k * kernel.value(x-x0)*kernel.value(y-y0)
-    
-    err = np.full(obj.shape,err,dtype=float)
-    from scipy.optimize import curve_fit
+    if err is not None:
+        err = np.full(obj.shape,err,dtype=float)
     initial_values = [k0,sigma0]
     xfit = np.vstack((x.ravel(),y.ravel()))
     yfit = obj.ravel()
-    errfit = err.ravel()
-    pop, pcov = curve_fit(fit_func,xfit[::-1],yfit,initial_values,sigma=errfit)
-    # sigma, k, x0, y0 = pop
-    # Dsigma, Dk, Dx0, Dy0 = np.sqrt(pcov.diagonal())
-    sigma, k, = pop
-    Dsigma, Dk = np.sqrt(pcov.diagonal())
-    print('FIT RESULTS')
-    print(f'\tsigma = {sigma} +- {Dsigma}\t{sigma/field_const}')
-    print(f'\tk = {k} +- {Dk}')
-    # print(f'\t(x0,y0) = ({x0},{y0}) +- ({Dx0},{Dy0})')
-    fit = fit_func((x,y),*pop)
-    chi_sq = (((obj-fit)/err)**2).sum()
-    chi0 = len(yfit)-len(pop)
-    print(f'\tred_chi = {chi_sq/chi0*100} +- {np.sqrt(2/chi0)*100} %')
-    # pop, pcov = curve_fit(fit_func,r.flatten(),obj.flatten(),initial_values,sigma=err.flatten())
+    errfit = err.ravel() if err is not None else err
+    pop, Dpop = fit_routine(xfit[::-1],yfit,fit_func,initial_values,err=errfit,names=['k','sigma'])
+    k, sigma = pop
+    Dk, Dsigma = Dpop
 
-    # xfit = np.arange(len(obj))-c
-    # yfit = (obj[xmax,:]+obj[:,ymax]) / 2
-    # errfit = err[xmax,:]
-    # pop, pcov = curve_fit(fit_func,xfit,yfit,initial_values,sigma=errfit)
-    # sigma, k = pop
-    # Dsigma, _ = np.sqrt(pcov.diagonal())
-    # print(f'sigma = {sigma} +- {Dsigma}')
-    # chi_sq = (((obj-fit_func(r,sigma,k))/err)**2).sum()
-    # chi0 = len(obj.flatten()) - 2
-    # print(f'chi_sq = {chi_sq/chi0*100:.2f} +- {np.sqrt(2/chi0)*100:.2f} %')
     if display_fig:
         figsize = kwargs['figsize'] if 'figsize' in kwargs.keys() else None
         title = kwargs['title'] if 'title' in kwargs.keys() else ''
@@ -600,11 +608,11 @@ def kernel_fit(obj: np.ndarray, err: float, display_fig: bool = False, **kwargs)
         plt.show()
     return sigma
 
-def kernel_estimation(extraction: list[np.ndarray], err: float, dim: int, selected: slice = slice(None), all_results: bool = False, display_plot: bool = False, **kwargs) -> np.ndarray | tuple[np.ndarray,tuple[float,float]]:
+def kernel_estimation(extraction: list[NDArray], err: float, dim: int, selected: slice = slice(None), all_results: bool = False, display_plot: bool = False, **kwargs) -> NDArray | tuple[NDArray,tuple[float,float]]:
     """Estimation of the kernel from a Gaussian model
 
     :param extraction: extracted objects
-    :type extraction: list[np.ndarray]
+    :type extraction: list[NDArray]
     :param back: estimated value of the background
     :type back: float
     :param noise: mean noise
@@ -617,12 +625,12 @@ def kernel_estimation(extraction: list[np.ndarray], err: float, dim: int, select
     :type all_results: bool, optional
     
     :return: kernel (and sigma with the error)
-    :rtype: np.ndarray | tuple[np.ndarray,tuple[float,float]]
+    :rtype: NDArray | tuple[NDArray,tuple[float,float]]
     """
     sel_extr = [*extraction[selected]]
     a_sigma = np.array([],dtype=float)
     for obj in sel_extr:
-        sigma = kernel_fit(obj,err)
+        sigma = kernel_fit(obj,err,display_plot,**kwargs)
         a_sigma = np.append(a_sigma,sigma)
         del sigma
     sigma = np.mean(a_sigma)
@@ -641,13 +649,13 @@ def kernel_estimation(extraction: list[np.ndarray], err: float, dim: int, select
         return kernel
 
 
-def LR_deconvolution(field: np.ndarray, kernel: np.ndarray, back: float, noise: float, iter: int = 17) -> np.ndarray:
+def LR_deconvolution(field: NDArray, kernel: NDArray, back: float, noise: float, iter: int = 17) -> NDArray:
     """Richardson-Lucy deconvolution algorithm
 
     :param field: the field
-    :type field: np.ndarray
+    :type field: NDArray
     :param kernel: estimated kernel
-    :type kernel: np.ndarray
+    :type kernel: NDArray
     :param back: estimated value of the background
     :type back: float
     :param noise: mean noise
@@ -656,7 +664,7 @@ def LR_deconvolution(field: np.ndarray, kernel: np.ndarray, back: float, noise: 
     :type iter: int, optional
     
     :return: recostructed field
-    :rtype: np.ndarray
+    :rtype: NDArray
     """
     n = max(back,noise)
     pos = np.where(field <= n)
