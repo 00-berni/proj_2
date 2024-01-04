@@ -9,7 +9,7 @@ K = field.K
 
 def initialize(dim: int, num: int, display_fig: bool = False, **kwargs):
     beta = field.BETA
-    masses = np.linspace(field.MIN_m,5, num)
+    masses = np.linspace(field.MIN_m,8, num)
     lums = masses**beta
     F = np.zeros((dim,dim))
     ynum = 5
@@ -138,14 +138,14 @@ if __name__ == '__main__':
         k,mu,sigma = args
         r = (x-mu)/sigma
         return k * np.exp(-r**2/2)
-    # from scipy.optimize import curve_fit
+    from scipy.optimize import curve_fit
     # cut = np.where(counts >= 500)[0]
     # edges = (bins[cut].min(), bins[cut].max())
     # cut = np.where(np.logical_and(edges[0] <= diff , diff <= edges[1]))[0]
-    thr = counts[maxpos] * 20e-2
-    edges = np.where(counts >= thr)[0][[0,-1]]
-    print('edges',edges)
-    edges = bins[edges]
+    thr = counts[maxpos] * 30e-2
+    pos = np.sort(np.where(counts >= thr)[0])[[0,-1]]
+    print('edges',pos)
+    edges = bins[pos]
     print('edges',edges)
     dlim = abs(edges[0]-diff).argmin()
     ulim = abs(edges[1]-diff).argmin()
@@ -166,23 +166,31 @@ if __name__ == '__main__':
     plt.stairs(counts,bins,fill=True)
     xx = np.linspace(min(bins),max(bins),1000)
     plt.plot(xx,gauss_fit(xx,*pop),color='orange')
+
+    pop, pcov = curve_fit(gauss_fit,bins[pos[0]:pos[1]],counts[pos[0]:pos[1]],[counts[maxpos],maxval,1])
+    print(f'mu = {pop[1]}')
+    print(f'sigma2 = {pop[-1]}')
+    plt.plot(xx,gauss_fit(xx,*pop),color='green')
+
     plt.axhline(thr,0,1,color='black',linestyle='dotted')
     plt.axvline(maxval,0,1,linestyle='--',color='red')
     plt.axvline(mu,0,1,linestyle='--',color='violet')
+    plt.axvline(pop[1],0,1,linestyle='--',color='yellow')
+    plt.axvline(edges[0],0,1,color='pink')
+    plt.axvline(edges[1],0,1,color='pink')
     plt.show()
+
+    mu = pop[1]
 
     err = (mu+1)*np.mean(I)
     print(f'!err={err}')
     err = (mu+1)*max(bkg,dark.mean())#np.mean(I)
     print(f'!err={err}')
     print(max(bkg,dark.mean()))
-    raise
 
     objs = restore.object_isolation(I,max(bkg,dark.mean()),size=7,objnum=20,reshape=True,reshape_corr=True,sel_cond=True,display_fig=False,norm=norm)
 
-    if objs is not None:
-        obj = objs[1]
-        sigma = restore.kernel_fit(obj,err,True)
+    kernel,(sigma, Dsigma) = restore.kernel_estimation(objs,err,N,all_results=True,display_plot=True)
 
     # print('\nII RUN')
     # back = ('Gaussian',(0.2, field.BACK_SIGMA))
