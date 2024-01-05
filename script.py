@@ -23,7 +23,13 @@ if __name__ == '__main__':
     print(bkg/field.K)
 
     print('\n--- Objects Extraction ---')
-    obj = restore.object_isolation(I,max(bkg,dark.mean()),size=7,objnum=15,reshape=True,reshape_corr=True,sel_cond=True,display_fig=True,norm=norm)
+    mean_val = max(bkg,dark.mean())
+    objs = restore.object_isolation(I,mean_val,size=7,objnum=15,reshape=True,reshape_corr=True,sel_cond=True,display_fig=False,norm=norm)
 
     print('\n--- Kernel Estimation ---')
-    # kernel = restore.kernel_estimation()
+    if objs is not None:
+        thr = 10
+        err = restore.err_estimation(I,mean_val,thr=thr,display_plot=True)
+        kernel, (sigma, Dsigma) = restore.kernel_estimation(objs,err,N,all_results=True,display_plot=True)
+    else:
+        print('[ALERT] - It is not possible to recover the field!\nTry to change parameters')
