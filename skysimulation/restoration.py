@@ -22,14 +22,43 @@ def peak_pos(field: NDArray) -> int | tuple[int,int]:
         return np.unravel_index(field.argmax(),field.shape)
 
 def fit_routine(xdata: NDArray, ydata: NDArray, method: Callable[[NDArray,Any],NDArray], initial_values: list[float] | NDArray, err: NDArray | None = None, sel: str = 'pop', print_res: bool = True, names: list[str | None] = [] ,**kwargs) -> list[NDArray | float]:
+    """Routine for a fit with `curve_fit`
+
+    :param xdata: x values
+    :type xdata: NDArray
+    :param ydata: y values
+    :type ydata: NDArray
+    :param method: model
+    :type method: Callable[[NDArray,Any],NDArray]
+    :param initial_values: guesses for parameters
+    :type initial_values: list[float] | NDArray
+    :param err: error values, defaults to `None`
+    :type err: NDArray | None, optional
+    :param sel: selected result/s, defaults to 'pop'
+    :type sel: str, optional
+    :param print_res: if `True` fit results are printed, defaults to `True`
+    :type print_res: bool, optional
+    :param names: names of the parameters, defaults to []
+    :type names: list[str  |  None], optional
+    
+    :return: estimated parameters and additional info
+    :rtype: list[NDArray | float]
+    """
+    # importing the function
     from scipy.optimize import curve_fit
+    # computing the fit
     pop, pcov = curve_fit(method, xdata, ydata, initial_values,sigma=err,**kwargs)
+    # extracting the errors
     Dpop = np.sqrt(pcov.diagonal())
+    # computing the chi squared
     if err is not None:
+        # evaluating function in `xdata`
         fit = method(xdata,*pop)
+        # computing chi squared
         chisq = (((ydata-fit)/err)**2).sum()
         chi0 = len(ydata) - len(pop)
         # Dchi0 = np.sqrt(2*chi0)
+    # print results
     if print_res:
         if len(names) == 0:
             names = [f'pop{i+1}' for i in range(len(pop))]
@@ -39,6 +68,7 @@ def fit_routine(xdata: NDArray, ydata: NDArray, method: Callable[[NDArray,Any],N
         if err is not None:
             print(f'\tred_chi = {chisq/chi0*100} +- {np.sqrt(2/chi0)*100} %')
         print('- - - -')
+    # collecting results
     results = []
     if sel == 'all' or 'pop' in sel:
         results += [pop, Dpop]
@@ -402,7 +432,7 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, min
 
 
 ##*
-def object_isolation(field: NDArray, thr: float, size: int = 3, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, display_fig: bool = False,**kwargs) -> NDArray | None:
+def object_isolation(field: NDArray, thr: float, size: int = 3, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, display_fig: bool = False,**kwargs) -> list[NDArray] | None:
     """To isolate the most luminous star object.
     The function calls the `size_est()` function to compute the size of the object and
     then to extract it from the field.
@@ -425,40 +455,49 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, objnum: int = 10
     :return: the extracted objects or `None`
     :rtype: NDArray | None
     """
-    tmp_field = field.copy()
-    display_field = field.copy()
-
-    a_pos = np.array([[],[]],dtype=int)
-    extraction = []
-    sel_pos = np.array([[],[]],dtype=int)
-    rej_obj = []
-    rej_pos = np.array([[],[]],dtype=int)
-    
+    # copying the field
+    tmp_field = field.copy()        #: field from which objects will be removed
+    display_field = field.copy()    #: field from which only selected objects will be removed
+    # initializing some useful variables
+    a_pos = np.array([[],[]],dtype=int)     #: storing coordinates of studied objects
+    extraction = []                         #: list to collect selected objects
+    sel_pos = np.array([[],[]],dtype=int)   #: storing coordinates of selected objects
+    rej_obj = []                            #: list to collect rejected objects
+    rej_pos = np.array([[],[]],dtype=int)   #: storing coordinates of rejected objects
+    # condition for the plots
     if display_fig: 
         tmp_kwargs = {key: kwargs[key] for key in kwargs.keys() - {'title'}} 
-
-    k = 0 
-    ctrl_cnt = 0
+    # routine to extract objects
+    k = 0           #: counter of selected objects
+    ctrl_cnt = 0    #: counter of iterations
     while k < objnum:
-        # finding the peak
+        # finding the maximum value
         index = peak_pos(tmp_field)
-        ctrl = False
+        
+        ctrl = False    #?: solo per me
+        #? per me
         if 0 in index: 
             print(index)
             ctrl = True
+        #?
+        
         peak = tmp_field[index]
-        # checking the value
+        # condition to stop
         if peak <= thr:
             break
         # computing size
-        x, y = index
         a_size = grad_check(tmp_field,index,thr,size)
+        
+        #? per me
         if ctrl: 
             print(index)
             print(a_size)
-            # raise Exception('Ci fermiamo un attimo') 
+        #?
+        
         print(f':: Iteration {k} of object_isolation :: ')
         print('a_size',a_size)
+        # removing the object from `tmp_field`
+        x, y = index
         x_size, y_size = a_size
         xu, xd = x_size
         yu, yd = y_size
@@ -468,12 +507,15 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, objnum: int = 10
         tmp_field[xr,yr] = 0.0
         print('a_size 2',a_size)
         a_pos = np.append(a_pos,[[x],[y]],axis=1)
+        # if the object is a single px it is rejected
         if all([0,0] == a_size[0]) or all([0,0] == a_size[1]):
             rej_obj += [field[xr,yr].copy()]
             rej_pos = np.append(rej_pos,[[x],[y]],axis=1)
             print(f'Rejected obj: ({x},{y})')
         else: 
             if reshape:
+                # reshaping the object in order to 
+                # get the same size in each directions
                 a_size = np.array(a_size)
                 pos = np.where(a_size != 0)
                 print('POS: ',pos)
@@ -484,10 +526,12 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, objnum: int = 10
                 yu, yd = y_size
                 xr = slice(x-xd, x+xu+1) 
                 yr = slice(y-yd, y+yu+1)
-            
+            # extracting the object
             obj = field[xr,yr].copy() 
 
             if reshape_corr and (0 in [xu,xd,yu,yd]):
+                # reshaping the object in order to 
+                # get a squared matrix
                 xpadu = 0 if xd != 0 else xu
                 xpadd = 0 if xu != 0 else xd
                 ypadu = 0 if yd != 0 else yu
@@ -496,39 +540,43 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, objnum: int = 10
                 xpad_pos = (xpadu,xpadd)
                 ypad_pos = (ypadu,ypadd)
                 print('Pad',xpad_pos,ypad_pos)
+                # extending the object
                 obj = np.pad(obj,(xpad_pos,ypad_pos),'reflect')
             
+            # checking if the object is acceptable or not
             save_cond = selection(obj,index,a_pos,size) if sel_cond else True
-            
             if save_cond:
                 print(f'** OBJECT SELECTED ->\t{k}')
+                # updating the field to plot
                 display_field[xr,yr] = 0.0
-                
+                # storing the selected object
                 extraction += [obj]
                 sel_pos = np.append(sel_pos,[[x],[y]],axis=1)
                 if display_fig:
                     tmp_kwargs['title'] = f'N. {k+1} object {index} - {ctrl_cnt}'
+                # updating the counter
                 k += 1 
             else: 
                 print(f'!! OBJECT REJECTED ->\t{k}')
+                # storing the rejected object
                 rej_obj += [obj]
                 rej_pos = np.append(rej_pos,[[x],[y]],axis=1)
                 if display_fig:
                     tmp_kwargs['title'] = f'Rejected object {index} - {ctrl_cnt}'
-
+            # plotting the object
             if display_fig: 
                 fast_image(obj,**tmp_kwargs) 
-            
+            # condition to prevent the stack-overflow
             if (ctrl_cnt >= objnum and len(extraction) >= 3) or ctrl_cnt > 2*objnum and sel_cond:
                 break
-
+            # updating the iteration counter
             ctrl_cnt += 1
-
+    # plotting the field after extraction
     if 'title' not in kwargs:
         kwargs['title'] = 'Field after extraction'
     fast_image(display_field,**kwargs)
     fast_image(tmp_field,**kwargs)    
-
+    # plotting the field with markers for rejected and selected objects
     if sel_cond and len(extraction) > 0:
         fig, ax = plt.subplots(1,1)
         kwargs.pop('title',None)
@@ -543,10 +591,94 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, objnum: int = 10
         ax.plot(sel_pos[1],sel_pos[0],'.',color='blue',label='chosen objects')
         ax.legend()
         plt.show()
-
+    # if nothing is taken or found
     if len(extraction) == 0: extraction = None
     print(':: End ::')
     return extraction
+
+def err_estimation(field: NDArray, mean_val: float, thr: float | int = 30, display_plot: bool = False) -> float:
+    """Estimating the mean fluctuation of the background
+
+    :param field: field matrix
+    :type field: NDArray
+    :param mean_val: mean value of background
+    :type mean_val: float
+    :param thr: threshold from which fit is computed in % of the maximum value, defaults to 30
+    :type thr: float | int, optional
+    :param display_plot: if `True` plots are shown, defaults to False
+    :type display_plot: bool, optional
+    
+    :return: estimation of the mean fluctuation
+    :rtype: float
+    """
+    # copying the field
+    field = np.copy(field)
+    # computing the ratio of each pixels with the others
+    diff = np.array([i/field for i in field])
+    print(f'diff = {diff.shape}')
+    print(f'diff -> {diff[0]}')
+    diff = diff.flatten()
+    print(f'diff = {diff.shape}')
+    #! da migliorare !
+    # removing the ratio of same pixels
+    pos = np.where(diff!=1.)[0]
+    print(len(np.where(diff==1.)[0]))
+    #!               !
+    # computing the contrast
+    diff = diff[pos] - 1
+    print(f'diff = {diff.shape}')
+    # computing the histogram
+    bins = np.linspace(min(diff),max(diff),np.sqrt(len(diff)).astype(int)*2)
+    counts, bins = np.histogram(diff,bins=bins)
+    # computing the maximum
+    maxpos = counts.argmax()
+    maxval = (bins[maxpos+1] + bins[maxpos])/2
+
+    def gauss_fit(x: float | NDArray,*args) -> float | NDArray:
+        """Gaussian model for the fit
+
+        :param x: variable
+        :type x: float | NDArray
+
+        :return: Gaussian value
+        :rtype: float | NDArray
+        """
+        k,mu,sigma = args
+        r = (x-mu)/sigma
+        return k * np.exp(-r**2/2)
+
+    # computing the threshold as the fraction of the maximum
+    thr = counts[maxpos] * thr/100
+    # taking only values over the threshold
+    pos = np.sort(np.where(counts >= thr)[0])[[0,-1]]
+    print('edges',pos)
+    edges = bins[pos]
+    print('edges',edges)
+    print('maxval',maxval)
+    cut = slice(pos[0],pos[1]+1)
+    # computing the fit
+    pop, Dpop = fit_routine(bins[cut],counts[cut],gauss_fit,[counts[maxpos],maxval,1],names=['k','mu','sigma'])
+    mu = pop[1]
+    if display_plot:
+        plt.figure()
+        plt.title('Fluctuations')
+        plt.stairs(counts,bins,fill=True, label='data')
+        xx = np.linspace(min(bins),max(bins),1000)
+        plt.plot(xx,gauss_fit(xx,*pop),color='green',label='fit')
+
+        plt.axhline(thr,0,1,color='black',linestyle='dotted',label='threshold')
+        plt.axvline(maxval,0,1,linestyle='--',color='red',label='max value')
+        plt.axvline(mu,0,1,linestyle='--',color='violet',label='$\mu_{fit}$')
+        plt.axvline(edges[0],0,1,color='pink')
+        plt.axvline(edges[1],0,1,color='pink')
+        
+        plt.legend()
+        plt.xlabel('$I_i/I_j$')
+        plt.ylabel('counts')
+        plt.show()
+    # computing the mean fluctuation
+    return (mu+1) * mean_val
+
 
 def kernel_fit(obj: NDArray, err: float | None = None, display_fig: bool = False, **kwargs) -> float:
     """Estimating the sigma of the kernel
@@ -561,28 +693,39 @@ def kernel_fit(obj: NDArray, err: float | None = None, display_fig: bool = False
     :return: mean sigma of the kernel
     :rtype: float
     """
+    # data need to be flattened 
     dim = len(obj)
     m = np.arange(dim)
     x, y = np.meshgrid(m,m)
-    xmax, ymax = peak_pos(obj)
-    r = np.sqrt(x**2 + y**2)
+    xmax, ymax = peak_pos(obj)  #: maximum value coordinates
+
+    def fit_func(pos: tuple[NDArray,NDArray],*args) -> NDArray:
+        """Gaussian model for the fit
+
+        :param pos: coordinates (x,y)
+        :type pos: tuple[NDArray,NDArray]
+
+        :return: value of the gaussian
+        :rtype: NDArray
+        """
+        x, y = pos
+        k, sigma = args
+        x0, y0 = xmax, ymax
+        kernel = Gaussian(sigma)
+        return k * kernel.value(x-x0)*kernel.value(y-y0)
+    # computing the error matrix
+    if err is not None:
+        err = np.full(obj.shape,err,dtype=float)
+    # computing the fit
     sigma0 = 1
     print('sigma',sigma0)
     k0 = obj.max()
-
-    def fit_func(pos: NDArray,*args) -> NDArray:
-        x, y = pos
-        k, sigma = args
-        x0, y0 = xmax, ymax 
-        kernel = Gaussian(sigma)
-        return k * kernel.value(x-x0)*kernel.value(y-y0)
-    if err is not None:
-        err = np.full(obj.shape,err,dtype=float)
     initial_values = [k0,sigma0]
     xfit = np.vstack((x.ravel(),y.ravel()))
     yfit = obj.ravel()
     errfit = err.ravel() if err is not None else err
-    pop, Dpop = fit_routine(xfit[::-1],yfit,fit_func,initial_values,err=errfit,names=['k','sigma'])
+    pop, Dpop = fit_routine(xfit[::-1],yfit,fit_func,initial_values,err=errfit,names=['k','sigma'])    
+    # extracting values
     k, sigma = pop
     Dk, Dsigma = Dpop
 
@@ -627,29 +770,33 @@ def kernel_estimation(extraction: list[NDArray], err: float, dim: int, selected:
     :return: kernel (and sigma with the error)
     :rtype: NDArray | tuple[NDArray,tuple[float,float]]
     """
+    # copying the list
     sel_extr = [*extraction[selected]]
-    a_sigma = np.array([],dtype=float)
+    a_sigma = np.array([],dtype=float)  #: array to store values of sigma
     for obj in sel_extr:
         sigma = kernel_fit(obj,err,display_plot,**kwargs)
         a_sigma = np.append(a_sigma,sigma)
         del sigma
+    # computing the mean and STD
     sigma = np.mean(a_sigma)
     Dsigma = np.sqrt(((sigma-a_sigma)**2).sum()/(len(a_sigma)*(len(a_sigma)-1)))
-    print(f'\nsigma = {sigma:.5f} +- {Dsigma:.5f}')
+    print(f'\nsigma = {sigma:.5f} +- {Dsigma:.5f} -> {Dsigma/sigma*100:.2f} %')
+    # computing the kernel
     kernel = Gaussian(sigma)
     kernel = kernel.kernel(dim)
+    
     if display_plot:
         if 'title' not in kwargs:
             kwargs['title'] = 'Estimated kernel'
         fast_image(kernel,**kwargs)
-    
+
     if all_results:
         return kernel,(sigma,Dsigma)
     else:
         return kernel
 
 
-def LR_deconvolution(field: NDArray, kernel: NDArray, back: float, noise: float, iter: int = 17) -> NDArray:
+def LR_deconvolution(field: NDArray, kernel: NDArray, mean_val: float, iter: int = 17) -> NDArray:
     """Richardson-Lucy deconvolution algorithm
 
     :param field: the field
@@ -666,8 +813,7 @@ def LR_deconvolution(field: NDArray, kernel: NDArray, back: float, noise: float,
     :return: recostructed field
     :rtype: NDArray
     """
-    n = max(back,noise)
-    pos = np.where(field <= n)
+    pos = np.where(field <= mean_val)
     tmp_field = field[pos].copy()
     n = np.mean(tmp_field)
     Dn = np.sqrt(np.mean((tmp_field-n)**2))
@@ -705,5 +851,5 @@ def LR_deconvolution(field: NDArray, kernel: NDArray, back: float, noise: float,
     plt.subplot(1,2,2)
     plt.imshow(Sr1,cmap='gray')
     plt.show()
-    fast_image(Sr1-back-noise)    
+    fast_image(Sr1-mean_val)    
     return Sr1
