@@ -61,7 +61,7 @@ def add_effects(F,masses,coor,back,atm,det,**kwargs):
         display.field_image(fig,ax1,F,v=2,norm='log')
         x,y = coor
         for i in range(len(masses)):
-            ax1.annotate(f'{masses[i]:.1f}',(x[i],y[i]),(x[i]-4,y[i]-3),fontsize=12)
+            ax1.annotate(f'{masses[i]:.1f}',(x[i],y[i]),(x[i]-4,y[i]+3),fontsize=12)
 
         ax2.set_title('Field and Background',fontsize=14)
         display.field_image(fig,ax2,Fb,v=v,norm=norm)
@@ -113,88 +113,16 @@ if __name__ == '__main__':
     bkg = nn[0]
     I = results[0]
     
-    # diff1 = I[1:]/I[:-1]
-    # diff2 = I[:,1:]/I[:,:-1]
-    # diff = np.append(diff1,diff2) - 1
-    Iflat = I.flatten()
-    # diff = np.array([ Iflat[i]/np.delete(Iflat,i) for i in range(len(Iflat)) ]).flatten() - 1
-    diff = np.array([i/I for i in I])
-    print(f'diff = {diff.shape}')
-    print(f'diff -> {diff[0]}')
-    diff = diff.flatten()
-    print(f'diff = {diff.shape}')
-    pos = np.where(diff!=1.)[0]
-    print(len(np.where(diff==1.)[0]))
-    diff = diff[pos] -1
-    print(f'diff = {diff.shape}')
-    bins = np.linspace(min(diff),max(diff),np.sqrt(len(diff)).astype(int))
-    counts, bins = np.histogram(diff,bins=bins)
-    maxpos = counts.argmax()
-    maxval = (bins[maxpos+1] + bins[maxpos])/2
-    from scipy import stats
-    # x = bins[:-1]
-    # y = counts
-    def gauss_fit(x,*args):
-        k,mu,sigma = args
-        r = (x-mu)/sigma
-        return k * np.exp(-r**2/2)
-    from scipy.optimize import curve_fit
-    # cut = np.where(counts >= 500)[0]
-    # edges = (bins[cut].min(), bins[cut].max())
-    # cut = np.where(np.logical_and(edges[0] <= diff , diff <= edges[1]))[0]
-    thr = counts[maxpos] * 30e-2
-    pos = np.sort(np.where(counts >= thr)[0])[[0,-1]]
-    print('edges',pos)
-    edges = bins[pos]
-    print('edges',edges)
-    dlim = abs(edges[0]-diff).argmin()
-    ulim = abs(edges[1]-diff).argmin()
-    dlim, ulim = min(dlim,ulim), max(dlim,ulim)
-    print('lim',dlim,ulim)
-    cut = slice(dlim,ulim)
-    (mu, sigma) = stats.norm.fit(diff[cut],loc=maxval,scale=1)
-    khist = counts.sum()*np.mean(bins[1:]-bins[:-1])
-    k = khist / np.sqrt(2*np.pi) / sigma
-    # initial_values = [max(y),maxval,0.5]
-    # pop, pcov = curve_fit(gauss_fit,x,y,initial_values)
-    # k,mu,sigma = pop
-    print('maxval',maxval)
-    print('mu',mu)
-    print('sigma',sigma)
-    pop = [k,mu,sigma]
-    plt.figure()
-    plt.stairs(counts,bins,fill=True)
-    xx = np.linspace(min(bins),max(bins),1000)
-    plt.plot(xx,gauss_fit(xx,*pop),color='orange')
-
-    pop, pcov = curve_fit(gauss_fit,bins[pos[0]:pos[1]],counts[pos[0]:pos[1]],[counts[maxpos],maxval,1])
-    print(f'mu = {pop[1]}')
-    print(f'sigma2 = {pop[-1]}')
-    plt.plot(xx,gauss_fit(xx,*pop),color='green')
-
-    plt.axhline(thr,0,1,color='black',linestyle='dotted')
-    plt.axvline(maxval,0,1,linestyle='--',color='red')
-    plt.axvline(mu,0,1,linestyle='--',color='violet')
-    plt.axvline(pop[1],0,1,linestyle='--',color='yellow')
-    plt.axvline(edges[0],0,1,color='pink')
-    plt.axvline(edges[1],0,1,color='pink')
-    plt.show()
-
-    mu = pop[1]
-
-    err = (mu+1)*np.mean(I)
-    print(f'!err={err}')
-    err = (mu+1)*max(bkg,dark.mean())#np.mean(I)
-    print(f'!err={err}')
-    print(max(bkg,dark.mean()))
 
     objs = restore.object_isolation(I,max(bkg,dark.mean()),size=7,objnum=20,reshape=True,reshape_corr=True,sel_cond=True,display_fig=False,norm=norm)
 
-    kernel,(sigma, Dsigma) = restore.kernel_estimation(objs,err,N,all_results=True,display_plot=True)
+    if objs is not None:
 
-    # print('\nII RUN')
-    # back = ('Gaussian',(0.2, field.BACK_SIGMA))
-    # det = ('Gaussian',(field.NOISE_MEAN,field.NOISE_SIGMA))
-    # atm = field.SEEING_SIGMA
-    # add_effects(F,back,atm,det,figure=figure,norm=norm,v=v)
+        err = restore.err_estimation(I,max(dark.mean(),bkg),display_plot=True)
 
+        kernel,(sigma, Dsigma) = restore.kernel_estimation(objs,err,N,all_results=True,display_plot=True)
+
+        
+
+    else:
+        print('[ALERT] - It is not possible to recover the field!\nTry to change parameters')
