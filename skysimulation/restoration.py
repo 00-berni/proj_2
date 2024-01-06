@@ -796,7 +796,7 @@ def kernel_estimation(extraction: list[NDArray], err: float, dim: int, selected:
         return kernel
 
 
-def LR_deconvolution(field: NDArray, kernel: NDArray, mean_val: float, iter: int = 17) -> NDArray:
+def LR_deconvolution(field: NDArray, kernel: NDArray, mean_val: float, iter: int = 10, sel: str = 'all', display_fig: bool = False, **kwargs) -> NDArray:
     """Richardson-Lucy deconvolution algorithm
 
     :param field: the field
@@ -823,33 +823,42 @@ def LR_deconvolution(field: NDArray, kernel: NDArray, mean_val: float, iter: int
     from skimage.restoration import richardson_lucy
     I = np.copy(field)
     P = np.copy(kernel)
-    Ir = lambda S: convolve(S,P)
-    Sr = lambda S,Ir: S * convolve(I/Ir,P)
+    if sel == 'all' or 'mine' in sel:
+        Ir = lambda S: convolve(S,P)
+        Sr = lambda S,Ir: S * convolve(I/Ir,P)
 
-    r = 1
-    Ir0 = Ir(I)
-    Sr1 = Sr(I,Ir0)
-    Ir1 = Ir(Sr1)
-    diff = abs(trapz(trapz(Ir1-Ir0)))
-    print('Dn', Dn)
-    print(f'{r:02d}: - diff {diff}')
-    while r < iter: #diff > Dn:
-        r += 1
-        Sr0 = Sr1
-        Ir0 = Ir1
-        Sr1 = Sr(Sr0,Ir0)
+        r = 1
+        Ir0 = Ir(I)
+        Sr1 = Sr(I,Ir0)
         Ir1 = Ir(Sr1)
         diff = abs(trapz(trapz(Ir1-Ir0)))
+        print('Dn', Dn)
         print(f'{r:02d}: - diff {diff}')
-    SrD = Sr(Sr1,Ir1)
-    fast_image(SrD)    
-    Sr1 = richardson_lucy(I,P,iter)
-    fast_image(Sr1)   
-    plt.figure()
-    plt.subplot(1,2,1)
-    plt.imshow(SrD,cmap='gray')
-    plt.subplot(1,2,2)
-    plt.imshow(Sr1,cmap='gray')
-    plt.show()
-    fast_image(Sr1-mean_val)    
-    return Sr1
+        while r < iter: #diff > Dn:
+            r += 1
+            Sr0 = Sr1
+            Ir0 = Ir1
+            Sr1 = Sr(Sr0,Ir0)
+            Ir1 = Ir(Sr1)
+            diff = abs(trapz(trapz(Ir1-Ir0)))
+            print(f'{r:02d}: - diff {diff}')
+        SrD = Sr(Sr1,Ir1)
+        if display_fig: fast_image(SrD,**kwargs)    
+        Sr = SrD
+    if sel == 'all' or 'rl' in sel:
+        Sr1 = richardson_lucy(I,P,iter)
+        if display_fig: fast_image(Sr1,**kwargs)   
+        Sr = Sr1
+    if display_fig:
+        if sel == 'all':
+            fig, (ax1,ax2) = plt.subplots(1,2)
+            field_image(fig,ax1,SrD,**kwargs)
+            field_image(fig,ax2,Sr1,**kwargs)
+            plt.show()
+        if 'rl' in sel:
+            fig, (ax1,ax2) = plt.subplots(1,2)
+            field_image(fig,ax1,field,**kwargs)
+            field_image(fig,ax2,Sr1,**kwargs)
+            plt.show()
+            fast_image(Sr1-mean_val,**kwargs)    
+    return Sr
