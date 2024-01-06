@@ -7,9 +7,9 @@ import skysimulation.restoration as restore
 
 K = field.K
 
-def initialize(dim: int, num: int, display_fig: bool = False, **kwargs):
+def initialize(dim: int, num: int,max_mass: float | int = 8, display_fig: bool = False, **kwargs):
     beta = field.BETA
-    masses = np.linspace(field.MIN_m,8, num)
+    masses = np.linspace(field.MIN_m,max_mass,num)
     lums = masses**beta
     F = np.zeros((dim,dim))
     ynum = 5
@@ -85,7 +85,8 @@ if __name__ == '__main__':
     norm = 'linear'
     v = 0
     print('Initializing')
-    F, masses, coor = initialize(N,M,display_fig=figure,v=1,norm=norm)
+    max_mass = 10
+    F, masses, coor = initialize(N,M,max_mass,display_fig=figure,v=1,norm=norm)
     
     print('\nI RUN')
     back = field.BACK_PARAM
@@ -113,16 +114,16 @@ if __name__ == '__main__':
     bkg = nn[0]
     I = results[0]
     
-
-    objs = restore.object_isolation(I,max(bkg,dark.mean()),size=7,objnum=20,reshape=True,reshape_corr=True,sel_cond=True,display_fig=False,norm=norm)
+    mean_val = max(bkg,dark.mean())
+    objs = restore.object_isolation(I,mean_val,size=7,objnum=20,reshape=True,reshape_corr=True,sel_cond=True,display_fig=False,norm=norm)
 
     if objs is not None:
 
-        err = restore.err_estimation(I,max(dark.mean(),bkg),display_plot=True)
+        err = restore.err_estimation(I,mean_val,display_plot=True)
 
         kernel,(sigma, Dsigma) = restore.kernel_estimation(objs,err,N,all_results=True,display_plot=True)
 
-        
+        rec_I = restore.LR_deconvolution(I,kernel,mean_val,iter=50,sel='rl',display_fig=True)
 
     else:
         print('[ALERT] - It is not possible to recover the field!\nTry to change parameters')

@@ -31,5 +31,6 @@ if __name__ == '__main__':
         thr = 10
         err = restore.err_estimation(I,mean_val,thr=thr,display_plot=True)
         kernel, (sigma, Dsigma) = restore.kernel_estimation(objs,err,N,all_results=True,display_plot=True)
+        rec_I = restore.LR_deconvolution(I,kernel,mean_val,iter=50,sel='rl',display_fig=True)
     else:
         print('[ALERT] - It is not possible to recover the field!\nTry to change parameters')
