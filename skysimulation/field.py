@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from numpy.typing import NDArray
 import matplotlib.pyplot as plt
 from scipy.signal import fftconvolve
 from scipy.ndimage import gaussian_filter
@@ -17,12 +18,12 @@ class Star():
     :param lum: star luminosity
     :type lum: float
     :param pos: star coordinates (x,y)
-    :type pos: tuple[np.ndarray, np.ndarray]
+    :type pos: tuple[NDArray, NDArray]
     """
-    def __init__(self, mass: float, lum: float, pos: tuple[np.ndarray, np.ndarray]) -> None:
-        self.m   = mass       # star mass value
-        self.lum = lum        # star luminosity value
-        self.pos = pos        # star coordinates
+    def __init__(self, mass: float | NDArray, lum: float | NDArray, pos: tuple[float | NDArray, float | NDArray]) -> None:
+        self.m   = mass       #: star mass value
+        self.lum = lum        #: star luminosity value
+        self.pos = pos        #: star coordinates
 
     def plot_info(self, alpha: float, beta: float, sel: str = 'all') -> None:
         nstars = len(self.m)
@@ -84,14 +85,14 @@ class Gaussian():
         print(f'mean:\t{self.mu}')
         print(f'sigma:\t{self.sigma}')
 
-    def value(self,r: float | np.ndarray) -> float | np.ndarray:
+    def value(self,r: float | NDArray) -> float | NDArray:
         """Computing the value
 
         :param r: variable
-        :type r: float | np.ndarray
+        :type r: float | NDArray
         
         :return: the value of the distribution
-        :rtype: float | np.ndarray
+        :rtype: float | NDArray
         """
         x = r/self.sigma
         return np.exp(-x**2/2)
@@ -115,14 +116,14 @@ class Gaussian():
         from scipy.integrate import quad
         return quad(self.value,inf,sup)[0]
 
-    def kernel(self, dim: int) -> np.ndarray:
+    def kernel(self, dim: int) -> NDArray:
         """Computing a Gaussian kernel
 
         :param dim: size of the field
         :type dim: int
         
         :return: kernel
-        :rtype: np.ndarray
+        :rtype: NDArray
         """
         # kernel must have a odd size
         if dim % 2 == 0: dim -= 1
@@ -136,14 +137,14 @@ class Gaussian():
         kernel = self.value(r)
         return kernel / self.kernel_norm(dim)
 
-    def field(self, dim: int) -> np.ndarray:
+    def field(self, dim: int) -> NDArray:
         """Drawing values from Gaussian distribution
 
         :param dim: size of the field
         :type dim: int
         
         :return: matrix
-        :rtype: np.ndarray
+        :rtype: NDArray
         """
         mu = self.mu
         sigma = self.sigma
@@ -169,7 +170,7 @@ class Uniform():
         print(f'minval:\t{self.min}')
         print(f'maxval:\t{self.max}')
 
-    def field(self, dim: int) -> np.ndarray:
+    def field(self, dim: int) -> NDArray:
         n = self.max
         rng = np.random.default_rng()
         return rng.uniform(self.min,n,size=(dim,dim))
@@ -183,7 +184,7 @@ class Poisson():
         print('Poisson distribution')
         print(f'lambda:\t{self.lam}')
 
-    def field(self, dim: int) -> np.ndarray:
+    def field(self, dim: int) -> NDArray:
         rng = np.random.default_rng()
         return self.k * rng.poisson(self.lam,size=(dim,dim))
         
@@ -233,7 +234,7 @@ SEEING_SIGMA = 3
 ATM_PARAM = ('Gaussian',SEEING_SIGMA)                                                                                     
 ##
 
-def generate_mass_array(m_min: float = MIN_m, m_max: float = MAX_m, alpha: float = ALPHA,  sdim: int = M) -> np.ndarray:
+def generate_mass_array(m_min: float = MIN_m, m_max: float = MAX_m, alpha: float = ALPHA,  sdim: int = M) -> NDArray:
     """Generating masses array from the IMF distribution
     The function takes the minimum and the maximum masses, the IMF 
     and generates a `sdim`-dimensional array of masses distributed like 
@@ -253,7 +254,7 @@ def generate_mass_array(m_min: float = MIN_m, m_max: float = MAX_m, alpha: float
     :type sdim: int, optional
 
     :return: `sdim`-dimensional array of masses distributed like IMF
-    :rtype: np.ndarray
+    :rtype: NDArray
     """
     # intial mass function
     IMF = lambda m : m**(-alpha)
@@ -265,7 +266,7 @@ def generate_mass_array(m_min: float = MIN_m, m_max: float = MAX_m, alpha: float
     return rng.uniform(imf_max,imf_min,sdim)**(-1/alpha)
 
 
-def star_location(sdim: int = M, dim: int = N, overlap: bool = False) -> tuple[np.ndarray,np.ndarray]:
+def star_location(sdim: int = M, dim: int = N, overlap: bool = False) -> tuple[NDArray,NDArray]:
     """Function to locate the stars.
     It generates a list with all possible positions in the
     field matrix and draws `sdim` of those. Then it collects
@@ -296,25 +297,25 @@ def star_location(sdim: int = M, dim: int = N, overlap: bool = False) -> tuple[n
     Y = np.array([grid[i][1] for i in ind])
     return (X, Y)    
 
-# def update_field(F: np.ndarray, pos: tuple[np.ndarray, np.ndarray], lum: np.ndarray) -> np.ndarray:
+# def update_field(F: NDArray, pos: tuple[NDArray, NDArray], lum: NDArray) -> NDArray:
 #     """Function to update the field.
 #     It adds the generated stars to the field.
 
 #     :param F: field matrix
-#     :type F: np.ndarray
+#     :type F: NDArray
 #     :param pos: star coordinates
-#     :type pos: tuple[np.ndarray, np.ndarray]
+#     :type pos: tuple[NDArray, NDArray]
 #     :param lum: luminosities array
-#     :type lum: np.ndarray
+#     :type lum: NDArray
 
 #     :return: updated field matrix
-#     :rtype: np.ndarray
+#     :rtype: NDArray
 #     """
 #     # uppdating the field
 #     F[pos] += lum
 #     return F
 
-def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m,MAX_m), alpha: float = ALPHA, beta: float = BETA, overlap: bool = False, display_fig: bool = False, **kwargs) -> tuple[np.ndarray, Star]:
+def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m,MAX_m), alpha: float = ALPHA, beta: float = BETA, overlap: bool = False, display_fig: bool = False, **kwargs) -> tuple[NDArray, Star]:
     """Initialization function for the generation of the "perfect" sky
     It generates the stars and updates the field without any seeing 
     or noise effect.
@@ -353,18 +354,18 @@ def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m
         fast_image(F,**kwargs)
     return F, S
 
-def atm_seeing(field: np.ndarray, sigma: float = SEEING_SIGMA, display_fig: bool = False, **kwargs) -> np.ndarray:
+def atm_seeing(field: NDArray, sigma: float = SEEING_SIGMA, display_fig: bool = False, **kwargs) -> NDArray:
     """Atmosferic seeing function
     It convolves the field with tha Gaussian to
     make the atmosferic seeing
 
     :param field: field matrix
-    :type field: np.ndarray
+    :type field: NDArray
     :param sigma: the root of variance of Gaussian, defaults to 0.5
     :type sigma: float, optional
     
     :return: field matrix with seeing
-    :rtype: np.ndarray
+    :rtype: NDArray
     """
     # dim of the field
     n = len(field)
@@ -383,7 +384,7 @@ def atm_seeing(field: np.ndarray, sigma: float = SEEING_SIGMA, display_fig: bool
     # checking the field and returning it
     return see_field
 
-def noise(params: tuple[str, float | tuple], dim: int = N, infos: bool = False, display_fig: bool = False, **kwargs) -> np.ndarray:
+def noise(params: tuple[str, float | tuple], dim: int = N, infos: bool = False, display_fig: bool = False, **kwargs) -> NDArray:
     """Noise generator
     It generates a (dim,dim) matrix of noise, using
     an arbitrary maximum intensity n.
@@ -394,7 +395,7 @@ def noise(params: tuple[str, float | tuple], dim: int = N, infos: bool = False, 
     :type dim: int, optional
 
     :return: noise matrix
-    :rtype: np.ndarray
+    :rtype: NDArray
     """
     distr = from_parms_to_distr(params,infos)
     n = distr.field(dim)
@@ -408,7 +409,7 @@ def noise(params: tuple[str, float | tuple], dim: int = N, infos: bool = False, 
         n = np.sqrt(n**2)
     return n * K
 
-def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, back_param: tuple[str, float | tuple] = BACK_PARAM, det_param: tuple[str, float | tuple] = NOISE_PARAM, overlap: bool = False, results: str | None = None, display_fig: bool = False, **kwargs) -> list[Star | np.ndarray]:
+def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, back_param: tuple[str, float | tuple] = BACK_PARAM, det_param: tuple[str, float | tuple] = NOISE_PARAM, overlap: bool = False, results: str | None = None, display_fig: bool = False, **kwargs) -> list[Star | NDArray]:
     """Constructor of the field
 
     :param dim: size of the field, defaults to N
@@ -433,7 +434,7 @@ def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (MI
     :type display_fig: bool, optional
     
     :return: stars and field (and additional results)
-    :rtype: list[np.ndarray]
+    :rtype: list[NDArray]
     """
     SEP = '-'*10 + '\n'
     print(SEP+f'Initialization of the field\nDimension:\t{dim} x {dim}\nNumber of stars:\t{stnum}')
