@@ -21,7 +21,7 @@ def peak_pos(field: NDArray) -> int | tuple[int,int]:
     else:
         return np.unravel_index(field.argmax(),field.shape)
 
-def fit_routine(xdata: NDArray, ydata: NDArray, method: Callable[[NDArray,Any],NDArray], initial_values: list[float] | NDArray, err: NDArray | None = None, sel: str = 'pop', print_res: bool = True, names: list[str | None] = [] ,**kwargs) -> list[NDArray | float]:
+def fit_routine(xdata: NDArray, ydata: NDArray, method: Callable[[NDArray,Any],NDArray], initial_values: list[float] | NDArray, err: NDArray | None = None, sel: str = 'pop', print_res: bool = True, names: list[str | None] = [] ,**kwargs) -> list[NDArray | float ] | dict:
     """Routine for a fit with `curve_fit`
 
     :param xdata: x values
@@ -72,12 +72,23 @@ def fit_routine(xdata: NDArray, ydata: NDArray, method: Callable[[NDArray,Any],N
     results = []
     if sel == 'all' or 'pop' in sel:
         results += [pop, Dpop]
+    elif sel == 'dict' and len(names) != 0:
+        names += ['D'+name for name in names]
+        pop = np.append(pop,Dpop)
+        dpop = {names[i]: pop[i] for i in range(len(names))}
+        results = dpop            
     if sel == 'all' or 'pcov' in sel:
         results += [pcov]
     if sel == 'all' or 'chisq' in sel:
         results += [chisq] 
+    # else: raise Exception('Wrong `sel`')
     return results
 
+def mean_n_std(xdata: NDArray) -> tuple[float, float]:
+    dim = len(xdata)
+    mean = np.mean(xdata)
+    std = np.sqrt(((xdata-mean)**2).sum()/(dim*(dim-1)))
+    return mean, std
 
 ##*
 def dark_elaboration(params: tuple[str, float | tuple], iteration: int = 3, dim: int = N, display_fig: bool = False, **kwargs) -> NDArray:
@@ -432,7 +443,7 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, min
 
 
 ##*
-def object_isolation(field: NDArray, thr: float, size: int = 3, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, display_fig: bool = False,**kwargs) -> list[NDArray] | None:
+def object_isolation(field: NDArray, thr: float, size: int = 3, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, display_fig: bool = False,**kwargs) -> tuple[list[NDArray],NDArray] | None:
     """To isolate the most luminous star object.
     The function calls the `size_est()` function to compute the size of the object and
     then to extract it from the field.
@@ -459,11 +470,11 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, objnum: int = 10
     tmp_field = field.copy()        #: field from which objects will be removed
     display_field = field.copy()    #: field from which only selected objects will be removed
     # initializing some useful variables
-    a_pos = np.array([[],[]],dtype=int)     #: storing coordinates of studied objects
-    extraction = []                         #: list to collect selected objects
-    sel_pos = np.array([[],[]],dtype=int)   #: storing coordinates of selected objects
-    rej_obj = []                            #: list to collect rejected objects
-    rej_pos = np.array([[],[]],dtype=int)   #: storing coordinates of rejected objects
+    a_pos = np.empty(shape=(2,0),dtype=int)     #: storing coordinates of studied objects
+    extraction = []                             #: list to collect selected objects
+    sel_pos = np.empty(shape=(2,0),dtype=int)   #: storing coordinates of selected objects
+    rej_obj = []                                #: list to collect rejected objects
+    rej_pos = np.empty(shape=(2,0),dtype=int)   #: storing coordinates of rejected objects
     # condition for the plots
     if display_fig: 
         tmp_kwargs = {key: kwargs[key] for key in kwargs.keys() - {'title'}} 
@@ -592,9 +603,9 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, objnum: int = 10
         ax.legend()
         plt.show()
     # if nothing is taken or found
-    if len(extraction) == 0: extraction = None
+    if len(extraction) == 0: return None
     print(':: End ::')
-    return extraction
+    return extraction, sel_pos
 
 def err_estimation(field: NDArray, mean_val: float, thr: float | int = 30, display_plot: bool = False) -> float:
     """Estimating the mean fluctuation of the background
@@ -680,7 +691,7 @@ def err_estimation(field: NDArray, mean_val: float, thr: float | int = 30, displ
     return (mu+1) * mean_val
 
 
-def kernel_fit(obj: NDArray, err: float | None = None, display_fig: bool = False, **kwargs) -> float:
+def kernel_fit(obj: NDArray, err: float | None = None, display_fig: bool = False, **kwargs) -> tuple[NDArray,NDArray]:
     """Estimating the sigma of the kernel
 
     :param obj: extracted objects
@@ -749,7 +760,7 @@ def kernel_fit(obj: NDArray, err: float | None = None, display_fig: bool = False
         plt.errorbar(m,obj[:,ymax],yerr=err[:,ymax],fmt='.')
         plt.plot(mm,fit_func([mm,ymax],*pop))
         plt.show()
-    return sigma
+    return pop, Dpop
 
 def kernel_estimation(extraction: list[NDArray], err: float, dim: int, selected: slice = slice(None), all_results: bool = False, display_plot: bool = False, **kwargs) -> NDArray | tuple[NDArray,tuple[float,float]]:
     """Estimation of the kernel from a Gaussian model
@@ -772,14 +783,17 @@ def kernel_estimation(extraction: list[NDArray], err: float, dim: int, selected:
     """
     # copying the list
     sel_extr = [*extraction[selected]]
-    a_sigma = np.array([],dtype=float)  #: array to store values of sigma
+    a_sigma = np.empty(shape=(0,2),dtype=float)  #: array to store values of sigma
+    a_k = np.empty(shape=(0,2),dtype=float)      #: array to store values of k
     for obj in sel_extr:
-        sigma = kernel_fit(obj,err,display_plot,**kwargs)
-        a_sigma = np.append(a_sigma,sigma)
-        del sigma
+        pop, Dpop = kernel_fit(obj,err,display_plot,**kwargs)
+        k, sigma = pop
+        Dk, Dsigma = Dpop
+        a_k = np.append(a_k,[[k,Dk]],axis=0)
+        a_sigma = np.append(a_sigma,[[sigma,Dsigma]],axis=0)
+        del sigma, Dsigma, k, Dk
     # computing the mean and STD
-    sigma = np.mean(a_sigma)
-    Dsigma = np.sqrt(((sigma-a_sigma)**2).sum()/(len(a_sigma)*(len(a_sigma)-1)))
+    sigma, Dsigma = mean_n_std(a_sigma[:,0])
     print(f'\nsigma = {sigma:.5f} +- {Dsigma:.5f} -> {Dsigma/sigma*100:.2f} %')
     # computing the kernel
     kernel = Gaussian(sigma)
@@ -791,9 +805,9 @@ def kernel_estimation(extraction: list[NDArray], err: float, dim: int, selected:
         fast_image(kernel,**kwargs)
 
     if all_results:
-        return kernel,(sigma,Dsigma)
+        return kernel, (a_sigma,a_k)
     else:
-        return kernel
+        return kernel, (sigma,Dsigma)
 
 
 def LR_deconvolution(field: NDArray, kernel: NDArray, mean_val: float, iter: int = 10, sel: str = 'all', display_fig: bool = False, **kwargs) -> NDArray:
@@ -818,7 +832,7 @@ def LR_deconvolution(field: NDArray, kernel: NDArray, mean_val: float, iter: int
     n = np.mean(tmp_field)
     Dn = np.sqrt(np.mean((tmp_field-n)**2))
     
-    from scipy.integrate import trapz
+    from scipy.integrate import trapezoid
     from scipy.ndimage import convolve
     from skimage.restoration import richardson_lucy
     I = np.copy(field)
@@ -831,7 +845,7 @@ def LR_deconvolution(field: NDArray, kernel: NDArray, mean_val: float, iter: int
         Ir0 = Ir(I)
         Sr1 = Sr(I,Ir0)
         Ir1 = Ir(Sr1)
-        diff = abs(trapz(trapz(Ir1-Ir0)))
+        diff = abs(trapezoid(trapezoid(Ir1-Ir0)))
         print('Dn', Dn)
         print(f'{r:02d}: - diff {diff}')
         while r < iter: #diff > Dn:
@@ -840,7 +854,7 @@ def LR_deconvolution(field: NDArray, kernel: NDArray, mean_val: float, iter: int
             Ir0 = Ir1
             Sr1 = Sr(Sr0,Ir0)
             Ir1 = Ir(Sr1)
-            diff = abs(trapz(trapz(Ir1-Ir0)))
+            diff = abs(trapezoid(trapezoid(Ir1-Ir0)))
             print(f'{r:02d}: - diff {diff}')
         SrD = Sr(Sr1,Ir1)
         if display_fig: fast_image(SrD,**kwargs)    
@@ -862,3 +876,17 @@ def LR_deconvolution(field: NDArray, kernel: NDArray, mean_val: float, iter: int
             plt.show()
             fast_image(Sr1-mean_val,**kwargs)    
     return Sr
+
+def light_recover(obj: NDArray, a_size: NDArray, kernel: NDArray) -> tuple[float, float]:
+    xd,xu,yd,yu = a_size
+    xmax, ymax = peak_pos(kernel)
+    x = slice(xmax-xd,xmax+xu+1)
+    y = slice(ymax-yd,xmax+yu+1)
+    cut = kernel[x,y]
+    l = obj/cut
+    return mean_n_std(l)
+    
+
+def find_objects(field: NDArray, kernel: NDArray, extraction: list[NDArray] | None = None, display_fig: bool = False, **kwargs) -> NDArray:
+
+    return
