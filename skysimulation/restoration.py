@@ -259,12 +259,10 @@ def moving(direction: str, field: NDArray, index: tuple[int,int], back: float, s
     print(f':: Results of moving() func for {direction} direction ::')
     tmp_field = field.copy()
     dim = len(tmp_field)
-    # pixel coordinates
-    x, y = index
+    x, y = index    #: pixel coordinates
     # size += 1
     
-    # list to store results
-    results = []
+    results = []    #: list to store results
     # inizializing the variable for the direction
     #    1 : forward
     #    0 : ignored
@@ -323,6 +321,7 @@ def moving(direction: str, field: NDArray, index: tuple[int,int], back: float, s
             ycond = lambda yval, ylim: yval < ylim 
     
     print('1 result',results)
+
     # if there are no forbidden directions
     if xd != 0 or yd != 0:
         # inizilizing the variables for the size
@@ -335,10 +334,8 @@ def moving(direction: str, field: NDArray, index: tuple[int,int], back: float, s
             # near pixels
             step0 = tmp_field[x + xsize*xd, y + ysize*yd]
             step1 = tmp_field[x + (xsize+1)*xd, y + (ysize+1)*yd]
-            # gradient
-            grad = step1 - step0
-            # ratio
-            ratio = step1/step0
+            grad = step1 - step0    #: gradient
+            ratio = step1/step0     #: ratio
             # condition to stop
             if step1 == 0 or step1 < back or (ratio - 1) >= acc:
                 print('ratio',ratio)
@@ -360,7 +357,7 @@ def moving(direction: str, field: NDArray, index: tuple[int,int], back: float, s
     return results
 
 
-def grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 3) -> tuple[NDArray,NDArray]:
+def grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 7, acc: float = 1e-5) -> tuple[NDArray,NDArray]:
     """Checking the gradient trend around an object
 
     :param field: the field
@@ -373,19 +370,23 @@ def grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 3
     :return: size of the object (x,y)
     :rtype: tuple[NDArray,NDArray]
     """
-    mov = lambda val: moving(val,field,index,back,size)
+    # defining method to move in a direction
+    mov = lambda val: moving(val,field,index,back,size=size,acc=acc)
+    # setting the diagonal directions
     xy_dir = ['fxfy','fxby','bxfy','bxby'] 
     a_xysize = np.array([mov(dir) for dir in xy_dir])
     print(':: Resutls of grad_check() ::')
     print('sizes',a_xysize)
+    # extracting resukts
     xf_size = a_xysize[:2,0]
     xb_size = a_xysize[2:,0]
     yf_size = a_xysize[(0,2),1]
     yb_size = a_xysize[(1,3),1]
-
+    # building a matrix of sizes
     a_size = np.array([[[mov('fx'),*xf_size],[mov('bx'),*xb_size]],
                        [[mov('fy'),*yf_size],[mov('by'),*yb_size]]])
     print('matrix',a_size)
+    # taking the maxima
     x_size, y_size = a_size.max(axis=2)
     print(':: End ::')
     return x_size, y_size
@@ -433,6 +434,7 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, min
     for i in range(lim):
         i += 1
         r, l, u, d = np.copy(obj[[x+i,x-i,x,x],[y,y,y+1,y-1]])
+        #!! DA RIVEDERE
         diff1 = abs(r/l - u/d) 
         diff2 = abs(r/d - l/u)
         if diff1 >= 0.3 or diff2 >= 0.3 or (diff1 > 0.25 and diff2 > 0.25): 
@@ -443,7 +445,7 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, min
 
 
 ##*
-def object_isolation(field: NDArray, thr: float, size: int = 3, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, display_fig: bool = False,**kwargs) -> tuple[list[NDArray],NDArray] | None:
+def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-5, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, display_fig: bool = False,**kwargs) -> tuple[list[NDArray],NDArray] | None:
     """To isolate the most luminous star object.
     The function calls the `size_est()` function to compute the size of the object and
     then to extract it from the field.
@@ -482,7 +484,7 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, objnum: int = 10
     k = 0           #: counter of selected objects
     ctrl_cnt = 0    #: counter of iterations
     while k < objnum:
-        # finding the maximum value
+        # finding the maximum value position
         index = peak_pos(tmp_field)
         
         ctrl = False    #?: solo per me
@@ -497,7 +499,7 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, objnum: int = 10
         if peak <= thr:
             break
         # computing size
-        a_size = grad_check(tmp_field,index,thr,size)
+        a_size = grad_check(tmp_field,index,thr,size,acc)
         
         #? per me
         if ctrl: 
@@ -519,7 +521,8 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, objnum: int = 10
         print('a_size 2',a_size)
         a_pos = np.append(a_pos,[[x],[y]],axis=1)
         # if the object is a single px it is rejected
-        if all([0,0] == a_size[0]) or all([0,0] == a_size[1]):
+        # if any([0,0] == a_size[0]) or all([0,0] == a_size[1]):
+        if any(([[0,0],[0,0]] == a_size).all(axis=1)):
             rej_obj += [field[xr,yr].copy()]
             rej_pos = np.append(rej_pos,[[x],[y]],axis=1)
             print(f'Rejected obj: ({x},{y})')
@@ -877,16 +880,55 @@ def LR_deconvolution(field: NDArray, kernel: NDArray, mean_val: float, iter: int
             fast_image(Sr1-mean_val,**kwargs)    
     return Sr
 
-def light_recover(obj: NDArray, a_size: NDArray, kernel: NDArray) -> tuple[float, float]:
-    xd,xu,yd,yu = a_size
+def light_recover(obj: NDArray, a_size: NDArray[np.int64], kernel: NDArray) -> tuple[float, float]:
     xmax, ymax = peak_pos(kernel)
-    x = slice(xmax-xd,xmax+xu+1)
-    y = slice(ymax-yd,xmax+yu+1)
-    cut = kernel[x,y]
+    xu, xd, yu, yd = a_size.flatten()
+    xr = slice(xmax-xd,xmax+xu+1)
+    yr = slice(ymax-yd,xmax+yu+1)
+    cut = kernel[xr,yr].copy()
     l = obj/cut
-    return mean_n_std(l)
+    L, DL = mean_n_std(l)
+    return L, DL
+
+
+def mask_filter(field: NDArray, lim: int) -> NDArray:
+    mask = field.copy()
+    dim = len(field)
+    cut = slice(lim,dim-lim)
+    mask[cut,cut] = 0.0
+    return field - mask
+
+
+def find_objects(field: NDArray, kernel: NDArray, mean_val: float, lim: int, sel_pos: NDArray | None = None, size: int = 7, acc: float = 1e-5, display_fig: bool = False, **kwargs) -> NDArray:
+    dim = len(field)
+    tmp_field = np.copy(field)      #: field from which objects will be removed
+    lum = np.empty(shape=(2,0),dtype=float)     #: array to collect brightness values and errors
+    pos = np.empty(shape=(2,0),dtype=int)       #: array to collect coordinates of stars
     
-
-def find_objects(field: NDArray, kernel: NDArray, extraction: list[NDArray] | None = None, display_fig: bool = False, **kwargs) -> NDArray:
-
-    return
+    if sel_pos is not None:
+        pos = np.copy(sel_pos)
+        for index in sel_pos:
+            a_size = grad_check(tmp_field,index,mean_val,size=size,acc=acc)
+            xu, xd, yu, yd = a_size.flatten()
+            x,y = index
+            xr = slice(x-xd, x+xu+1) 
+            yr = slice(y-yd, y+yu+1)
+            obj = field[xr,yr].copy()      
+            l, Dl = light_recover(obj,a_size,kernel)
+            lum = np.append(lum,[[l],[Dl]],axis=1)
+            tmp_field[xr,yr] = 0.0
+    
+    # routine
+    tmp_field = mask_filter(tmp_field,lim)
+    index = peak_pos(tmp_field)
+    peak = tmp_field[index]
+    while peak > mean_val:
+        x,y = index
+        a_size = grad_check(tmp_field,index,mean_val,size=size,acc=acc)
+        xu, xd, yu, yd = a_size.flatten()
+        xr = slice(x-xd, x+xu+1) 
+        yr = slice(y-yd, y+yu+1)
+        tmp_field[xr,yr] = 0.0
+        if all(([[0,0],[0,0]] == a_size).any(axis=1)):
+            obj = field[xr,yr].copy()      
+    return lum, pos
