@@ -93,7 +93,8 @@ class Gaussian():
         :return: the value of the distribution
         :rtype: float | np.ndarray
         """
-        return np.exp(-r**2/(2*self.sigma**2))
+        x = r/self.sigma
+        return np.exp(-x**2/2)
     
     def kernel_norm(self, dim: int) -> float:
         """Computing the normalization coefficient of a matrix
@@ -131,10 +132,8 @@ class Gaussian():
         x, y = np.meshgrid(np.arange(dim),np.arange(dim))
         # computing the distance from the center
         r = np.sqrt((x-self.mu)**2 + (y-self.mu)**2)
-        sigma = self.sigma
-        const = np.sqrt(2 * np.pi * sigma**2)
-        kernel = self.value(r) / const
         # computing kernel
+        kernel = self.value(r)
         return kernel / self.kernel_norm(dim)
 
     def field(self, dim: int) -> np.ndarray:
