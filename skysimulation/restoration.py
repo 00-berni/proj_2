@@ -357,7 +357,7 @@ def moving(direction: str, field: NDArray, index: tuple[int,int], back: float, s
     return results
 
 
-def grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 7, acc: float = 1e-5) -> tuple[NDArray,NDArray]:
+def grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 7, acc: float = 1e-5) -> NDArray:
     """Checking the gradient trend around an object
 
     :param field: the field
@@ -383,13 +383,15 @@ def grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 7
     yf_size = a_xysize[(0,2),1]
     yb_size = a_xysize[(1,3),1]
     # building a matrix of sizes
-    a_size = np.array([[[mov('fx'),*xf_size],[mov('bx'),*xb_size]],
-                       [[mov('fy'),*yf_size],[mov('by'),*yb_size]]])
+    a_size = np.array([[[mov('fx'),*xf_size],
+                        [mov('bx'),*xb_size]],
+                       [[mov('fy'),*yf_size],
+                        [mov('by'),*yb_size]]])
     print('matrix',a_size)
     # taking the maxima
-    x_size, y_size = a_size.max(axis=2)
+    a_size = a_size.max(axis=2)
     print(':: End ::')
-    return x_size, y_size
+    return a_size
     
 def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, mindist: int = 5, minsize: int = 3, cutsize: int = 5) -> bool:
     """Selecting the objects for the fit
@@ -511,9 +513,7 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-
         print('a_size',a_size)
         # removing the object from `tmp_field`
         x, y = index
-        x_size, y_size = a_size
-        xu, xd = x_size
-        yu, yd = y_size
+        xu, xd, yu, yd = a_size.flatten()
         xr = slice(x-xd, x+xu+1) 
         yr = slice(y-yd, y+yu+1)
         print('Slices: ',xr,yr)
@@ -530,14 +530,11 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-
             if reshape:
                 # reshaping the object in order to 
                 # get the same size in each directions
-                a_size = np.array(a_size)
                 pos = np.where(a_size != 0)
                 print('POS: ',pos)
                 min_size = a_size[pos].min()
                 a_size[pos] = min_size
-                x_size, y_size = a_size
-                xu, xd = x_size
-                yu, yd = y_size
+                xu, xd, yu, yd = a_size.flatten()
                 xr = slice(x-xd, x+xu+1) 
                 yr = slice(y-yd, y+yu+1)
             # extracting the object
@@ -672,7 +669,11 @@ def err_estimation(field: NDArray, mean_val: float, thr: float | int = 30, displ
     cut = slice(pos[0],pos[1]+1)
     # computing the fit
     pop, Dpop = fit_routine(bins[cut],counts[cut],gauss_fit,[counts[maxpos],maxval,1],names=['k','mu','sigma'])
+    pop[2] = abs(pop[2])
     mu = pop[1]
+    print(f'Pop = {(mu+1)*np.mean(field)} - {mean_val}')
+    sigma = pop[2]
+    print(f'Sigma_pop = {sigma*mean_val} - {sigma*np.mean(field)} - {(sigma * np.sqrt(2*np.log(2))) * mean_val}')
     if display_plot:
         plt.figure()
         plt.title('Fluctuations')
@@ -691,10 +692,11 @@ def err_estimation(field: NDArray, mean_val: float, thr: float | int = 30, displ
         plt.ylabel('counts')
         plt.show()
     # computing the mean fluctuation
-    return (mu+1) * mean_val
+    return (sigma * np.sqrt(2*np.log(2))) * mean_val
+    # return (mu+1) * mean_val
 
 
-def kernel_fit(obj: NDArray, err: float | None = None, display_fig: bool = False, **kwargs) -> tuple[NDArray,NDArray]:
+def kernel_fit(obj: NDArray, err: float | None = None, size_cut: int | None = 9, display_fig: bool = False, **kwargs) -> tuple[NDArray,NDArray]:
     """Estimating the sigma of the kernel
 
     :param obj: extracted objects
@@ -708,6 +710,11 @@ def kernel_fit(obj: NDArray, err: float | None = None, display_fig: bool = False
     :rtype: float
     """
     # data need to be flattened 
+    if size_cut is not None:
+        if len(obj) > size_cut:
+            cut = (len(obj)-size_cut)//2
+            obj = np.copy(obj[cut:-cut,cut:-cut])
+            del cut
     dim = len(obj)
     m = np.arange(dim)
     x, y = np.meshgrid(m,m)
@@ -742,6 +749,7 @@ def kernel_fit(obj: NDArray, err: float | None = None, display_fig: bool = False
     # extracting values
     k, sigma = pop
     Dk, Dsigma = Dpop
+    print(f'\tDerivative: ')
 
     if display_fig:
         figsize = kwargs['figsize'] if 'figsize' in kwargs.keys() else None
@@ -754,18 +762,20 @@ def kernel_fit(obj: NDArray, err: float | None = None, display_fig: bool = False
         ax.contour(xx,yy,fit_func((xx,yy),*pop),colors='b',linestyles='dashed',alpha=0.7)
         # kwargs.pop('title')
         # kwargs.pop('figsize')
-
-        plt.figure()
-        plt.subplot(1,2,1)
-        plt.errorbar(m,obj[xmax,:],yerr=err[xmax,:],fmt='.')
-        plt.plot(mm,fit_func([xmax,mm],*pop))
-        plt.subplot(1,2,2)
-        plt.errorbar(m,obj[:,ymax],yerr=err[:,ymax],fmt='.')
-        plt.plot(mm,fit_func([mm,ymax],*pop))
+        if err is not None:
+            plt.figure()
+            plt.subplot(1,2,1)
+            plt.title('On x axis')
+            plt.errorbar(m,obj[xmax,:],yerr=err[xmax,:],fmt='.')
+            plt.plot(mm,fit_func([xmax,mm],*pop))
+            plt.subplot(1,2,2)
+            plt.title('On y axis')
+            plt.errorbar(m,obj[:,ymax],yerr=err[:,ymax],fmt='.')
+            plt.plot(mm,fit_func([mm,ymax],*pop))
         plt.show()
     return pop, Dpop
 
-def kernel_estimation(extraction: list[NDArray], err: float, dim: int, selected: slice = slice(None), all_results: bool = False, display_plot: bool = False, **kwargs) -> NDArray | tuple[NDArray,tuple[float,float]]:
+def kernel_estimation(extraction: list[NDArray], err: float, dim: int, selected: slice = slice(None), size_cut: int | None = 9, all_results: bool = False, display_plot: bool = False, **kwargs) -> NDArray | tuple[NDArray,tuple[float,float]]:
     """Estimation of the kernel from a Gaussian model
 
     :param extraction: extracted objects
@@ -789,7 +799,7 @@ def kernel_estimation(extraction: list[NDArray], err: float, dim: int, selected:
     a_sigma = np.empty(shape=(0,2),dtype=float)  #: array to store values of sigma
     a_k = np.empty(shape=(0,2),dtype=float)      #: array to store values of k
     for obj in sel_extr:
-        pop, Dpop = kernel_fit(obj,err,display_plot,**kwargs)
+        pop, Dpop = kernel_fit(obj,err,size_cut=size_cut,display_fig=display_plot,**kwargs)
         k, sigma = pop
         Dk, Dsigma = Dpop
         a_k = np.append(a_k,[[k,Dk]],axis=0)
@@ -874,9 +884,12 @@ def LR_deconvolution(field: NDArray, kernel: NDArray, mean_val: float, iter: int
             plt.show()
         if 'rl' in sel:
             fig, (ax1,ax2) = plt.subplots(1,2)
+            ax1.set_title('Before')
             field_image(fig,ax1,field,**kwargs)
+            ax2.set_title('after')
             field_image(fig,ax2,Sr1,**kwargs)
             plt.show()
+            kwargs['title'] = 'Image - mean value'
             fast_image(Sr1-mean_val,**kwargs)    
     return Sr
 
