@@ -85,7 +85,7 @@ if __name__ == '__main__':
     norm = 'linear'
     v = 0
     print('Initializing')
-    max_mass = 10
+    max_mass = 5
     F, masses, coor = initialize(N,M,max_mass,display_fig=figure,v=1,norm=norm)
     
     print('\nI RUN')
@@ -115,15 +115,68 @@ if __name__ == '__main__':
     I = results[0]
     
     mean_val = max(bkg,dark.mean())
-    objs = restore.object_isolation(I,mean_val,size=7,objnum=20,reshape=True,reshape_corr=True,sel_cond=True,display_fig=False,norm=norm)
+    objs, obj_pos = restore.object_isolation(I,mean_val,size=7,objnum=20,reshape=True,reshape_corr=True,sel_cond=True,display_fig=False,norm=norm)
 
     if objs is not None:
-
-        err = restore.err_estimation(I,mean_val,display_plot=True)
-
-        kernel,(sigma, Dsigma) = restore.kernel_estimation(objs,err,N,all_results=False,display_plot=True)
+        try:
+            err = restore.err_estimation(I,mean_val,display_plot=True)
+        except:
+            err = None
+        kernel,(sigma, Dsigma) = restore.kernel_estimation(objs,err,N,all_results=False,display_plot=False)
 
         rec_I = restore.LR_deconvolution(I,kernel,mean_val,iter=50,sel='rl',display_fig=True)
-
+        dim = len(rec_I)
+        size = 0
+        cond = np.array([False]*4)
+        for i in range(dim-1):
+            diff1 = rec_I[i+1,i+1] - rec_I[i,i]
+            diff2 = rec_I[dim-1-i-1,dim-1-i-1] - rec_I[dim-1-i,dim-1-i]
+            diff3 = rec_I[i+1,dim-1-i-1] - rec_I[i,dim-1-i]
+            diff4 = rec_I[dim-1-i-1,i+1] - rec_I[dim-1-i,i]
+            if diff1 <= 0:
+                if i > size: size = i
+                cond[0] = True
+            if diff2 <= 0:
+                if i > size: size = i
+                cond[1] = True
+            if diff3 <= 0:
+                if i > size: size = i
+                cond[2] = True
+            if diff4 <= 0:
+                if i > size: size = i
+                cond[3] = True
+            if all(cond): break
+        print('size',size)
+        size0 = size
+        for i in range(size+1,dim-1):
+            diff1 = rec_I[:,i+1] - rec_I[:,i]
+            diff2 = rec_I[:,dim-1-i-1] - rec_I[:,dim-1-i]
+            diff3 = rec_I[i+1,:] - rec_I[i,:]
+            diff4 = rec_I[dim-1-i-1,:] - rec_I[dim-1-i,:]
+            diff1 = diff1.max()
+            diff2 = diff2.max()
+            diff3 = diff3.max()
+            diff4 = diff4.max()
+            if max(diff1,diff2,diff3,diff4) >= 0:
+                size = i
+                break
+        print('size',size)
+        fig, (ax1,ax2) = plt.subplots(1,2)
+        display.field_image(fig,ax1,I)
+        ax1.axhline(size0,0,1,color='red')
+        ax1.axhline(size0+size0//3,0,1,color='orange')
+        ax1.axhline(size,0,1)
+        ax1.axhline(dim-1-size,0,1)
+        ax1.axvline(size,0,1)
+        ax1.axvline(dim-1-size,0,1)
+        display.field_image(fig,ax2,rec_I)
+        ax2.axhline(size0,0,1,color='red')
+        ax2.axhline(size0+size0//3,0,1,color='orange')
+        ax2.axhline(size,0,1)
+        ax2.axhline(dim-1-size,0,1)
+        ax2.axvline(size,0,1)
+        ax2.axvline(dim-1-size,0,1)
+        plt.show()
+        display.fast_image(rec_I-I)
     else:
         print('[ALERT] - It is not possible to recover the field!\nTry to change parameters')
