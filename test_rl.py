@@ -6,6 +6,7 @@ import skysimulation.restoration as restore
 
 
 K = field.K
+st_pos = 20
 
 def initialize(dim: int, num: int,max_mass: float | int = 8, display_fig: bool = False, **kwargs):
     beta = field.BETA
@@ -22,7 +23,7 @@ def initialize(dim: int, num: int,max_mass: float | int = 8, display_fig: bool =
         diff = xnum*ynum - num
         lums = np.append(lums,[0]*diff)
     F[y,x] = lums * K
-    F[dim//2,dim//2] = 4**beta * K
+    F[st_pos,st_pos] = 4**beta * K
     # F[5,-1] = 8.6**beta * K
     # F[5,-9] = 8.5**beta * K
     if display_fig:
@@ -126,7 +127,8 @@ if __name__ == '__main__':
         kernel,(sigma, Dsigma) = restore.kernel_estimation(objs,err,N,all_results=False,display_plot=False)
 
         rec_I = restore.LR_deconvolution(I,kernel,mean_val,iter=50,sel='rl',display_fig=True)
-        print('Center Value',I[N//2,N//2],rec_I[N//2,N//2])
+        print('Center Value',I[st_pos,st_pos],rec_I[st_pos,st_pos])
+        mask = restore.mask_filter(rec_I,I,True)
         # lum, pos = restore.find_objects(rec_I,I,kernel,mean_val,sel_pos=obj_pos,display_fig=True)
     else:
         print('[ALERT] - It is not possible to recover the field!\nTry to change parameters')
