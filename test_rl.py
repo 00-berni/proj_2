@@ -128,7 +128,7 @@ if __name__ == '__main__':
 
         rec_I = restore.LR_deconvolution(I,kernel,mean_val,iter=50,sel='rl',display_fig=True)
         print('Center Value',I[st_pos,st_pos],rec_I[st_pos,st_pos])
-        mask = restore.mask_filter(rec_I,I,True)
-        # lum, pos = restore.find_objects(rec_I,I,kernel,mean_val,sel_pos=obj_pos,display_fig=True)
+        # mask = restore.mask_filter(rec_I,I,True)
+        lum, pos = restore.find_objects(rec_I,I,kernel,mean_val,sel_pos=obj_pos,display_fig=True)
     else:
         print('[ALERT] - It is not possible to recover the field!\nTry to change parameters')

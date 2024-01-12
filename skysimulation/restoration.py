@@ -393,7 +393,7 @@ def grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 7
     print(':: End ::')
     return a_size
     
-def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, mindist: int = 5, minsize: int = 3, cutsize: int = 5) -> bool:
+def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: str = 'all', mindist: int = 5, minsize: int = 3, cutsize: int = 5) -> bool:
     """Selecting the objects for the fit
 
     :param objs: list of extracted objects
@@ -407,43 +407,50 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, min
     :return: list of the selected and rejected objects 
     :rtype: tuple[list[NDArray], list[None | NDArray]]
     """
+    # distance must be 
+    if (size+mindist) < 0: raise
+    cond = False        #: variable to check if `sel` is correct
     obj = np.copy(obj)
     dim = len(obj)
-    if size != 1 and dim <= minsize: 
-        print(f'\t:Selection:\tdim = {dim}')
-        return False
-
-    if len(apos[0]) > 0:    
-        #: method to compute the length
-        dist = lambda x,y: np.sqrt(x**2 + y**2)
-        # extracting positions
-        x, y = index
-        xi, yi = np.copy(apos[:,:])
-        # computing distances
-        mindist += size
-        adist = np.array( [dist(xi[i]-x, yi[i]-y) for i in range(len(xi))] )
-        pos = np.where(np.logical_and(adist <= mindist, adist != 0))  
-        if len(pos[0]) != 0: 
-            print(f'\t:Selection:\tdist = {adist[pos]} - adist = {adist} - mindist = {mindist}')
+    if sel == 'all' or 'size' in sel:
+        cond = True
+        if size != 1 and dim <= minsize: 
+            print(f'\t:Selection:\tdim = {dim}')
             return False
-        del x, y, xi, yi, dist, adist, pos
-    
-    x, y = peak_pos(obj)
-    if abs(x - dim//2) > 1 or abs(y - dim//2) > 1: 
-        print(f'\t:Selection:\t(x,y) = ({x},{y}) - dim//2 = {dim//2}')
-        return False 
-    lim = cutsize if dim > 2*cutsize else dim//2 
-    for i in range(lim):
-        i += 1
-        r, l, u, d = np.copy(obj[[x+i,x-i,x,x],[y,y,y+1,y-1]])
-        #!! DA RIVEDERE
-        diff1 = abs(r/l - u/d) 
-        diff2 = abs(r/d - l/u)
-        if diff1 >= 0.3 or diff2 >= 0.3 or (diff1 > 0.25 and diff2 > 0.25): 
-            print(f'\t:Selection:\tdiff1 = {diff1} -  diff2 = {diff2}')
-            return False
-
-    return True
+    if sel == 'all' or 'dist' in sel:
+        cond = True
+        if len(apos[0]) > 0:    
+            #: method to compute the length
+            dist = lambda x,y: np.sqrt(x**2 + y**2)
+            # extracting positions
+            x, y = index
+            xi, yi = np.copy(apos[:,:])
+            # computing distances
+            mindist += size
+            adist = np.array( [dist(xi[i]-x, yi[i]-y) for i in range(len(xi))] )
+            pos = np.where(np.logical_and(adist <= mindist, adist != 0))  
+            if len(pos[0]) != 0: 
+                print(f'\t:Selection:\tdist = {adist[pos]} - adist = {adist} - mindist = {mindist}')
+                return False
+            del x, y, xi, yi, dist, adist, pos
+    if sel == 'all' or 'cut' in sel:    
+        cond = True
+        x, y = peak_pos(obj)
+        if abs(x - dim//2) > 1 or abs(y - dim//2) > 1: 
+            print(f'\t:Selection:\t(x,y) = ({x},{y}) - dim//2 = {dim//2}')
+            return False 
+        lim = cutsize if dim > 2*cutsize else dim//2 
+        for i in range(lim):
+            i += 1
+            r, l, u, d = np.copy(obj[[x+i,x-i,x,x],[y,y,y+1,y-1]])
+            #!! DA RIVEDERE
+            diff1 = abs(r/l - u/d) 
+            diff2 = abs(r/d - l/u)
+            if diff1 >= 0.3 or diff2 >= 0.3 or (diff1 > 0.25 and diff2 > 0.25): 
+                print(f'\t:Selection:\tdiff1 = {diff1} -  diff2 = {diff2}')
+                return False
+    if cond: return True
+    else: raise
 
 
 ##*
@@ -922,7 +929,7 @@ def mask_size(recover_field: NDArray, field: NDArray | None = None, display_fig:
         diff[2] = tmp_field[i+1,size+1:] - tmp_field[i,size+1:]
         diff[3] = tmp_field[dim-1-i-1,size+1:] - tmp_field[dim-1-i,size+1:]
         if diff.max() >= 0:
-            size = i
+            size = 4*i//3
             break
     print('Lim Cut',size)
     if display_fig:
@@ -930,47 +937,45 @@ def mask_size(recover_field: NDArray, field: NDArray | None = None, display_fig:
             fig, (ax1,ax2) = plt.subplots(1,2)
             field_image(fig,ax1,field,colorbar=False)
             ax1.axhline(size0,0,1,color='red',label='size0')
-            ax1.axhline(4//3*size0,0,1,color='orange',label='1/3')
+            ax1.axhline(4*size0//3,0,1,color='orange',label='1/3')
             ax1.axhline(size,0,1,label='size')
             ax1.axhline(dim-1-size,0,1)
             ax1.axvline(size,0,1)
             ax1.axvline(dim-1-size,0,1)
             field_image(fig,ax2,tmp_field)
             ax2.axhline(size0,0,1,color='red',label='size0')
-            ax2.axhline(4//3*size0,0,1,color='orange',label='1/3')
+            ax2.axhline(4*size0//3,0,1,color='orange',label='1/3')
             ax2.axhline(size,0,1,label='size')
             ax2.axhline(dim-1-size,0,1)
             ax2.axvline(size,0,1)
             ax2.axvline(dim-1-size,0,1)
-            ax2.legend()
             fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(2,2)
             field_image(fig,ax1,tmp_field,sct=((dim//2,None),(0,dim//2)),colorbar=False)
-            ax1.axhline(dim//2-4//3*size0,0,1,color='orange',label='1/3')
-            ax1.axvline(4//3*size0,0,1,color='orange',label='1/3')
+            ax1.axhline(dim//2-4*size0//3,0,1,color='orange',label='1/3')
+            ax1.axvline(4*size0//3,0,1,color='orange',label='1/3')
             ax1.axhline(dim//2-size,0,1)
             ax1.axvline(size,0,1)
             field_image(fig,ax2,tmp_field,sct=(dim//2,None),colorbar=False)
-            ax2.axhline(dim//2-4//3*size0,0,1,color='orange',label='1/3')
-            ax2.axvline(dim//2-4//3*size0,0,1,color='orange',label='1/3')
+            ax2.axhline(dim//2-4*size0//3,0,1,color='orange',label='1/3')
+            ax2.axvline(dim//2-4*size0//3,0,1,color='orange',label='1/3')
             ax2.axhline(dim//2-size,0,1)
             ax2.axvline(dim//2-size,0,1)
             field_image(fig,ax3,tmp_field,sct=(0,dim//2),colorbar=False)
-            ax3.axhline(4//3*size0,0,1,color='orange',label='1/3')
-            ax3.axvline(4//3*size0,0,1,color='orange',label='1/3')
+            ax3.axhline(4*size0//3,0,1,color='orange',label='1/3')
+            ax3.axvline(4*size0//3,0,1,color='orange',label='1/3')
             ax3.axhline(size,0,1)
             ax3.axvline(size,0,1)
             field_image(fig,ax4,tmp_field,sct=((0,dim//2),(dim//2,None)),colorbar=False)
-            ax4.axhline(4//3*size0,0,1,color='orange',label='1/3')
-            ax4.axvline(dim//2-4//3*size0,0,1,color='orange',label='1/3')
+            ax4.axhline(4*size0//3,0,1,color='orange',label='1/3')
+            ax4.axvline(dim//2-4*size0//3,0,1,color='orange',label='1/3')
             ax4.axhline(size,0,1)
             ax4.axvline(dim//2-size,0,1)
             plt.show()
-
         else:
             fig, ax = plt.subplots(1,1)
             field_image(fig,ax,tmp_field)
             ax.axhline(size0,0,1,color='red')
-            ax.axhline(4//3*size0,0,1,color='orange')
+            ax.axhline(4*size0//3,0,1,color='orange')
             ax.axhline(size,0,1)
             ax.axhline(dim-1-size,0,1)
             ax.axvline(size,0,1)
@@ -986,9 +991,9 @@ def mask_filter(field: NDArray, field0: NDArray | None = None, display_fig: bool
     mask[cut,cut] = 0.0
     if display_fig:
         fast_image(field-mask,**kwargs)
-    cut = slice(2*lim,dim - 2*lim)
-    amp, Damp = mean_n_std(field[cut,cut]/field0[cut,cut])
-    print(f'New Amp:\t{amp} +- {Damp}')
+    # cut = slice(2*lim,dim - 2*lim)
+    # amp, Damp = mean_n_std(field[cut,cut]/field0[cut,cut])
+    # print(f'New Amp:\t{amp*100} +- {Damp*100} %')
     return field - mask
 
 def light_recover(obj: NDArray, a_size: NDArray[np.int64], kernel: NDArray) -> tuple[float, float]:
@@ -1001,7 +1006,6 @@ def light_recover(obj: NDArray, a_size: NDArray[np.int64], kernel: NDArray) -> t
     if len(l) == 1: 
         print(obj)
         fast_image(obj)
-
         raise
     L, DL = mean_n_std(l)
     return L, DL
@@ -1011,6 +1015,7 @@ def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: flo
     tmp_field = np.copy(field)                  #: field from which objects will be removed
     lum = np.empty(shape=(2,0),dtype=float)     #: array to collect brightness values and errors
     rej = []                                    #: list of rejected objects
+    # applying the squared mask 
     tmp_field = mask_filter(tmp_field,field0,display_fig=display_fig,**kwargs)
     # checking previous objects first
     for i in range(len(sel_pos[0])):
@@ -1029,7 +1034,7 @@ def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: flo
             if display_fig:
                 fast_image(obj,title=f'Obj n.{i} - ({x},{y})',**kwargs)        
         tmp_field[xr,yr] = 0.0
-    pos = np.copy(sel_pos)                      #: array to collect coordinates of stars
+    pos = np.copy(sel_pos)      #: array to collect coordinates of stars
     if len(rej) > 0:
         # removing rejected objects
         pos = np.delete(pos,rej,axis=1)
@@ -1043,7 +1048,6 @@ def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: flo
     # routine
     index = peak_pos(tmp_field)
     peak = tmp_field[index]
-    raise
     while peak > mean_val:
         x,y = index
         a_size = grad_check(tmp_field,index,mean_val,size=size,acc=acc)
