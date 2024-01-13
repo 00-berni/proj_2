@@ -334,6 +334,9 @@ def moving(direction: str, field: NDArray, index: tuple[int,int], back: float, s
             # near pixels
             step0 = tmp_field[x + xsize*xd, y + ysize*yd]
             step1 = tmp_field[x + (xsize+1)*xd, y + (ysize+1)*yd]
+            if step0 == 0: 
+                print(f'Error:\n\tx,y = {x,y}\n\txd,yd = {xd},{yd}\n\txsize,ysize = {xsize},{ysize}\nstep1 = {step1}')
+                raise
             grad = step1 - step0    #: gradient
             ratio = step1/step0     #: ratio
             # condition to stop
@@ -1012,21 +1015,35 @@ def light_recover(obj: NDArray, a_size: NDArray[np.int64], kernel: NDArray) -> t
 
 def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: float, sel_pos: NDArray, size: int = 7, acc: float = 1e-5, display_fig: bool = False, **kwargs) -> NDArray:
     dim = len(field)
+    new_pos = sel_pos.copy()
     tmp_field = np.copy(field)                  #: field from which objects will be removed
     lum = np.empty(shape=(2,0),dtype=float)     #: array to collect brightness values and errors
-    rej = []                                    #: list of rejected objects
+    rej = []                                    #:
+    rej_pos = np.empty(shape=(2,0),dtype=int)   #: array to collect rejected objects
     # applying the squared mask 
     tmp_field = mask_filter(tmp_field,field0,display_fig=display_fig,**kwargs)
     # checking previous objects first
-    for i in range(len(sel_pos[0])):
-        x,y = sel_pos[:,i]
+    for i in range(len(new_pos[0])):
+        print('Iteration',i)
+        x,y = new_pos[:,i]
+        print(f'X,Y = {x,y}')
+        xlim = (max(0,x-2),min(x+2,dim))
+        ylim = (max(0,y-2),min(y+2,dim))
+        print(xlim,ylim)
+        xcut = slice(*xlim)
+        ycut = slice(*ylim)
+        x,y = np.array(peak_pos(tmp_field[xcut,ycut])) + np.array((xlim[0],ylim[0]))
+        new_pos[:,i] = [x,y]
+        print(f'X,Y new = {x,y}')
         a_size = grad_check(tmp_field,(x,y),mean_val,size=size,acc=acc)
         xu, xd, yu, yd = a_size.flatten()
         xr = slice(x-xd, x+xu+1) 
         yr = slice(y-yd, y+yu+1)
         obj = field[xr,yr].copy()
         # if obj is not acceptable
-        if len(obj) <= 2 or field[x,y]==0: rej += [i] 
+        if len(obj) <= 2 or field[x,y]==0: 
+            rej += [i]
+            rej_pos = np.append(rej_pos,[[x],[y]],axis=1) 
         else:
             # computing and storing brightness    
             l, Dl = light_recover(obj,a_size,kernel)
@@ -1034,10 +1051,21 @@ def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: flo
             if display_fig:
                 fast_image(obj,title=f'Obj n.{i} - ({x},{y})',**kwargs)        
         tmp_field[xr,yr] = 0.0
-    pos = np.copy(sel_pos)      #: array to collect coordinates of stars
     if len(rej) > 0:
         # removing rejected objects
-        pos = np.delete(pos,rej,axis=1)
+        new_pos = np.delete(new_pos,rej,axis=1)
+    if display_fig:
+        fig, (ax1,ax2) = plt.subplots(1,2)
+        fig.suptitle('New positions for previous objects')
+        field_image(fig,ax1,field0,**kwargs)
+        field_image(fig,ax2,field,**kwargs)
+        if len(rej) > 0:
+            ax1.plot(rej_pos[1],rej_pos[0],'x',color='red')
+            ax2.plot(rej_pos[1],rej_pos[0],'.',color='red')
+        ax1.plot(sel_pos[1],sel_pos[0],'.',color='orange')
+        ax2.plot(new_pos[1],new_pos[0],'.',color='pink')
+        plt.show()
+    pos = np.copy(sel_pos)      #: array to collect coordinates of stars
     # computing the amplification factor
     amp_fact = np.mean(field[pos[0],pos[1]]/field0[pos[0],pos[1]])
     print(f'Estimated Ampl Fact:\t{amp_fact*100} %')
@@ -1069,13 +1097,12 @@ def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: flo
                 field_image(fig,ax1,field0,**kwargs)
                 field_image(fig,ax2,field,**kwargs)
                 ax1.plot(y,x,'.b')
-                ax2.plot(y,x,'.b')
-            if len(rej) > 0:
-                ax1.plot(sel_pos[1,rej],sel_pos[0,rej],'.',color='violet')
-                ax2.plot(sel_pos[1,rej],sel_pos[0,rej],'.',color='violet')
-                sel_pos = np.delete(sel_pos,rej,axis=1)
+                ax2.plot(y,x,'.b')                
+                if len(rej) > 0:
+                    ax1.plot(rej_pos[1],rej_pos[0],'x',color='violet')
+                    ax2.plot(rej_pos[1],rej_pos[0],'.',color='violet')
                 ax1.plot(sel_pos[1],sel_pos[0],'.',color='orange')
-                ax2.plot(sel_pos[1],sel_pos[0],'.',color='orange')
+                ax2.plot(new_pos[1],new_pos[0],'.',color='orange')
 
         else:
             if amp/amp_fact >= 2: cond = f'\namp/amp_factor = {amp/amp_fact}'
@@ -1091,7 +1118,10 @@ def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: flo
                 ax1.plot(y,x,'.r')
                 ax2.plot(y,x,'.r')
                 ax1.plot(sel_pos[1],sel_pos[0],'.',color='orange')
-                ax2.plot(sel_pos[1],sel_pos[0],'.',color='orange')
+                ax2.plot(new_pos[1],new_pos[0],'.',color='orange')
+                if len(rej) > 0:
+                    ax1.plot(rej_pos[1],rej_pos[0],'x',color='violet')
+                    ax2.plot(rej_pos[1],rej_pos[0],'.',color='violet')
         plt.show()
         tmp_field[xr,yr] = 0.0
         index = peak_pos(tmp_field)
