@@ -1,8 +1,8 @@
+from typing import Callable, Sequence, Any
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import NDArray,ArrayLike
 from scipy.signal import find_peaks
-from typing import Callable, Any
 from .display import fast_image, field_image
 from .field import Gaussian, N, Uniform, noise
 from .field import K as field_const
@@ -396,7 +396,7 @@ def grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 7
     print(':: End ::')
     return a_size
     
-def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: str = 'all', mindist: int = 5, minsize: int = 3, cutsize: int = 5) -> bool:
+def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: str | Sequence[str] = 'all', mindist: int = 5, minsize: int = 3, cutsize: int = 5) -> bool:
     """Selecting the objects for the fit
 
     :param objs: list of extracted objects
@@ -986,7 +986,7 @@ def mask_size(recover_field: NDArray, field: NDArray | None = None, display_fig:
             plt.show()
     return size
 
-def mask_filter(field: NDArray, field0: NDArray | None = None, display_fig: bool = False,**kwargs) -> NDArray:
+def mask_filter(field: NDArray, field0: NDArray | None = None, display_fig: bool = False,**kwargs) -> tuple[NDArray,int]:
     lim = mask_size(field,field0,display_fig=display_fig,**kwargs)
     mask = field.copy()
     dim = len(field)
@@ -997,7 +997,7 @@ def mask_filter(field: NDArray, field0: NDArray | None = None, display_fig: bool
     # cut = slice(2*lim,dim - 2*lim)
     # amp, Damp = mean_n_std(field[cut,cut]/field0[cut,cut])
     # print(f'New Amp:\t{amp*100} +- {Damp*100} %')
-    return field - mask
+    return field - mask, lim
 
 def light_recover(obj: NDArray, a_size: NDArray[np.int64], kernel: NDArray) -> tuple[float, float]:
     xmax, ymax = peak_pos(kernel)
@@ -1021,7 +1021,7 @@ def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: flo
     rej = []                                    #:
     rej_pos = np.empty(shape=(2,0),dtype=int)   #: array to collect rejected objects
     # applying the squared mask 
-    tmp_field = mask_filter(tmp_field,field0,display_fig=display_fig,**kwargs)
+    tmp_field, lim = mask_filter(tmp_field,field0,display_fig=display_fig,**kwargs)
     # checking previous objects first
     for i in range(len(new_pos[0])):
         print('Iteration',i)
@@ -1047,10 +1047,12 @@ def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: flo
         else:
             # computing and storing brightness    
             l, Dl = light_recover(obj,a_size,kernel)
+            l = field[x,y].copy()
             lum = np.append(lum,[[l],[Dl]],axis=1)
             if display_fig:
                 fast_image(obj,title=f'Obj n.{i} - ({x},{y})',**kwargs)        
         tmp_field[xr,yr] = 0.0
+    pos = np.copy(new_pos)
     if len(rej) > 0:
         # removing rejected objects
         new_pos = np.delete(new_pos,rej,axis=1)
@@ -1065,7 +1067,8 @@ def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: flo
         ax1.plot(sel_pos[1],sel_pos[0],'.',color='orange')
         ax2.plot(new_pos[1],new_pos[0],'.',color='pink')
         plt.show()
-    pos = np.copy(sel_pos)      #: array to collect coordinates of stars
+    acc_pos = np.empty(shape=(2,0),dtype=int)      #: array to collect coordinates of stars
+    unacc_pos = np.empty(shape=(2,0),dtype=int)
     # computing the amplification factor
     amp_fact = np.mean(field[pos[0],pos[1]]/field0[pos[0],pos[1]])
     print(f'Estimated Ampl Fact:\t{amp_fact*100} %')
@@ -1078,16 +1081,21 @@ def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: flo
     peak = tmp_field[index]
     while peak > mean_val:
         x,y = index
+        pos = np.append(pos,[[x],[y]],axis=1)
         a_size = grad_check(tmp_field,index,mean_val,size=size,acc=acc)
         xu, xd, yu, yd = a_size.flatten()
         xr = slice(x-xd, x+xu+1) 
         yr = slice(y-yd, y+yu+1)
         amp = peak/field0[index]
         print(f'- Ampl Fact:\t{amp*100} %')
-        if all(([[0,0],[0,0]] != a_size).any(axis=1)) and amp/amp_fact < 2:
-            obj = field[xr,yr].copy()      
+        obj = field[xr,yr].copy()      
+        select = selection(obj,index,pos,size=size,mindist=0,minsize=2,sel=('size','dist'))
+        edge_cond = sum([(np.array([x,y]) == i).any() for i in [lim+1,dim-2-lim]]) and np.logical_and(a_size < 3,a_size!=0).any() 
+        if all(([[0,0],[0,0]] != a_size).any(axis=1)) and amp/amp_fact < 2 and select and edge_cond:
             l, Dl = light_recover(obj, a_size, kernel)
+            l = field[x,y].copy()
             lum = np.append(lum,[[l],[Dl]],axis=1)
+            acc_pos = np.append(pos,[[x],[y]],axis=1)
             if display_fig:
                 fig, ax = plt.subplots(1,1)
                 ax.set_title(f'Accepted {len(lum[0])} - ({x},{y})')
@@ -1103,8 +1111,8 @@ def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: flo
                     ax2.plot(rej_pos[1],rej_pos[0],'.',color='violet')
                 ax1.plot(sel_pos[1],sel_pos[0],'.',color='orange')
                 ax2.plot(new_pos[1],new_pos[0],'.',color='orange')
-
         else:
+            unacc_pos = np.append(unacc_pos,[[x],[y]],axis=1)
             if amp/amp_fact >= 2: cond = f'\namp/amp_factor = {amp/amp_fact}'
             else: cond = f'\na_size = {a_size}'; print(f'A_SIZE cond = {([[0,0],[0,0]] == a_size).any(axis=1)}\t{a_size}')
             if display_fig:
@@ -1122,10 +1130,32 @@ def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: flo
                 if len(rej) > 0:
                     ax1.plot(rej_pos[1],rej_pos[0],'x',color='violet')
                     ax2.plot(rej_pos[1],rej_pos[0],'.',color='violet')
-        plt.show()
+        if display_fig:
+            ax2.axvline(lim,0,1,color='yellow',alpha=0.8)
+            ax2.axhline(lim,0,1,color='yellow',alpha=0.8)
+            ax2.axvline(dim-1-lim,0,1,color='yellow',alpha=0.8)
+            ax2.axhline(dim-1-lim,0,1,color='yellow',alpha=0.8)
+            plt.show()
         tmp_field[xr,yr] = 0.0
         index = peak_pos(tmp_field)
         peak = tmp_field[index]
-    if display_fig:
-        fast_image(tmp_field,**kwargs)
+    acc_pos = np.append(new_pos,acc_pos,axis=1)
+    unacc_pos = np.append(rej_pos,unacc_pos,axis=1)
+    fig, (ax1,ax2,ax3) = plt.subplots(1,3)
+    field_image(fig,ax1,field0,**kwargs)
+    field_image(fig,ax2,field,**kwargs)
+    field_image(fig,ax3,tmp_field,**kwargs)
+    ax2.plot(acc_pos[1],acc_pos[0],'.b')
+    # ax2.plot(unacc_pos[1],unacc_pos[0],'.r')
+    ax2.axvline(lim,0,1,color='yellow',alpha=0.8)
+    ax2.axhline(lim,0,1,color='yellow',alpha=0.8)
+    ax2.axvline(dim-1-lim,0,1,color='yellow',alpha=0.8)
+    ax2.axhline(dim-1-lim,0,1,color='yellow',alpha=0.8)
+    ax3.plot(acc_pos[1],acc_pos[0],'.b')
+    ax3.plot(unacc_pos[1],unacc_pos[0],'.r')
+    ax3.axvline(lim,0,1,color='yellow',alpha=0.8)
+    ax3.axhline(lim,0,1,color='yellow',alpha=0.8)
+    ax3.axvline(dim-1-lim,0,1,color='yellow',alpha=0.8)
+    ax3.axhline(dim-1-lim,0,1,color='yellow',alpha=0.8)
+    plt.show()
     return lum, pos
