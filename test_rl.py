@@ -23,7 +23,7 @@ def initialize(dim: int, num: int,max_mass: float | int = 8, display_fig: bool =
         diff = xnum*ynum - num
         lums = np.append(lums,[0]*diff)
     F[y,x] = lums * K
-    F[st_pos,st_pos] = 4**beta * K
+    # F[st_pos,st_pos] = 4**beta * K
     # F[5,-1] = 8.6**beta * K
     # F[5,-9] = 8.5**beta * K
     if display_fig:
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     norm = 'linear'
     v = 0
     print('Initializing')
-    max_mass = 5
+    max_mass = 10
     F, masses, coor = initialize(N,M,max_mass,display_fig=figure,v=1,norm=norm)
 
     print('\nI RUN')
@@ -129,6 +129,22 @@ if __name__ == '__main__':
         rec_I = restore.LR_deconvolution(I,kernel,mean_val,iter=50,sel='rl',display_fig=True)
         print('Center Value',I[st_pos,st_pos],rec_I[st_pos,st_pos])
         # mask = restore.mask_filter(rec_I,I,True)
-        lum, pos = restore.find_objects(rec_I,I,kernel,mean_val,sel_pos=obj_pos,display_fig=True)
+        lum, pos = restore.find_objects(rec_I,I,kernel,mean_val,sel_pos=obj_pos,display_fig=False)
+        l, Dl = lum
+        l0 = masses**field.BETA * K
+        print('MAXes',l0.max(),l.max())
+        print('MINes',l0.min(),l.min())
+        fig, ax = plt.subplots(1,1)
+        bins = np.linspace(min(l.min(),l0.min()),max(l.max(),l0.max()),len(l0)*4)
+        l_counts, bins = np.histogram(l,bins=bins)
+        l0_counts, bins = np.histogram(l0,bins=bins)
+        ax.stairs(l_counts,bins,label='estimated')
+        ax.stairs(l0_counts,bins,linestyle='dashed',label='original')
+        lm = np.linspace(masses.min()**field.BETA,masses.max()**field.BETA,6) *K
+        ax.set_xticks(lm)
+        ax.set_xticklabels([f'{(i/K)**(1/field.BETA):.1f}' for i in lm])
+        # ax.set_xscale('log')
+        ax.legend()
+        plt.show()
     else:
         print('[ALERT] - It is not possible to recover the field!\nTry to change parameters')
