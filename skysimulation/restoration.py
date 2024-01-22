@@ -396,7 +396,7 @@ def grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 7
     print(':: End ::')
     return a_size
     
-def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: str | Sequence[str] = 'all', mindist: int = 5, minsize: int = 3, cutsize: int = 5) -> bool:
+def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: str | Sequence[str] = 'all', mindist: int = 5, minsize: int = 3, cutsize: int = 5, all_obj: list[NDArray] | None = None) -> bool:
     """Selecting the objects for the fit
 
     :param objs: list of extracted objects
@@ -433,8 +433,8 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
             adist = np.array( [dist(xi[i]-x, yi[i]-y) for i in range(len(xi))] )
             pos = np.where(np.logical_and(adist <= mindist, adist != 0))  
             if len(pos[0]) != 0: 
-                print(f'\t:Selection:\tdist = {adist[pos]} - adist = {adist} - mindist = {mindist}')
-                return False
+                    print(f'\t:Selection:\tdist = {adist[pos]} - adist = {adist} - mindist = {mindist}')
+                    return False
             del x, y, xi, yi, dist, adist, pos
     if sel == 'all' or 'cut' in sel:    
         cond = True
@@ -894,9 +894,10 @@ def LR_deconvolution(field: NDArray, kernel: NDArray, mean_val: float, iter: int
             plt.show()
         if 'rl' in sel:
             fig, (ax1,ax2) = plt.subplots(1,2)
+            fig.suptitle(f'RL recover - {iter} iterations')
             ax1.set_title('Before')
             field_image(fig,ax1,field,**kwargs)
-            ax2.set_title('after')
+            ax2.set_title('After')
             field_image(fig,ax2,Sr1,**kwargs)
             plt.show()
             kwargs['title'] = 'Image - mean value'
@@ -999,21 +1000,27 @@ def mask_filter(field: NDArray, field0: NDArray | None = None, display_fig: bool
     # print(f'New Amp:\t{amp*100} +- {Damp*100} %')
     return field - mask, lim
 
-def light_recover(obj: NDArray, a_size: NDArray[np.int64], kernel: NDArray) -> tuple[float, float]:
-    xmax, ymax = peak_pos(kernel)
-    xu, xd, yu, yd = a_size.flatten()
-    xr = slice(xmax-xd,xmax+xu+1)
-    yr = slice(ymax-yd,xmax+yu+1)
-    cut = kernel[xr,yr].copy()
-    l = obj/cut
-    if len(l) == 1: 
-        print(obj)
-        fast_image(obj)
-        raise
-    L, DL = mean_n_std(l)
-    return L, DL
-
-def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: float, sel_pos: NDArray, size: int = 7, acc: float = 1e-5, display_fig: bool = False, **kwargs) -> NDArray:
+def light_recover(obj: NDArray, a_size: NDArray[np.int64] | None = None, kernel: NDArray | None = None, mode: str = 'mean') -> tuple[float, float] | float:
+    if mode == 'mean':
+        xmax, ymax = peak_pos(kernel)
+        xu, xd, yu, yd = a_size.flatten()
+        xr = slice(xmax-xd,xmax+xu+1)
+        yr = slice(ymax-yd,xmax+yu+1)
+        cut = kernel[xr,yr].copy()
+        l = obj/cut
+        if len(l) == 1: 
+            print(obj)
+            fast_image(obj)
+            raise
+        L, DL = mean_n_std(l)
+        return L, DL
+    elif mode == 'integrate':
+        from scipy.integrate import trapezoid,simpson
+        L = trapezoid(trapezoid(obj))
+        print(f'SIM = {simpson(simpson(obj))}')
+        return L, L
+    
+def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: float, sel_pos: NDArray, size: int = 7, acc: float = 1e-5, mask: bool = True, method: str = 'integrate',res_str: str = ['lum','acc'], display_fig: bool = False, **kwargs) -> list[NDArray] | NDArray:
     dim = len(field)
     new_pos = sel_pos.copy()
     tmp_field = np.copy(field)                  #: field from which objects will be removed
@@ -1021,7 +1028,8 @@ def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: flo
     rej = []                                    #:
     rej_pos = np.empty(shape=(2,0),dtype=int)   #: array to collect rejected objects
     # applying the squared mask 
-    tmp_field, lim = mask_filter(tmp_field,field0,display_fig=display_fig,**kwargs)
+    if mask:
+        tmp_field, lim = mask_filter(tmp_field,field0,display_fig=display_fig,**kwargs)
     # checking previous objects first
     for i in range(len(new_pos[0])):
         print('Iteration',i)
@@ -1035,23 +1043,27 @@ def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: flo
         x,y = np.array(peak_pos(tmp_field[xcut,ycut])) + np.array((xlim[0],ylim[0]))
         new_pos[:,i] = [x,y]
         print(f'X,Y new = {x,y}')
-        a_size = grad_check(tmp_field,(x,y),mean_val,size=size,acc=acc)
-        xu, xd, yu, yd = a_size.flatten()
-        xr = slice(x-xd, x+xu+1) 
-        yr = slice(y-yd, y+yu+1)
-        obj = field[xr,yr].copy()
-        # if obj is not acceptable
-        if len(obj) <= 2 or field[x,y]==0: 
+        if tmp_field[x,y]==0:
             rej += [i]
             rej_pos = np.append(rej_pos,[[x],[y]],axis=1) 
         else:
-            # computing and storing brightness    
-            l, Dl = light_recover(obj,a_size,kernel)
-            l = field[x,y].copy()
-            lum = np.append(lum,[[l],[Dl]],axis=1)
-            if display_fig:
-                fast_image(obj,title=f'Obj n.{i} - ({x},{y})',**kwargs)        
-        tmp_field[xr,yr] = 0.0
+            a_size = grad_check(tmp_field,(x,y),mean_val,size=size,acc=acc)
+            xu, xd, yu, yd = a_size.flatten()
+            xr = slice(x-xd, x+xu+1) 
+            yr = slice(y-yd, y+yu+1)
+            obj = field[xr,yr].copy()
+            # if obj is not acceptable
+            if len(obj) <= 2: 
+                rej += [i]
+                rej_pos = np.append(rej_pos,[[x],[y]],axis=1) 
+            else:
+                # computing and storing brightness    
+                l, Dl = light_recover(obj,a_size,kernel,mode=method)
+                # l = field[x,y].copy()
+                lum = np.append(lum,[[l],[Dl]],axis=1)
+                if display_fig:
+                    fast_image(obj,title=f'Obj n.{i} - ({x},{y})',**kwargs)        
+            tmp_field[xr,yr] = 0.0
     pos = np.copy(new_pos)
     if len(rej) > 0:
         # removing rejected objects
@@ -1090,10 +1102,10 @@ def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: flo
         print(f'- Ampl Fact:\t{amp*100} %')
         obj = field[xr,yr].copy()      
         select = selection(obj,index,pos,size=size,mindist=0,minsize=2,sel=('size','dist'))
-        edge_cond = sum([(np.array([x,y]) == i).any() for i in [lim+1,dim-2-lim]]) and np.logical_and(a_size < 3,a_size!=0).any() 
+        edge_cond = sum([(np.array([x,y]) == i).any() for i in [lim+1,dim-2-lim]]) and np.logical_and(a_size < 3,a_size!=0).any() if mask else True
         if all(([[0,0],[0,0]] != a_size).any(axis=1)) and amp/amp_fact < 2 and select and edge_cond:
-            l, Dl = light_recover(obj, a_size, kernel)
-            l = field[x,y].copy()
+            l, Dl = light_recover(obj, a_size, kernel,mode=method)
+            # l = field[x,y].copy()
             lum = np.append(lum,[[l],[Dl]],axis=1)
             acc_pos = np.append(pos,[[x],[y]],axis=1)
             if display_fig:
@@ -1130,7 +1142,7 @@ def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: flo
                 if len(rej) > 0:
                     ax1.plot(rej_pos[1],rej_pos[0],'x',color='violet')
                     ax2.plot(rej_pos[1],rej_pos[0],'.',color='violet')
-        if display_fig:
+        if display_fig and mask:
             ax2.axvline(lim,0,1,color='yellow',alpha=0.8)
             ax2.axhline(lim,0,1,color='yellow',alpha=0.8)
             ax2.axvline(dim-1-lim,0,1,color='yellow',alpha=0.8)
@@ -1146,16 +1158,28 @@ def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: flo
     field_image(fig,ax2,field,**kwargs)
     field_image(fig,ax3,tmp_field,**kwargs)
     ax2.plot(acc_pos[1],acc_pos[0],'.b')
-    # ax2.plot(unacc_pos[1],unacc_pos[0],'.r')
-    ax2.axvline(lim,0,1,color='yellow',alpha=0.8)
-    ax2.axhline(lim,0,1,color='yellow',alpha=0.8)
-    ax2.axvline(dim-1-lim,0,1,color='yellow',alpha=0.8)
-    ax2.axhline(dim-1-lim,0,1,color='yellow',alpha=0.8)
     ax3.plot(acc_pos[1],acc_pos[0],'.b')
     ax3.plot(unacc_pos[1],unacc_pos[0],'.r')
-    ax3.axvline(lim,0,1,color='yellow',alpha=0.8)
-    ax3.axhline(lim,0,1,color='yellow',alpha=0.8)
-    ax3.axvline(dim-1-lim,0,1,color='yellow',alpha=0.8)
-    ax3.axhline(dim-1-lim,0,1,color='yellow',alpha=0.8)
+    if mask:
+        ax2.axvline(lim,0,1,color='yellow',alpha=0.8)
+        ax2.axhline(lim,0,1,color='yellow',alpha=0.8)
+        ax2.axvline(dim-1-lim,0,1,color='yellow',alpha=0.8)
+        ax2.axhline(dim-1-lim,0,1,color='yellow',alpha=0.8)
+        ax3.axvline(lim,0,1,color='yellow',alpha=0.8)
+        ax3.axhline(lim,0,1,color='yellow',alpha=0.8)
+        ax3.axvline(dim-1-lim,0,1,color='yellow',alpha=0.8)
+        ax3.axhline(dim-1-lim,0,1,color='yellow',alpha=0.8)
     plt.show()
-    return lum, pos
+    results = []
+    if res_str == 'all' or 'lum' in res_str:
+        results += [lum]
+    if res_str == 'all' or 'acc' in res_str:
+        results += [acc_pos]
+    if res_str == 'all' or 'rej' in res_str:
+        results += [rej_pos]
+    if res_str == 'all' or 'pos' in res_str:
+        results += [pos]
+    
+    if len(results) == 0: raise Exception('Error in `res_str`')
+    elif len(results) == 1: results = results[0]
+    return results
