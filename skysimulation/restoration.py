@@ -359,6 +359,86 @@ def moving(direction: str, field: NDArray, index: tuple[int,int], back: float, s
     print(':: End ::')
     return results
 
+def new_moving(direction: str, field: NDArray, index: tuple[int,int], back: float, size: int = 7):
+    dim = len(field)
+    x,y = index
+    results = []
+    hm = field[index]/2
+    # inizializing the variable for the direction
+    #    1 : forward
+    #    0 : ignored
+    #   -1 : backward
+    xd = 0
+    yd = 0
+    # initializing the limits
+    xmax = x
+    ymax = y
+    # initializing the conditions on x and y 
+    xcond = lambda xval, xlim: True
+    ycond = lambda yval, ylim: True
+    
+    # forward along x
+    if 'fx' in direction:
+        print('hey')
+        # computing the edge
+        xmax = min(size, dim-1-x)
+        # impossible movement
+        if xmax == 0: 
+            results += [0]
+        # updating the condition on x
+        else: 
+            xd = 1
+            xcond = lambda xval, xlim: xval < xlim
+    # backward along x
+    elif 'bx' in direction:
+        # computing the edge
+        xmax = min(size, x)
+        # impossible movement
+        if xmax == 0: results += [0]
+        # updating the condition on x
+        else: 
+            xd = -1
+            xcond = lambda xval, xlim: xval < xlim 
+    
+    # forward along y
+    if 'fy' in direction:
+        # computing the edge
+        ymax = min(size, dim-1-y)
+        # impossible movement
+        if ymax == 0: results += [0]
+        # updating the condition on y
+        else: 
+            yd = 1
+            ycond = lambda yval, ylim: yval < ylim 
+    # backward along y
+    elif 'by' in direction:
+        # computing the edge
+        ymax = min(size, y)
+        # impossible movement
+        if ymax == 0: results += [0]
+        # updating the condition on y
+        else: 
+            yd = -1
+            ycond = lambda yval, ylim: yval < ylim 
+    
+    for i in range(1,size+1):
+        step = field[x+xd*i,y+yd*i]
+        if step <= hm: 
+            if 'x' in direction and xd != 0: results = results + [i]
+            if 'y' in direction and yd != 0: results += [i]
+            return results
+    if 'x' in direction and xd != 0: results = results + [-1]
+    if 'y' in direction and yd != 0: results += [-1]
+    return results
+    
+    
+
+def new_grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 7) -> NDArray:
+    mov = lambda val : new_moving(val,field,index,back,size)
+    
+
+
+
 
 def grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 7, acc: float = 1e-5) -> NDArray:
     """Checking the gradient trend around an object
