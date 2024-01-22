@@ -354,7 +354,7 @@ def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m
         fast_image(F,**kwargs)
     return F, S
 
-def atm_seeing(field: NDArray, sigma: float = SEEING_SIGMA, display_fig: bool = False, **kwargs) -> NDArray:
+def atm_seeing(field: NDArray, sigma: float = SEEING_SIGMA,ext_val: int = 7, display_fig: bool = False, **kwargs) -> NDArray:
     """Atmosferic seeing function
     It convolves the field with tha Gaussian to
     make the atmosferic seeing
@@ -369,20 +369,19 @@ def atm_seeing(field: NDArray, sigma: float = SEEING_SIGMA, display_fig: bool = 
     """
     # dim of the field
     n = len(field)
+    tmp_field = np.zeros((n+2*ext_val, n+2*ext_val))
     # coping the field in order to preserve it
-    field = np.copy(field)
-    # kernel = Gaussian(sigma).kernel(n)
-    # convolution with gaussian seeing
-    # see_field = fftconvolve(field, kernel, mode='same')
-    # see_field = gaussian_filter(field,sigma,mode='nearest')
+    cut = slice(ext_val, n+ext_val)
+    tmp_field[cut,cut] += field
     from astropy.convolution import convolve_fft, Gaussian2DKernel
-    see_field = convolve_fft(field, Gaussian2DKernel(sigma))
+    see_field = convolve_fft(tmp_field, Gaussian2DKernel(sigma))
     if display_fig:
         if 'title' not in kwargs:
-            kwargs['title'] = 'Atmospheric Seeing'
+            kwargs['title'] = 'Atmospheric Seeing '
         fast_image(see_field,**kwargs)
+        fast_image(see_field[cut,cut],**kwargs)
     # checking the field and returning it
-    return see_field
+    return see_field[cut,cut]
 
 def noise(params: tuple[str, float | tuple], dim: int = N, infos: bool = False, display_fig: bool = False, **kwargs) -> NDArray:
     """Noise generator
@@ -453,9 +452,8 @@ def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (MI
     if atm_param[0] == 'Gaussian':
         sigma = atm_param[1]
         print(f'sigma:\t{sigma}')
-        # F_bs = atm_seeing(F_b,sigma,display_fig)
         kwargs['title'] = 'Atmospheric Seeing'
-        F_bs = atm_seeing(F_b,sigma,display_fig,**kwargs)
+        F_bs = atm_seeing(F_b,sigma,display_fig=display_fig,**kwargs)
     # detector
     print('\nDetector noise:')
     kwargs['title'] = 'Detector noise'
