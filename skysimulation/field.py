@@ -213,7 +213,7 @@ N = int(1e2)
 # number of stars
 M = int(1e2)
 # masses range
-MIN_m = 0.1
+MIN_m = 0.3
 MAX_m = 20
 # IMF exp
 ALPHA = 2
@@ -438,7 +438,7 @@ def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (MI
     SEP = '-'*10 + '\n'
     print(SEP+f'Initialization of the field\nDimension:\t{dim} x {dim}\nNumber of stars:\t{stnum}')
     # creating the starting field
-    F, S = initialize(dim,stnum,masses,*star_param,overlap=overlap,display_fig=display_fig,**kwargs)
+    F, S = initialize(dim,stnum,masses,*star_param,overlap=overlap,display_fig=display_fig,v=1,norm='log')
     # background
     print('\nBackground:')
     kwargs['title'] = 'Background'
