@@ -233,7 +233,7 @@ def bkg_est(field: NDArray, display_fig: bool = False) -> float:
         plt.show()
     return mean
 
-def moving(direction: str, field: NDArray, index: tuple[int,int], back: float, size: int = 3, acc: float = 1e-5) -> list[int]:
+def moving(direction: str, field: NDArray, index: tuple[int,int], back: float, size: int = 3, acc: float = 1e-5) -> list[int] | int:
     """Looking in one direction
 
     `direction` is a string and contains two parameters:
@@ -359,7 +359,44 @@ def moving(direction: str, field: NDArray, index: tuple[int,int], back: float, s
     print(':: End ::')
     return results
 
-def new_moving(direction: str, field: NDArray, index: tuple[int,int], back: float, size: int = 7):
+def grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 7, acc: float = 1e-5) -> NDArray:
+    """Checking the gradient trend around an object
+
+    :param field: the field
+    :type field: NDArray
+    :param index: coordinates of the object
+    :type index: tuple[int,int]
+    :param size: the maximum size of the object, defaults to 3
+    :type size: int, optional
+    
+    :return: size of the object (x,y)
+    :rtype: tuple[NDArray,NDArray]
+    """
+    # defining method to move in a direction
+    mov = lambda val: moving(val,field,index,back,size=size,acc=acc)
+    # setting the diagonal directions
+    xy_dir = ['fxfy','fxby','bxfy','bxby'] 
+    a_xysize = np.array([mov(dir) for dir in xy_dir])
+    print(':: Resutls of grad_check() ::')
+    print('sizes',a_xysize)
+    # extracting resukts
+    xf_size = a_xysize[:2,0]
+    xb_size = a_xysize[2:,0]
+    yf_size = a_xysize[(0,2),1]
+    yb_size = a_xysize[(1,3),1]
+    # building a matrix of sizes
+    a_size = np.array([[[mov('fx'),*xf_size],
+                        [mov('bx'),*xb_size]],
+                       [[mov('fy'),*yf_size],
+                        [mov('by'),*yb_size]]])
+    print('matrix',a_size)
+    # taking the maxima
+    a_size = a_size.max(axis=2)
+    print(':: End ::')
+    return a_size
+
+
+def new_moving(direction: str, field: NDArray, index: tuple[int,int], back: float, size: int = 7) -> list[int] | int:
     dim = len(field)
     x,y = index
     results = []
@@ -421,63 +458,60 @@ def new_moving(direction: str, field: NDArray, index: tuple[int,int], back: floa
             yd = -1
             ycond = lambda yval, ylim: yval < ylim 
     
-    for i in range(1,size+1):
-        step = field[x+xd*i,y+yd*i]
-        if step <= hm: 
-            if 'x' in direction and xd != 0: results = results + [i]
-            if 'y' in direction and yd != 0: results += [i]
-            return results
-    if 'x' in direction and xd != 0: results = results + [-1]
-    if 'y' in direction and yd != 0: results += [-1]
+    # if there are no forbidden directions
+    if xd != 0 or yd != 0:
+        # inizilizing the variables for the size
+        xsize = 1
+        ysize = 1
+        condition = xcond(xsize,xmax) and ycond(ysize,ymax)
+        print(xcond(xsize,xmax),xmax)
+        # routine to compute the size
+        while condition:
+            step = field[x+xd*xsize, y+yd*ysize]
+            if step == 0: 
+                if 'x' in direction and xd != 0: results  = [xsize+size] + results
+                if 'y' in direction and yd != 0: results += [ysize+size]
+                if len(results) == 1: results = results[0]
+                return results
+            elif step <= hm: 
+                if 'x' in direction and xd != 0: results  = [xsize] + results
+                if 'y' in direction and yd != 0: results += [ysize]
+                if len(results) == 1: results = results[0]
+                return results
+            else:
+                xsize += 1
+                ysize += 1
+                condition = xcond(xsize,xmax) and ycond(ysize,ymax)
+        if 'x' in direction and xd != 0: results  = [-1] + results
+        if 'y' in direction and yd != 0: results += [-1]
+
+    if len(results) == 0: raise
+    if len(results) == 1: results = results[0]
     return results
-    
-    
 
-def new_grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 7) -> NDArray:
-    mov = lambda val : new_moving(val,field,index,back,size)
-    
+def new_grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 7, acc: float = 1e-5) -> NDArray:
+    mov = lambda val : moving(val,field,index,back,size,acc=acc)
+    n_mov = lambda val : new_moving(val,field,index,back,size)
+    xf_dir = ['fx','bx','fy','by']
+    a_xysize = np.array([n_mov(dir) for dir in xf_dir])
+    print('A_XF',type(a_xysize))
+    n_pos = np.where(a_xysize == -1)[0]
+    if len(n_pos) != 0:
+        a_xysize[n_pos] = np.array([mov(xf_dir[i]) for i in n_pos])
+        print('A_XF',type(a_xysize),a_xysize)
+    a_xysize = np.where(a_xysize > size, a_xysize-size, a_xysize)
+
+    return a_xysize.reshape(2,2)
 
 
-
-
-def grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 7, acc: float = 1e-5) -> NDArray:
-    """Checking the gradient trend around an object
-
-    :param field: the field
-    :type field: NDArray
-    :param index: coordinates of the object
-    :type index: tuple[int,int]
-    :param size: the maximum size of the object, defaults to 3
-    :type size: int, optional
-    
-    :return: size of the object (x,y)
-    :rtype: tuple[NDArray,NDArray]
-    """
-    # defining method to move in a direction
-    mov = lambda val: moving(val,field,index,back,size=size,acc=acc)
-    # setting the diagonal directions
-    xy_dir = ['fxfy','fxby','bxfy','bxby'] 
-    a_xysize = np.array([mov(dir) for dir in xy_dir])
-    print(':: Resutls of grad_check() ::')
-    print('sizes',a_xysize)
-    # extracting resukts
-    xf_size = a_xysize[:2,0]
-    xb_size = a_xysize[2:,0]
-    yf_size = a_xysize[(0,2),1]
-    yb_size = a_xysize[(1,3),1]
-    # building a matrix of sizes
-    a_size = np.array([[[mov('fx'),*xf_size],
-                        [mov('bx'),*xb_size]],
-                       [[mov('fy'),*yf_size],
-                        [mov('by'),*yb_size]]])
-    print('matrix',a_size)
-    # taking the maxima
-    a_size = a_size.max(axis=2)
-    print(':: End ::')
-    return a_size
-    
 def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: str | Sequence[str] = 'all', mindist: int = 5, minsize: int = 3, cutsize: int = 5, all_obj: list[NDArray] | None = None) -> bool:
     """Selecting the objects for the fit
+
+    sel:
+      * `'all'` : all
+      * `'size'`: size
+      * `'dist'`: distance
+      * `'cut'` : cut
 
     :param objs: list of extracted objects
     :type objs: list[NDArray]
@@ -537,7 +571,7 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
 
 
 ##*
-def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-5, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, display_fig: bool = False,**kwargs) -> tuple[list[NDArray],NDArray] | None:
+def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-5, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, mindist: int = 5, minsize: int = 3, cutsize: int = 5, display_fig: bool = False,**kwargs) -> tuple[list[NDArray],NDArray] | None:
     """To isolate the most luminous star object.
     The function calls the `size_est()` function to compute the size of the object and
     then to extract it from the field.
@@ -549,7 +583,7 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-
     :param size: maximum size of the object, defaults to 3
     :type size: int, optional
     :param objnum: maximum number of object to search, defaults to 10
-    :type objnum: int, optional
+    :type objnum: int, optioFalsenal
     :param reshape: if `True` x and y sizes of the object are equal, defaults to False
     :type reshape: bool, optional
     :param reshape_corr: if `True` objects at the edges are corrected, defaults to False
@@ -591,7 +625,7 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-
         if peak <= thr:
             break
         # computing size
-        a_size = grad_check(tmp_field,index,thr,size,acc)
+        a_size = new_grad_check(tmp_field,index,thr,size,acc)
         
         #? per me
         if ctrl: 
@@ -611,7 +645,6 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-
         print('a_size 2',a_size)
         a_pos = np.append(a_pos,[[x],[y]],axis=1)
         # if the object is a single px it is rejected
-        # if any([0,0] == a_size[0]) or all([0,0] == a_size[1]):
         if any(([[0,0],[0,0]] == a_size).all(axis=1)):
             rej_obj += [field[xr,yr].copy()]
             rej_pos = np.append(rej_pos,[[x],[y]],axis=1)
@@ -645,7 +678,7 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-
                 obj = np.pad(obj,(xpad_pos,ypad_pos),'reflect')
             
             # checking if the object is acceptable or not
-            save_cond = selection(obj,index,a_pos,size) if sel_cond else True
+            save_cond = selection(obj,index,a_pos,size,sel='all',mindist=mindist,minsize=minsize,cutsize=cutsize) if sel_cond else True
             if save_cond:
                 print(f'** OBJECT SELECTED ->\t{k}')
                 # updating the field to plot
@@ -694,6 +727,7 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-
         plt.show()
     # if nothing is taken or found
     if len(extraction) == 0: return None
+    print(f'\nRej:\t{len(rej_obj)}\nExt:\t{len(extraction)}')
     print(':: End ::')
     return extraction, sel_pos
 
@@ -764,6 +798,7 @@ def err_estimation(field: NDArray, mean_val: float, thr: float | int = 30, displ
     print(f'Pop = {(mu+1)*np.mean(field)} - {mean_val}')
     sigma = pop[2]
     print(f'Sigma_pop = {sigma*mean_val} - {sigma*np.mean(field)} - {(sigma * np.sqrt(2*np.log(2))) * mean_val}')
+    mean_val = np.mean(field)
     if display_plot:
         plt.figure()
         plt.title('Fluctuations')
@@ -782,7 +817,7 @@ def err_estimation(field: NDArray, mean_val: float, thr: float | int = 30, displ
         plt.ylabel('counts')
         plt.show()
     # computing the mean fluctuation
-    return (sigma * np.sqrt(2*np.log(2))) * mean_val
+    return (sigma * np.sqrt(2*np.log(2))) * mean_val, (mu+1)*mean_val
     # return (mu+1) * mean_val
 
 
@@ -892,11 +927,22 @@ def kernel_estimation(extraction: list[NDArray], err: float, dim: int, selected:
         pop, Dpop = kernel_fit(obj,err,size_cut=size_cut,display_fig=display_plot,**kwargs)
         k, sigma = pop
         Dk, Dsigma = Dpop
-        a_k = np.append(a_k,[[k,Dk]],axis=0)
-        a_sigma = np.append(a_sigma,[[sigma,Dsigma]],axis=0)
+        if Dsigma/sigma < 2:
+            a_k = np.append(a_k,[[k,Dk]],axis=0)
+            a_sigma = np.append(a_sigma,[[sigma,Dsigma]],axis=0)
         del sigma, Dsigma, k, Dk
-    # computing the mean and STD
-    sigma, Dsigma = mean_n_std(a_sigma[:,0])
+    maxpos = a_sigma[:,0].argmax()
+    maxval, maxerr = a_sigma[maxpos]
+    discr = (a_sigma[:,0]-maxval)/maxerr
+    errpos = np.where(discr > 1)[0]
+    if len(errpos) != 0 and len(errpos) != len(a_sigma[:,0]):
+        print(f'REMOVE - {errpos}')
+        a_sigma = np.delete(a_sigma,errpos,axis=0)
+    if len(a_sigma) == 0: raise
+    elif len(a_sigma) == 1: sigma, Dsigma = a_sigma
+    else:
+        # computing the mean and STD
+        sigma, Dsigma = mean_n_std(a_sigma[:,0])
     print(f'\nsigma = {sigma:.5f} +- {Dsigma:.5f} -> {Dsigma/sigma*100:.2f} %')
     # computing the kernel
     kernel = Gaussian(sigma)
