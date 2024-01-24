@@ -497,14 +497,16 @@ def new_grad_check(field: NDArray, index: tuple[int,int], back: float, size: int
     print('A_XF',type(a_xysize))
     n_pos = np.where(a_xysize == -1)[0]
     if len(n_pos) != 0:
-        a_xysize[n_pos] = np.array([mov(xf_dir[i]) for i in n_pos])
+        dim = len(field)
+        # a_xysize[n_pos] = np.array([mov(xf_dir[i]) for i in n_pos])
+        a_xysize[n_pos] = np.array([ min(size, ((i+1)%2)*dim + (i%2*2-1)*(index[i//2])) for i in n_pos])
         print('A_XF',type(a_xysize),a_xysize)
     a_xysize = np.where(a_xysize > size, a_xysize-size, a_xysize)
 
     return a_xysize.reshape(2,2)
 
 
-def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: str | Sequence[str] = 'all', mindist: int = 5, minsize: int = 3, cutsize: int = 5, all_obj: list[NDArray] | None = None) -> bool:
+def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: str | Sequence[str] = 'all', mindist: int = 5, minsize: int = 3, cutsize: int = 5, acc: float = 1e-5, reshape: bool = False) -> bool:
     """Selecting the objects for the fit
 
     sel:
@@ -528,7 +530,8 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
     if (size+mindist) < 0: raise
     cond = False        #: variable to check if `sel` is correct
     obj = np.copy(obj)
-    dim = len(obj)
+    xdim, ydim = obj.shape
+    dim = min(xdim,ydim)
     if sel == 'all' or 'size' in sel:
         cond = True
         if size != 1 and dim <= minsize: 
@@ -553,19 +556,25 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
     if sel == 'all' or 'cut' in sel:    
         cond = True
         x, y = peak_pos(obj)
-        if abs(x - dim//2) > 1 or abs(y - dim//2) > 1: 
-            print(f'\t:Selection:\t(x,y) = ({x},{y}) - dim//2 = {dim//2}')
-            return False 
-        lim = cutsize if dim > 2*cutsize else dim//2 
-        for i in range(lim):
-            i += 1
-            r, l, u, d = np.copy(obj[[x+i,x-i,x,x],[y,y,y+1,y-1]])
-            #!! DA RIVEDERE
-            diff1 = abs(r/l - u/d) 
-            diff2 = abs(r/d - l/u)
-            if diff1 >= 0.3 or diff2 >= 0.3 or (diff1 > 0.25 and diff2 > 0.25): 
-                print(f'\t:Selection:\tdiff1 = {diff1} -  diff2 = {diff2}')
-                return False
+        if reshape:  
+            if abs(x - xdim//2) > 1 or abs(y - ydim//2) > 1: 
+                print(f'\t:Selection:\t(x,y) = ({x},{y}) - dim//2 = {dim//2}')
+                return False 
+        lims = np.array([[max(x-1,0),xdim-1 - x], [max(y-1,0),ydim-1 - y]])
+        ind = np.where(lims != 0)
+        if len(ind[0]) == 0 or len(ind[0]) == 1: return False
+        else:
+            lim = lims[ind].min()
+             
+            for i in range(lim):
+                i += 1
+                r, l, u, d = np.copy(obj[[x+i,x-i,x,x],[y,y,y+1,y-1]])
+                #!! DA RIVEDERE
+                diff1 = abs(r/l - u/d) 
+                diff2 = abs(r/d - l/u)
+                if diff1 >= 0.3 or diff2 >= 0.3 or (diff1 > 0.25 and diff2 > 0.25): 
+                    print(f'\t:Selection:\tdiff1 = {diff1} -  diff2 = {diff2}')
+                    return False
     if cond: return True
     else: raise
 
@@ -807,6 +816,7 @@ def err_estimation(field: NDArray, mean_val: float, thr: float | int = 30, displ
     sigma = pop[2]
     print(f'Sigma_pop = {sigma*mean_val} - {sigma*np.mean(field)} - {(sigma * np.sqrt(2*np.log(2))) * mean_val}')
     mean_val = np.mean(field)
+    mean_val = (mu+1)*mean_val
     if display_plot:
         plt.figure()
         plt.title('Fluctuations')
@@ -825,7 +835,7 @@ def err_estimation(field: NDArray, mean_val: float, thr: float | int = 30, displ
         plt.ylabel('counts')
         plt.show()
     # computing the mean fluctuation
-    return (sigma * np.sqrt(2*np.log(2))) * mean_val, (mu+1)*mean_val
+    return (sigma * np.sqrt(2*np.log(2))) * mean_val, mean_val
 
 
 
@@ -867,6 +877,7 @@ def kernel_fit(obj: NDArray, err: float | None = None, size_cut: int | None = 9,
         x0, y0 = xmax, ymax
         kernel = Gaussian(sigma)
         return k * kernel.value(x-x0)*kernel.value(y-y0)
+    
     # computing the error matrix
     if err is not None:
         err = np.full(obj.shape,err,dtype=float)
@@ -943,6 +954,7 @@ def new_kernel_fit(obj: NDArray, err: float | None = None, size_cut: int | None 
         x0, y0 = xmax, ymax
         kernel = Gaussian(sigma)
         return k * kernel.value(x-x0)*kernel.value(y-y0)
+    
     # computing the error matrix
     if err is not None:
         err = np.full(obj.shape,err,dtype=float)
