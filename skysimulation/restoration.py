@@ -678,7 +678,7 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-
                 obj = np.pad(obj,(xpad_pos,ypad_pos),'reflect')
             
             # checking if the object is acceptable or not
-            save_cond = selection(obj,index,a_pos,size,sel='all',mindist=mindist,minsize=minsize,cutsize=cutsize) if sel_cond else True
+            save_cond = selection(obj,index,a_pos,size,sel=['size','dist'],mindist=mindist,minsize=minsize,cutsize=cutsize) if sel_cond else True
             if save_cond:
                 print(f'** OBJECT SELECTED ->\t{k}')
                 # updating the field to plot
@@ -699,6 +699,14 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-
                     tmp_kwargs['title'] = f'Rejected object {index} - {ctrl_cnt}'
             # plotting the object
             if display_fig: 
+                fig, ax = plt.subplots(1,1)
+                field_image(fig,ax,tmp_field,**{key: tmp_kwargs[key] for key in tmp_kwargs.keys() - {'title'}})
+                if len(rej_pos[0])!= 0:
+                    ax.plot(rej_pos[1,:-1],rej_pos[0,:-1],'.r')
+                    ax.plot(rej_pos[1,-1],rej_pos[0,-1],'x',color='red')
+                if len(sel_pos[0])!=0:
+                    ax.plot(sel_pos[1,:-1],sel_pos[0,:-1],'.b')
+                    ax.plot(sel_pos[1,-1],sel_pos[0,-1],'xb')
                 fast_image(obj,**tmp_kwargs) 
             # condition to prevent the stack-overflow
             if (ctrl_cnt >= objnum and len(extraction) >= 3) or ctrl_cnt > 2*objnum and sel_cond:
@@ -731,7 +739,7 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-
     print(':: End ::')
     return extraction, sel_pos
 
-def err_estimation(field: NDArray, mean_val: float, thr: float | int = 30, display_plot: bool = False) -> float:
+def err_estimation(field: NDArray, mean_val: float, thr: float | int = 30, display_plot: bool = False) -> tuple[float,float]:
     """Estimating the mean fluctuation of the background
 
     :param field: field matrix
@@ -818,7 +826,7 @@ def err_estimation(field: NDArray, mean_val: float, thr: float | int = 30, displ
         plt.show()
     # computing the mean fluctuation
     return (sigma * np.sqrt(2*np.log(2))) * mean_val, (mu+1)*mean_val
-    # return (mu+1) * mean_val
+
 
 
 def kernel_fit(obj: NDArray, err: float | None = None, size_cut: int | None = 9, display_fig: bool = False, **kwargs) -> tuple[NDArray,NDArray]:
@@ -900,6 +908,83 @@ def kernel_fit(obj: NDArray, err: float | None = None, size_cut: int | None = 9,
         plt.show()
     return pop, Dpop
 
+
+def new_kernel_fit(obj: NDArray, err: float | None = None, size_cut: int | None = 9, display_fig: bool = False, **kwargs) -> tuple[NDArray,NDArray]:
+    """Estimating the sigma of the kernel
+
+    :param obj: extracted objects
+    :type obj: NDArray
+    :param back: estimated value of the background
+    :type back: float
+    :param noise: mean noise value
+    :type noise: float
+    
+    :return: mean sigma of the kernel
+    :rtype: float
+    """
+
+    xdim, ydim = obj.shape
+    xmax, ymax = peak_pos(obj)  #: maximum value coordinates
+    x = np.arange(xdim)
+    y = np.arange(ydim) 
+    y,x = np.meshgrid(y,x)
+
+    def fit_func(pos: tuple[NDArray,NDArray],*args) -> NDArray:
+        """Gaussian model for the fit
+
+        :param pos: coordinates (x,y)
+        :type pos: tuple[NDArray,NDArray]
+
+        :return: value of the gaussian
+        :rtype: NDArray
+        """
+        x, y = pos
+        k, sigma = args
+        x0, y0 = xmax, ymax
+        kernel = Gaussian(sigma)
+        return k * kernel.value(x-x0)*kernel.value(y-y0)
+    # computing the error matrix
+    if err is not None:
+        err = np.full(obj.shape,err,dtype=float)
+    # computing the fit
+    sigma0 = 1
+    print('sigma',sigma0)
+    k0 = obj.max()
+    initial_values = [k0,sigma0]
+    xfit = np.vstack((x.ravel(),y.ravel()))
+    yfit = obj.ravel()
+    errfit = err.ravel() if err is not None else err
+    pop, Dpop = fit_routine(xfit,yfit,fit_func,initial_values,err=errfit,names=['k','sigma'])    
+    # extracting values
+    k, sigma = pop
+    Dk, Dsigma = Dpop
+
+    if display_fig:
+        figsize = kwargs['figsize'] if 'figsize' in kwargs.keys() else None
+        title = kwargs['title'] if 'title' in kwargs.keys() else ''
+        fig, ax = plt.subplots(1,1,figsize=figsize)
+        ax.set_title(title)
+        field_image(fig,ax,obj)
+        mx = np.linspace(0,xdim-1,50)
+        my = np.linspace(0,ydim-1,50)
+        yy, xx = np.meshgrid(my,mx)
+        ax.contour(yy,xx,fit_func((xx,yy),*pop),colors='b',linestyles='dashed',alpha=0.7)
+        ax.plot(ymax,xmax,'.r')
+        # kwargs.pop('title')
+        # kwargs.pop('figsize')
+        if err is not None:
+            plt.figure()
+            plt.subplot(1,2,1)
+            plt.title('On x axis')
+            plt.errorbar(np.arange(ydim),obj[xmax,:],yerr=err[xmax,:],fmt='.')
+            plt.plot(my,fit_func([xmax,my],*pop))
+            plt.subplot(1,2,2)
+            plt.title('On y axis')
+            plt.errorbar(np.arange(xdim),obj[:,ymax],yerr=err[:,ymax],fmt='.')
+            plt.plot(mx,fit_func([mx,ymax],*pop))
+        plt.show()
+    return pop, Dpop
+
 def kernel_estimation(extraction: list[NDArray], err: float, dim: int, selected: slice = slice(None), size_cut: int | None = 9, all_results: bool = False, display_plot: bool = False, **kwargs) -> NDArray | tuple[NDArray,tuple[float,float]]:
     """Estimation of the kernel from a Gaussian model
 
@@ -924,7 +1009,7 @@ def kernel_estimation(extraction: list[NDArray], err: float, dim: int, selected:
     a_sigma = np.empty(shape=(0,2),dtype=float)  #: array to store values of sigma
     a_k = np.empty(shape=(0,2),dtype=float)      #: array to store values of k
     for obj in sel_extr:
-        pop, Dpop = kernel_fit(obj,err,size_cut=size_cut,display_fig=display_plot,**kwargs)
+        pop, Dpop = new_kernel_fit(obj,err,size_cut=size_cut,display_fig=display_plot,**kwargs)
         k, sigma = pop
         Dk, Dsigma = Dpop
         if Dsigma/sigma < 2:
