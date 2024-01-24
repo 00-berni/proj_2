@@ -90,15 +90,23 @@ def add_effects(F,masses,coor,back,atm,det,pos_mode: str = 'grid',**kwargs):
 if __name__ == '__main__':
     N = 100
     M = 20
-    figure = True
+    figure = False
     norm = 'linear'
     v = 0
-    pos_mode = 'random'
-    set_pos = None
-    # pos_mode = 'set'
-    # set_pos = np.array([ [0]*10 + [N-1]*10, [i*4 for i in range(20)] ])
+    # pos_mode = 'random'
+    pos_mode = 'set'
+
+    if pos_mode == 'set':
+        np.random.seed(10)
+        # list with all possible positions in the field
+        grid = [(i,j) for i in range(N) for j in range(N)]
+        ind = np.random.choice(len(grid),size=M,replace=False)
+        set_pos = np.array([ [grid[i][0] for i in ind], [grid[i][1] for i in ind] ])
+    else:
+        set_pos = None
+ 
     print('Initializing')
-    max_mass = 5
+    max_mass = 4
     F, masses, coor = initialize(N,M,max_mass,pos=pos_mode,set_pos=set_pos,display_fig=figure,v=1,norm=norm)
 
     print('\nI RUN')
@@ -123,56 +131,64 @@ if __name__ == '__main__':
     print('nm ',nm/K)
     print('min',min(nn)/K)
 
-    # dark = restore.dark_elaboration(det)
-    # bkg = nn[0]
-    # I = results[0]
+    dark = restore.dark_elaboration(det)
+    bkg = nn[0]
+    I = results[0]
     
-    # mean_val = max(bkg,dark.mean())
-    # objs, obj_pos = restore.object_isolation(I,mean_val,size=7,objnum=20,reshape=True,reshape_corr=True,sel_cond=True,display_fig=False,norm=norm)
+    mean_val = max(bkg,dark.mean())
+    try:
+        err, mean_val = restore.err_estimation(I,mean_val,thr=10,display_plot=True)
+        print(f'MEAN VAL = {mean_val} +- {err}')
+    except:
+        err = None
 
-    # if objs is not None:
-    #     try:
-    #         err = restore.err_estimation(I,mean_val,display_plot=True)
-    #     except:
-    #         err = None
-    #     kernel,(sigma, Dsigma) = restore.kernel_estimation(objs,err,N,all_results=False,display_plot=False)
+    objs, obj_pos = restore.object_isolation(I,mean_val,size=7,objnum=20,reshape=False,reshape_corr=False,sel_cond=True,display_fig=True,norm=norm)
 
-    #     rec_I = restore.LR_deconvolution(I,kernel,mean_val,iter=50,sel='rl',display_fig=True)
-    #     mask = restore.mask_filter(rec_I,I,True)
-    #     lum, pos = restore.find_objects(rec_I,I,kernel,mean_val,sel_pos=obj_pos,display_fig=False)
-    #     l, Dl = lum - mean_val #- dark.mean()
+    fig, ax = plt.subplots(1,1)
+    display.field_image(fig,ax,I)
+    ax.plot(obj_pos[1],obj_pos[0],'.b')
+    ax.plot(coor[1],coor[0],'x', color='green')
+    plt.show()
+
+    if objs is not None:
+        # kernel,(sigma, Dsigma) = restore.kernel_estimation(objs,err,N,all_results=False,display_plot=True)
+
+        # rec_I = restore.LR_deconvolution(I,kernel,mean_val,iter=50,sel='rl',display_fig=True)
+        # mask = restore.mask_filter(rec_I,I,True)
+        # lum, pos = restore.find_objects(rec_I,I,kernel,mean_val,sel_pos=obj_pos,display_fig=False)
+        # l, Dl = lum - mean_val #- dark.mean()
         
-    #     index  = pos.copy()
-    #     index0 = np.array(coor)[:,::-1]
+        # index  = pos.copy()
+        # index0 = np.array(coor)[:,::-1]
 
-    #     min_dim = min(len(index[0]),len(index0[0]))
-    #     dx, dy = abs(index[:,:min_dim] - index0[:,:min_dim])
-    #     discr = 2
-    #     mat_pos = np.where(np.logical_and(dx<=discr,dy<=discr))[0]        
-    #     matches = len(mat_pos)
+        # min_dim = min(len(index[0]),len(index0[0]))
+        # dx, dy = abs(index[:,:min_dim] - index0[:,:min_dim])
+        # discr = 2
+        # mat_pos = np.where(np.logical_and(dx<=discr,dy<=discr))[0]        
+        # matches = len(mat_pos)
 
-    #     print('\n----------------\n')
-    #     print(f'MAX MASS - {max_mass}')
-    #     print(f'Found:\t{len(l)} / {M}')
-    #     print(f'Precision:\t{len(l)/M*100:.2f} %')
-    #     print(f'Match:\t{matches} / {M}')
-    #     print(f'Accuracy:\t{matches/len(l)*100:.2f} %')
+        print('\n----------------\n')
+        print(f'MAX MASS - {max_mass}')
+        # print(f'Found:\t{len(l)} / {M}')
+        # print(f'Precision:\t{len(l)/M*100:.2f} %')
+        # print(f'Match:\t{matches} / {M}')
+        # print(f'Accuracy:\t{matches/len(l)*100:.2f} %')
 
 
-    #     # print('Center Value',I[st_pos,st_pos],rec_I[st_pos,st_pos])
-    #     # print('MAXes',l0.max(),l.max())
-    #     # print('MINes',l0.min(),l.min())
-    #     # fig, ax = plt.subplots(1,1)
-    #     # bins = np.linspace(min(l.min(),l0.min()),max(l.max(),l0.max()),len(l0)*4)
-    #     # l_counts, bins = np.histogram(l,bins=bins)
-    #     # l0_counts, bins = np.histogram(l0,bins=bins)
-    #     # ax.stairs(l_counts,bins,label='estimated')
-    #     # ax.stairs(l0_counts,bins,linestyle='dashed',label='original')
-    #     # lm = np.linspace(masses.min()**field.BETA,masses.max()**field.BETA,6) *K
-    #     # ax.set_xticks(lm)
-    #     # ax.set_xticklabels([f'{(i/K)**(1/field.BETA):.1f}' for i in lm])
-    #     # # ax.set_xscale('log')
-    #     # ax.legend()
-    #     # plt.show()
-    # else:
-    #     print('[ALERT] - It is not possible to recover the field!\nTry to change parameters')
+        # print('Center Value',I[st_pos,st_pos],rec_I[st_pos,st_pos])
+        # print('MAXes',l0.max(),l.max())
+        # print('MINes',l0.min(),l.min())
+        # fig, ax = plt.subplots(1,1)
+        # bins = np.linspace(min(l.min(),l0.min()),max(l.max(),l0.max()),len(l0)*4)
+        # l_counts, bins = np.histogram(l,bins=bins)
+        # l0_counts, bins = np.histogram(l0,bins=bins)
+        # ax.stairs(l_counts,bins,label='estimated')
+        # ax.stairs(l0_counts,bins,linestyle='dashed',label='original')
+        # lm = np.linspace(masses.min()**field.BETA,masses.max()**field.BETA,6) *K
+        # ax.set_xticks(lm)
+        # ax.set_xticklabels([f'{(i/K)**(1/field.BETA):.1f}' for i in lm])
+        # # ax.set_xscale('log')
+        # ax.legend()
+        # plt.show()
+    else:
+        print('[ALERT] - It is not possible to recover the field!\nTry to change parameters')
