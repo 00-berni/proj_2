@@ -1,15 +1,18 @@
 import numpy as np
+from numpy import correlate
 import matplotlib.pyplot as plt
 from skysimulation import NDArray
 from skysimulation import field
 from skysimulation import display
 import skysimulation.restoration as restore
 
+def autocorr(vec: restore.Sequence, mode: str = 'same') -> restore.NDArray:
+    return correlate(vec,vec,mode)
 
 K = field.K
 st_pos = 20
 
-def initialize(dim: int, num: int, max_mass: float | int = 8, pos: str = 'grid', set_pos: NDArray | None = None, display_fig: bool = False, **kwargs):
+def initialize(dim: int, num: int, max_mass: float | int = 8, pos: str = 'grid', set_pos: NDArray | None = None, display_fig: bool = False, **kwargs) -> tuple[NDArray, field.Star]:
     beta = field.BETA
     masses = np.linspace(field.MIN_m,max_mass,num)
     lums = masses**beta
@@ -29,6 +32,7 @@ def initialize(dim: int, num: int, max_mass: float | int = 8, pos: str = 'grid',
     elif pos == 'set':
         y,x = set_pos
     F[y,x] = lums * K
+    S = field.Star(masses,lums*K,(y,x))
     # F[st_pos,st_pos] = 4**beta * K
     # F[5,-1] = 8.6**beta * K
     # F[5,-9] = 8.5**beta * K
@@ -36,10 +40,10 @@ def initialize(dim: int, num: int, max_mass: float | int = 8, pos: str = 'grid',
         if 'title' not in kwargs:
             kwargs['title'] = f'Inizialized Field\nMass range [{masses.min():.1f}, {masses.max():.1f}]'
             field.fast_image(F,**kwargs)
-    return F, masses, (y,x)    
+    return F, S  
 
 
-def add_effects(F,masses,coor,back,atm,det,pos_mode: str = 'grid',**kwargs):
+def add_effects(F,masses,coor,back,atm,det,pos_mode: str = 'grid',**kwargs) -> NDArray:
     N = len(F)
     if 'results' not in kwargs: kwargs['results'] = False
     if 'figure' not in kwargs: kwargs['figure'] = False
@@ -93,11 +97,12 @@ if __name__ == '__main__':
     figure = False
     norm = 'linear'
     v = 0
-    # pos_mode = 'random'
+    seed = 500
     pos_mode = 'set'
+    # pos_mode = 'random'
 
     if pos_mode == 'set':
-        np.random.seed(10)
+        np.random.seed(seed)
         # list with all possible positions in the field
         grid = [(i,j) for i in range(N) for j in range(N)]
         ind = np.random.choice(len(grid),size=M,replace=False)
@@ -107,7 +112,10 @@ if __name__ == '__main__':
  
     print('Initializing')
     max_mass = 4
-    F, masses, coor = initialize(N,M,max_mass,pos=pos_mode,set_pos=set_pos,display_fig=figure,v=1,norm=norm)
+    F, S = initialize(N,M,max_mass,pos=pos_mode,set_pos=set_pos,display_fig=figure,v=1,norm=norm)
+
+    masses = S.m
+    coor = np.array([*S.pos])
 
     print('\nI RUN')
     back = field.BACK_PARAM
@@ -142,16 +150,28 @@ if __name__ == '__main__':
     except:
         err = None
 
-    objs, obj_pos = restore.object_isolation(I,mean_val,size=7,objnum=20,reshape=False,reshape_corr=False,sel_cond=True,display_fig=True,norm=norm)
+    objs, obj_pos = restore.object_isolation(I,mean_val,size=7,acc=err/mean_val,grad_new=False,objnum=20,reshape=False,reshape_corr=False,sel_cond=True,display_fig=False,norm=norm)
 
+    ind = np.where(S.lum > mean_val)[0]
     fig, ax = plt.subplots(1,1)
     display.field_image(fig,ax,I)
     ax.plot(obj_pos[1],obj_pos[0],'.b')
-    ax.plot(coor[1],coor[0],'x', color='green')
+    ax.plot(coor[1,ind],coor[0,ind],'x', color='green')
+    ax.plot(coor[1,:ind.min()],coor[0,:ind.min()],'x', color='violet')
+
     plt.show()
 
     if objs is not None:
-        # kernel,(sigma, Dsigma) = restore.kernel_estimation(objs,err,N,all_results=False,display_plot=True)
+        for obj in objs:
+            fig,ax = plt.subplots(1,1)
+            display.field_image(fig,ax,obj)
+            rows = np.vstack(obj)
+            plt.figure()
+            for i in range(len(rows)):
+                plt.plot(autocorr(rows[i]),'.-',label=f'{i}')
+            plt.legend()
+            plt.show()
+        kernel,(sigma, Dsigma) = restore.kernel_estimation(objs,err,N,all_results=False,display_plot=True)
 
         # rec_I = restore.LR_deconvolution(I,kernel,mean_val,iter=50,sel='rl',display_fig=True)
         # mask = restore.mask_filter(rec_I,I,True)
