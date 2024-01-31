@@ -64,7 +64,7 @@ def fit_routine(xdata: NDArray, ydata: NDArray, method: Callable[[NDArray,Any],N
             names = [f'pop{i+1}' for i in range(len(pop))]
         print('- FIT RESULTS -')
         for i in range(len(pop)):
-            print('\t'+names[i]+f' = {pop[i]} +- {Dpop[i]}')
+            print('\t'+names[i]+f' = {pop[i]} +- {Dpop[i]}\t{Dpop[i]/pop[i]*100:.2} %')
         if err is not None:
             print(f'\tred_chi = {chisq/chi0*100} +- {np.sqrt(2/chi0)*100} %')
         print('- - - -')
@@ -340,7 +340,7 @@ def moving(direction: str, field: NDArray, index: tuple[int,int], back: float, s
             grad = step1 - step0    #: gradient
             ratio = step1/step0     #: ratio
             # condition to stop
-            if step1 == 0 or step1 < back or (ratio - 1) >= acc:
+            if step1 == 0 or step1 < back or (ratio - 1) > acc:
                 print('ratio',ratio)
                 print('grad and step',grad,step1)
                 print('size',xsize,ysize)
@@ -490,10 +490,10 @@ def new_moving(direction: str, field: NDArray, index: tuple[int,int], back: floa
     return results
 
 def new_grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 7, acc: float = 1e-5) -> NDArray:
-    mov = lambda val : moving(val,field,index,back,size,acc=acc)
+    # 
     n_mov = lambda val : new_moving(val,field,index,back,size)
-    xf_dir = ['fx','bx','fy','by']
-    a_xysize = np.array([n_mov(dir) for dir in xf_dir])
+    xf_dir = ['fx','bx','fy','by']      #: directions
+    a_xysize = np.array([n_mov(dir) for dir in xf_dir]) 
     print('A_XF',type(a_xysize))
     n_pos = np.where(a_xysize == -1)[0]
     if len(n_pos) != 0:
@@ -506,7 +506,7 @@ def new_grad_check(field: NDArray, index: tuple[int,int], back: float, size: int
     return a_xysize.reshape(2,2)
 
 
-def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: str | Sequence[str] = 'all', mindist: int = 5, minsize: int = 3, cutsize: int = 5, acc: float = 1e-5, reshape: bool = False) -> bool:
+def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: str | Sequence[str] = 'all', mindist: int = 5, minsize: int = 3, cutsize: int = 5, acc: float = 1e-1, reshape: bool = False) -> bool:
     """Selecting the objects for the fit
 
     sel:
@@ -560,27 +560,103 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
             if abs(x - xdim//2) > 1 or abs(y - ydim//2) > 1: 
                 print(f'\t:Selection:\t(x,y) = ({x},{y}) - dim//2 = {dim//2}')
                 return False 
-        lims = np.array([[max(x-1,0),xdim-1 - x], [max(y-1,0),ydim-1 - y]])
-        ind = np.where(lims != 0)
-        if len(ind[0]) == 0 or len(ind[0]) == 1: return False
+        lims = np.array([x, xdim-1 - x, y, ydim-1 - y])
+        print(obj.shape)
+        print(x,y)
+        print('LIMS',lims)
+        ind = np.where(lims > 1)[0]
+        if len(ind) == 0: 
+            return False
         else:
+            step0 = obj[x,y]
+            step00 = obj[x,y]
+            step0_0 = obj[x,y]
             lim = lims[ind].min()
-             
-            for i in range(lim):
-                i += 1
-                r, l, u, d = np.copy(obj[[x+i,x-i,x,x],[y,y,y+1,y-1]])
-                #!! DA RIVEDERE
-                diff1 = abs(r/l - u/d) 
-                diff2 = abs(r/d - l/u)
-                if diff1 >= 0.3 or diff2 >= 0.3 or (diff1 > 0.25 and diff2 > 0.25): 
-                    print(f'\t:Selection:\tdiff1 = {diff1} -  diff2 = {diff2}')
+            dirc = lambda i : i%2*2-1
+            xpos = lambda x : dirc(x)*(1-x//2)
+            ypos = lambda y : dirc(y)*(y//2)
+            print('IND',ind)
+            diag = np.array([[1,3],[0,2]])
+            dpos = np.array([ j in ind for j in diag.flatten()]).reshape(2,2)
+            ind0 = np.array([*ind])
+            xind, yind = np.where(dpos == False)
+            if len(xind) != 0:
+                ind0 = np.delete(ind0, 2-xind-yind) if len(xind) == 1 else diag[(xind+1)%2]
+            print('DPOS',dpos)
+            print('IND0',ind0)
+            diag = np.array([[0,3],[1,2]])
+            ndpos = np.array([ j in ind for j in diag.flatten()]).reshape(2,2)
+            ind1 = np.array([*ind])
+            xind, yind = np.where(ndpos == False)
+            if len(xind) != 0:
+                ind1 = np.delete(ind1, (1-xind)*((yind+2)%3)+xind) if len(xind) == 1 else diag[(xind+1)%2]
+            print('NDPOS',ndpos)
+            print('IND1',ind1)
+            del xind, yind
+            for i in range(1,lim+1):
+                values = np.array([obj[x+xpos(j)*i,y+ypos(j)*i] for j in ind])
+                step1 = np.mean(values)
+                ratio = step1/step0 - 1
+                print('RATIO',ratio)
+                if ratio > acc:
+                    print('END RATIO')
                     return False
+                step0 = step1
+
+                if dpos.all(axis=1).any():
+                    values = np.array([obj[x+dirc(j)*i,y+dirc(j)*i] for j in ind0])
+                    step11 = np.mean(values) if len(values) > 1 else values[0]
+                    ratio = step11/step00 - 1
+                    print('RATIO 00',ratio)
+                    if ratio > acc:
+                        print('END RATIO')
+                        return False
+                    step00 = step11
+
+                if ndpos.all(axis=1).any():
+                    values = np.array([obj[x+dirc(j)*i,y-dirc(j)*i] for j in ind1])
+                    step1_1 = np.mean(values) if len(values) > 1 else values[0]
+                    ratio = step1_1/step0_0 - 1
+                    print('RATIO 0_0',ratio)
+                    if ratio > acc:
+                        print('END RATIO')
+                        return False
+                    step0_0 = step1_1
+
+        # ind = np.where(lims != 0)[0]
+        # if len(ind) == 0 or len(ind) == 1: 
+        #     return False
+        # else:
+            # lim = min(lims[ind].min(),2)
+            # xpos = lambda x : (x%2*2-1)*(1-x//2)
+            # ypos = lambda y : (y%2*2-1)*(y//2)
+            # for i in range(1,lim+1):
+            #     values = np.array([ obj[x + xpos(j)*i, y + ypos(j)*i] for j in ind])
+            #     ratios = np.array([values[j]/values for j in range(1,len(values))])
+            #     ratios = np.delete(ratios,np.where(ratios==1))
+            #     rdim = len(ratios)
+            #     if rdim == 0: break
+            #     elif rdim == 1:
+            #         diff = abs(ratios - 1)
+            #     else:
+            #         diff = np.array([abs(ratios[j] - ratios[(j+1)%rdim]) for j in range(rdim)])
+            #     if np.count_nonzero(diff > acc) > len(diff)//2:
+            #         print(f'{i} - DIFF = {diff}')
+            #         return False
+                # i += 1
+                # r, l, u, d = np.copy(obj[[x+i,x-i,x,x],[y,y,y+1,y-1]])
+                # #!! DA RIVEDERE
+                # diff1 = abs(r/l - u/d) 
+                # diff2 = abs(r/d - l/u)
+                # if diff1 >= 0.3 or diff2 >= 0.3 or (diff1 > 0.25 and diff2 > 0.25): 
+                #     print(f'\t:Selection:\tdiff1 = {diff1} -  diff2 = {diff2}')
+                #     return False
     if cond: return True
     else: raise
 
 
 ##*
-def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-5, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, mindist: int = 5, minsize: int = 3, cutsize: int = 5, display_fig: bool = False,**kwargs) -> tuple[list[NDArray],NDArray] | None:
+def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-1, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, mindist: int = 5, minsize: int = 3, cutsize: int = 5, grad_new: bool = True, display_fig: bool = False,**kwargs) -> tuple[list[NDArray],NDArray] | None:
     """To isolate the most luminous star object.
     The function calls the `size_est()` function to compute the size of the object and
     then to extract it from the field.
@@ -634,7 +710,7 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-
         if peak <= thr:
             break
         # computing size
-        a_size = new_grad_check(tmp_field,index,thr,size,acc)
+        a_size = new_grad_check(tmp_field,index,thr,size,acc) if grad_new else grad_check(tmp_field,index,thr,size,acc)
         
         #? per me
         if ctrl: 
@@ -687,7 +763,7 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-
                 obj = np.pad(obj,(xpad_pos,ypad_pos),'reflect')
             
             # checking if the object is acceptable or not
-            save_cond = selection(obj,index,a_pos,size,sel=['size','dist'],mindist=mindist,minsize=minsize,cutsize=cutsize) if sel_cond else True
+            save_cond = selection(obj,index,a_pos,size,sel='all',mindist=mindist,minsize=minsize,cutsize=cutsize) if sel_cond else True
             if save_cond:
                 print(f'** OBJECT SELECTED ->\t{k}')
                 # updating the field to plot
@@ -920,7 +996,7 @@ def kernel_fit(obj: NDArray, err: float | None = None, size_cut: int | None = 9,
     return pop, Dpop
 
 
-def new_kernel_fit(obj: NDArray, err: float | None = None, size_cut: int | None = 9, display_fig: bool = False, **kwargs) -> tuple[NDArray,NDArray]:
+def new_kernel_fit(obj: NDArray, err: float | None = None, size_cut: int | None = 9, initial_values: list[int] | None = None, display_fig: bool = False, **kwargs) -> tuple[NDArray,NDArray]:
     """Estimating the sigma of the kernel
 
     :param obj: extracted objects
@@ -959,10 +1035,11 @@ def new_kernel_fit(obj: NDArray, err: float | None = None, size_cut: int | None 
     if err is not None:
         err = np.full(obj.shape,err,dtype=float)
     # computing the fit
-    sigma0 = 1
-    print('sigma',sigma0)
-    k0 = obj.max()
-    initial_values = [k0,sigma0]
+    if initial_values is None:
+        sigma0 = 1
+        print('sigma',sigma0)
+        k0 = obj.max()
+        initial_values = [k0,sigma0]
     xfit = np.vstack((x.ravel(),y.ravel()))
     yfit = obj.ravel()
     errfit = err.ravel() if err is not None else err
@@ -1020,11 +1097,21 @@ def kernel_estimation(extraction: list[NDArray], err: float, dim: int, selected:
     sel_extr = [*extraction[selected]]
     a_sigma = np.empty(shape=(0,2),dtype=float)  #: array to store values of sigma
     a_k = np.empty(shape=(0,2),dtype=float)      #: array to store values of k
+    # computing an initial value for sigma and a threshold
+    obj = sel_extr[0]
+    xmax, ymax = peak_pos(obj)
+    hm = obj[xmax,ymax]/2
+    xmin, ymin = np.unravel_index(abs(obj-hm).argmin(),obj.shape)
+    sigma0 = int(np.sqrt((xmax-xmin)**2 + (ymax-ymin)**2))*2
+    print(sigma0)
+    del obj,xmax,ymax,xmin,ymin,hm
+    # routine
     for obj in sel_extr:
-        pop, Dpop = new_kernel_fit(obj,err,size_cut=size_cut,display_fig=display_plot,**kwargs)
+        initial_values = [obj.max(),sigma0//4 if sigma0//4 != 0 else 1]
+        pop, Dpop = new_kernel_fit(obj,err,size_cut=size_cut,initial_values=initial_values,display_fig=display_plot,**kwargs)
         k, sigma = pop
         Dk, Dsigma = Dpop
-        if Dsigma/sigma < 2:
+        if Dsigma/sigma < 2 and sigma <= sigma0:
             a_k = np.append(a_k,[[k,Dk]],axis=0)
             a_sigma = np.append(a_sigma,[[sigma,Dsigma]],axis=0)
         del sigma, Dsigma, k, Dk
@@ -1040,15 +1127,14 @@ def kernel_estimation(extraction: list[NDArray], err: float, dim: int, selected:
     else:
         # computing the mean and STD
         sigma, Dsigma = mean_n_std(a_sigma[:,0])
-    print(f'\nsigma = {sigma:.5f} +- {Dsigma:.5f} -> {Dsigma/sigma*100:.2f} %')
+    print(f'\nsigma = {sigma:.5f} +- {Dsigma:.5f} -> {Dsigma/sigma*100:.2} %')
     # computing the kernel
     kernel = Gaussian(sigma)
     kernel = kernel.kernel(dim)
     
-    if display_plot:
-        if 'title' not in kwargs:
-            kwargs['title'] = 'Estimated kernel'
-        fast_image(kernel,**kwargs)
+    if 'title' not in kwargs:
+        kwargs['title'] = f'Estimated kernel\n$\\sigma = $ {sigma}'
+    fast_image(kernel,**kwargs)
 
     if all_results:
         return kernel, (a_sigma,a_k)
