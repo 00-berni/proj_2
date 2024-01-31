@@ -4,7 +4,7 @@ from numpy.typing import NDArray
 import matplotlib.pyplot as plt
 from scipy.signal import fftconvolve
 from scipy.ndimage import gaussian_filter
-from .display import fast_image
+from .display import fast_image, field_image
 
 
 ##* 
@@ -222,7 +222,7 @@ BETA = 3
 # normalization constant
 K = 1/(MAX_m**BETA)
 # mean background value
-BACK_MEAN = MAX_m**BETA * 0.01e-2
+BACK_MEAN = MAX_m**BETA * 1e-4
 BACK_SIGMA = BACK_MEAN * 20e-2
 BACK_PARAM = ('Gaussian',(BACK_MEAN, BACK_SIGMA))
 # mean detector noise
@@ -463,6 +463,20 @@ def field_builder(dim: int = N, stnum: int = M, masses: tuple[float,float] = (MI
     kwargs['title'] = 'Final Field'
     fast_image(F_bsd,**kwargs)        
     
+    kwargs = {key: kwargs[key] for key in kwargs.keys() - {'title'}}
+    fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(2,2)
+    fig.suptitle('Field Building Process')
+    tmp_kwargs = {key: kwargs[key] for key in kwargs.keys() - {'v'}}
+    ax1.set_title('Initial Field')
+    field_image(fig,ax1,F,v=1,**tmp_kwargs)
+    ax2.set_title('Background')
+    field_image(fig,ax2,F_b,**kwargs)
+    ax3.set_title('Seeing effect')
+    field_image(fig,ax3,F_bs,**kwargs)
+    ax4.set_title('Detector Noise')
+    field_image(fig,ax4,F_bsd,**kwargs)
+    plt.show()
+
     ret_val = [S, F_bsd]
     if results is not None:
         if 'F' in results or results == 'all':
