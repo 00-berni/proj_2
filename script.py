@@ -44,14 +44,14 @@ if __name__ == '__main__':
 
     coor = np.array([*S.pos])
     ind = np.where(S.lum > mean_val)[0]
-    # fig, ax = plt.subplots(1,1)
-    # display.field_image(fig,ax,I)
-    # if len(obj_pos[1]) != 0:
-    #     ax.plot(obj_pos[1],obj_pos[0],'.b')
-    # ax.plot(coor[1,ind],coor[0,ind],'x', color='yellow')
-    # ax.plot(coor[1,:ind.min()],coor[0,:ind.min()],'x', color='violet')
+    fig, ax = plt.subplots(1,1)
+    display.field_image(fig,ax,I)
+    if len(obj_pos[1]) != 0:
+        ax.plot(obj_pos[1],obj_pos[0],'.b')
+    ax.plot(coor[1,ind],coor[0,ind],'x', color='yellow')
+    ax.plot(coor[1,:ind.min()],coor[0,:ind.min()],'x', color='violet')
 
-    # plt.show()
+    plt.show()
 
 
 
@@ -61,17 +61,17 @@ if __name__ == '__main__':
         s = err / np.sqrt(2*np.log(2))
         for obj in objs:
             art_noise = np.random.normal(m,s,obj.shape)
-            # fig,ax = plt.subplots(1,1)
-            # display.field_image(fig,ax,obj)
-            # fig,ax = plt.subplots(1,1)
-            # display.field_image(fig,ax,art_noise)
+            fig,ax = plt.subplots(1,1)
+            display.field_image(fig,ax,obj)
+            fig,ax = plt.subplots(1,1)
+            display.field_image(fig,ax,art_noise)
             rows = np.vstack(obj)
             nrows = np.vstack(art_noise)
-            # plt.figure()
-            # for i in range(len(rows)):
-            #     plt.plot(np.correlate(rows[i],nrows[i],'same'),'.-',label=f'{i}')
-            # plt.legend()
-            # plt.show()
+            plt.figure()
+            for i in range(len(rows)):
+                plt.plot(np.correlate(rows[i],nrows[i],'same'),'.-',label=f'{i}')
+            plt.legend()
+            plt.show()
     
         print('MEAN VAL',mean_val)
         # kernel, (sigma, Dsigma) = restore.kernel_estimation(objs,err,N,all_results=True,display_plot=False)

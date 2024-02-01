@@ -12,6 +12,7 @@ def autocorr(vec: restore.Sequence, mode: str = 'same') -> restore.NDArray:
 K = field.K
 st_pos = 20
 
+
 def initialize(dim: int, num: int, max_mass: float | int = 8, pos: str = 'grid', set_pos: NDArray | None = None, display_fig: bool = False, **kwargs) -> tuple[NDArray, field.Star]:
     beta = field.BETA
     masses = np.linspace(field.MIN_m,max_mass,num)
@@ -158,20 +159,53 @@ if __name__ == '__main__':
     ax.plot(obj_pos[1],obj_pos[0],'.b')
     ax.plot(coor[1,ind],coor[0,ind],'x', color='green')
     ax.plot(coor[1,:ind.min()],coor[0,:ind.min()],'x', color='violet')
-
     plt.show()
 
     if objs is not None:
+        m = mean_val
+        s = err / np.sqrt(2*np.log(2))
         for obj in objs:
+            art_noise = np.random.normal(m,s,obj.shape)
             fig,ax = plt.subplots(1,1)
             display.field_image(fig,ax,obj)
+            fig,ax = plt.subplots(1,1)
+            display.field_image(fig,ax,art_noise)
             rows = np.vstack(obj)
-            plt.figure()
+            nrows = np.vstack(art_noise)
+            fig1, ax1 = plt.subplots(1,1)
+            fig2, ax2 = plt.subplots(1,1)
+            ax1.set_title('Correlation signal - noise')
+            ax2.set_title('Correlation noise - noise')
+            mcorr = []
+            mncorr = []
+            acorr = []
             for i in range(len(rows)):
-                plt.plot(autocorr(rows[i]),'.-',label=f'{i}')
-            plt.legend()
+                c = np.correlate(rows[i],nrows[i],'same')
+                mcorr += [c]
+                ax1.plot(c,'.-',label=f'{i}')
+                c = autocorr(nrows[i])
+                mncorr += [c]
+                ax2.plot(c,'.-',label=f'{i}')
+                acorr += [autocorr(rows[i])]
+            
+            ax1.legend()
+            ax2.legend()
+            mcorr = np.mean(mcorr,axis=1)
+            mncorr = np.mean(mncorr,axis=1)
+            acorr = np.mean(acorr,axis=1)
+            fig, (ax1, ax2, ax3) = plt.subplots(1,3)
+            ax1.set_title('Correlation signal - noise')
+            ax1.plot(mcorr)
+            ax2.set_title('Correlation noise - noise')
+            ax2.plot(mncorr)
+            ax3.set_title('Correlation signal - signal')
+            ax3.plot(acorr)
+            print(mncorr/mncorr.max()-acorr/acorr.max())
+            plt.figure()
+            plt.plot(mncorr/mncorr.max()-acorr/acorr.max())
+            plt.axhline(np.mean(mncorr/mncorr.max()-acorr/acorr.max()),0,1)
             plt.show()
-        kernel,(sigma, Dsigma) = restore.kernel_estimation(objs,err,N,all_results=False,display_plot=True)
+        # kernel,(sigma, Dsigma) = restore.kernel_estimation(objs,err,N,all_results=False,display_plot=True)
 
         # rec_I = restore.LR_deconvolution(I,kernel,mean_val,iter=50,sel='rl',display_fig=True)
         # mask = restore.mask_filter(rec_I,I,True)
