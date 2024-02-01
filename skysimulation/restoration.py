@@ -570,29 +570,19 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
         else:
             step0 = obj[x,y]
             step00 = obj[x,y]
-            step0_0 = obj[x,y]
             lim = lims[ind].min()
             dirc = lambda i : i%2*2-1
             xpos = lambda x : dirc(x)*(1-x//2)
             ypos = lambda y : dirc(y)*(y//2)
             print('IND',ind)
-            diag = np.array([[1,3],[0,2]])
-            dpos = np.array([ j in ind for j in diag.flatten()]).reshape(2,2)
-            ind0 = np.array([*ind])
-            xind, yind = np.where(dpos == False)
+            diag = np.array([[1,3],[0,2],[0,3],[1,2]])
+            dpos = np.array([ j in ind for j in diag.flatten()]).reshape(4,2).all(axis=1)
+            xind = np.where(dpos == False)[0]
             if len(xind) != 0:
-                ind0 = np.delete(ind0, 2-xind-yind) if len(xind) == 1 else diag[(xind+1)%2]
+                diag = np.delete(diag,xind,axis=0)
             print('DPOS',dpos)
-            print('IND0',ind0)
-            diag = np.array([[0,3],[1,2]])
-            ndpos = np.array([ j in ind for j in diag.flatten()]).reshape(2,2)
-            ind1 = np.array([*ind])
-            xind, yind = np.where(ndpos == False)
-            if len(xind) != 0:
-                ind1 = np.delete(ind1, (1-xind)*((yind+2)%3)+xind) if len(xind) == 1 else diag[(xind+1)%2]
-            print('NDPOS',ndpos)
-            print('IND1',ind1)
-            del xind, yind
+            print('DIAG',diag)
+            del xind, dpos
             for i in range(1,lim+1):
                 values = np.array([obj[x+xpos(j)*i,y+ypos(j)*i] for j in ind])
                 step1 = np.mean(values)
@@ -603,8 +593,8 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
                     return False
                 step0 = step1
 
-                if dpos.all(axis=1).any():
-                    values = np.array([obj[x+dirc(j)*i,y+dirc(j)*i] for j in ind0])
+                if len(diag) != 0:
+                    values = np.array([obj[x+dirc(d[0])*i,y+dirc(d[1])*i] for d in diag])
                     step11 = np.mean(values) if len(values) > 1 else values[0]
                     ratio = step11/step00 - 1
                     print('RATIO 00',ratio)
@@ -613,15 +603,6 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
                         return False
                     step00 = step11
 
-                if ndpos.all(axis=1).any():
-                    values = np.array([obj[x+dirc(j)*i,y-dirc(j)*i] for j in ind1])
-                    step1_1 = np.mean(values) if len(values) > 1 else values[0]
-                    ratio = step1_1/step0_0 - 1
-                    print('RATIO 0_0',ratio)
-                    if ratio > acc:
-                        print('END RATIO')
-                        return False
-                    step0_0 = step1_1
 
         # ind = np.where(lims != 0)[0]
         # if len(ind) == 0 or len(ind) == 1: 
