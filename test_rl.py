@@ -9,9 +9,86 @@ import skysimulation.restoration as restore
 def autocorr(vec: restore.Sequence, mode: str = 'same') -> restore.NDArray:
     return correlate(vec,vec,mode)
 
+def corr_plot(obj: NDArray, noise: NDArray) -> tuple[NDArray,NDArray,NDArray,NDArray]:
+    fig,ax = plt.subplots(1,1)
+    display.field_image(fig,ax,obj)
+    fig,ax = plt.subplots(1,1)
+    display.field_image(fig,ax,noise)
+    rows = np.vstack(obj)
+    nrows = np.vstack(noise)
+    cols = np.stack(obj,axis=-1)
+    ncols = np.stack(noise,axis=-1)
+    fig1, ax1 = plt.subplots(1,2)
+    fig2, ax2 = plt.subplots(1,2)
+    fig1.suptitle('Correlation signal - noise')
+    ax1[0].set_title('Vertical')
+    ax1[1].set_title('Horizontal')
+    fig2.suptitle('Correlation noise - noise')
+    ax2[0].set_title('Vertical')
+    ax2[1].set_title('Horizontal')
+    v_mcorr = []
+    v_mncorr = []
+    v_acorr = []
+    h_mcorr = []
+    h_mncorr = []
+    h_acorr = []
+    for i in range(len(rows)):
+        # rows
+        c = np.correlate(rows[i],nrows[i],'same')
+        v_mcorr += [c]
+        ax1[0].plot(c,'.-',label=f'{i} row')
+        c = autocorr(nrows[i])
+        v_mncorr += [c]
+        ax2[0].plot(c,'.-',label=f'{i} row')
+        v_acorr += [autocorr(rows[i])]
+    for i in range(len(cols)):
+        # columns
+        c = np.correlate(cols[i],ncols[i],'same')
+        h_mcorr += [c]
+        ax1[1].plot(c,'.-',label=f'{i} col')
+        c = autocorr(ncols[i])
+        h_mncorr += [c]
+        ax2[1].plot(c,'.-',label=f'{i} col')
+        h_acorr += [autocorr(cols[i])]
+    ax1[0].legend()
+    ax2[0].legend()
+    ax1[1].legend()
+    ax2[1].legend()
+    v_mcorr  = np.mean(v_mcorr,axis=1)
+    v_mncorr = np.mean(v_mncorr,axis=1)
+    v_acorr  = np.mean(v_acorr,axis=1)
+    h_mcorr  = np.mean(h_mcorr,axis=1)
+    h_mncorr = np.mean(h_mncorr,axis=1)
+    h_acorr  = np.mean(h_acorr,axis=1)
+    fig, ((ax1, ax2, ax3),(ax4,ax5,ax6)) = plt.subplots(2,3)
+    ax1.set_title('Correlation signal - noise')
+    ax1.plot(v_mcorr)
+    ax4.plot(h_mcorr)
+    ax2.set_title('Correlation noise - noise')
+    ax2.plot(v_mncorr)
+    ax5.plot(h_mncorr)
+    ax3.set_title('Correlation signal - signal')
+    ax3.plot(v_acorr)
+    ax6.plot(h_acorr)
+    v_diff = abs(np.sort(v_mncorr/v_mncorr.max())-np.sort(v_acorr/v_acorr.max())) 
+    h_diff = abs(np.sort(h_mncorr/h_mncorr.max())-np.sort(h_acorr/h_acorr.max())) 
+    print('DIFF',v_diff.max(),v_diff.min(),np.mean(v_diff),h_diff.max(),h_diff.min(),np.mean(h_diff))
+    plt.figure()
+    plt.subplot(121)
+    plt.plot(v_diff)
+    plt.axhline(np.mean(v_diff),0,1,linestyle='-',color='red')
+    plt.axhline(0,0,1,color='black')
+    plt.subplot(122)
+    plt.plot(h_diff)
+    plt.axhline(np.mean(h_diff),0,1,linestyle='-',color='red')
+    plt.axhline(0,0,1,color='black')
+    plt.figure()
+    plt.plot(np.mean(obj,axis=1))
+    plt.show()
+    return v_mcorr, v_mncorr, v_acorr, v_diff
+
 K = field.K
 st_pos = 20
-
 
 def initialize(dim: int, num: int, max_mass: float | int = 8, pos: str = 'grid', set_pos: NDArray | None = None, display_fig: bool = False, **kwargs) -> tuple[NDArray, field.Star]:
     beta = field.BETA
@@ -44,7 +121,7 @@ def initialize(dim: int, num: int, max_mass: float | int = 8, pos: str = 'grid',
     return F, S  
 
 
-def add_effects(F,masses,coor,back,atm,det,pos_mode: str = 'grid',**kwargs) -> NDArray:
+def add_effects(F: NDArray, masses: restore.Sequence, coor: tuple[NDArray,NDArray], back: tuple = field.BACK_PARAM, atm: float = field.SEEING_SIGMA, det: tuple = field.NOISE_PARAM, pos_mode: str = 'grid',**kwargs) -> NDArray:
     N = len(F)
     if 'results' not in kwargs: kwargs['results'] = False
     if 'figure' not in kwargs: kwargs['figure'] = False
@@ -164,47 +241,14 @@ if __name__ == '__main__':
     if objs is not None:
         m = mean_val
         s = err / np.sqrt(2*np.log(2))
+        mm = np.empty(0,float)
         for obj in objs:
             art_noise = np.random.normal(m,s,obj.shape)
-            fig,ax = plt.subplots(1,1)
-            display.field_image(fig,ax,obj)
-            fig,ax = plt.subplots(1,1)
-            display.field_image(fig,ax,art_noise)
-            rows = np.vstack(obj)
-            nrows = np.vstack(art_noise)
-            fig1, ax1 = plt.subplots(1,1)
-            fig2, ax2 = plt.subplots(1,1)
-            ax1.set_title('Correlation signal - noise')
-            ax2.set_title('Correlation noise - noise')
-            mcorr = []
-            mncorr = []
-            acorr = []
-            for i in range(len(rows)):
-                c = np.correlate(rows[i],nrows[i],'same')
-                mcorr += [c]
-                ax1.plot(c,'.-',label=f'{i}')
-                c = autocorr(nrows[i])
-                mncorr += [c]
-                ax2.plot(c,'.-',label=f'{i}')
-                acorr += [autocorr(rows[i])]
-            
-            ax1.legend()
-            ax2.legend()
-            mcorr = np.mean(mcorr,axis=1)
-            mncorr = np.mean(mncorr,axis=1)
-            acorr = np.mean(acorr,axis=1)
-            fig, (ax1, ax2, ax3) = plt.subplots(1,3)
-            ax1.set_title('Correlation signal - noise')
-            ax1.plot(mcorr)
-            ax2.set_title('Correlation noise - noise')
-            ax2.plot(mncorr)
-            ax3.set_title('Correlation signal - signal')
-            ax3.plot(acorr)
-            print(mncorr/mncorr.max()-acorr/acorr.max())
-            plt.figure()
-            plt.plot(mncorr/mncorr.max()-acorr/acorr.max())
-            plt.axhline(np.mean(mncorr/mncorr.max()-acorr/acorr.max()),0,1)
-            plt.show()
+            mcorr, mncorr, acorr, diff = corr_plot(obj,art_noise)
+            mm = np.append(mm,np.mean(diff))
+        plt.figure()
+        plt.plot(mm,'.--')
+        plt.show()
         # kernel,(sigma, Dsigma) = restore.kernel_estimation(objs,err,N,all_results=False,display_plot=True)
 
         # rec_I = restore.LR_deconvolution(I,kernel,mean_val,iter=50,sel='rl',display_fig=True)
