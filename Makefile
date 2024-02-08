@@ -12,6 +12,9 @@ script:
 # test:
 test:
 	python3.10 ./test_rl.py > $(RDIR)/test_results.txt
+# test:
+test-corr:
+	python3.10 ./test_corr.py > $(RDIR)/test-corr_results.txt
 # test threshold
 test-thr:
 	python3.10 $(TDIR)/test_thr.py > $(TDIR)/out-test_thr.txt
