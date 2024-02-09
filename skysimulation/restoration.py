@@ -656,7 +656,7 @@ def corr_check(obj: NDArray, numpeak: int = 3, display_plot: bool = False,**kwar
         if len(r_peak) > 0:
             plt.plot(r_peak,r_corr[r_peak],'x',color='red')
         plt.subplot(2,2,3)
-        plt.plot(cows,'.-')
+        plt.plot(cols,'.-')
         plt.subplot(2,2,4)
         plt.plot(c_corr,'.-')
         if len(c_peak) > 0:
