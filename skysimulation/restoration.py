@@ -7,6 +7,10 @@ from .display import fast_image, field_image
 from .field import Gaussian, N, Uniform, noise
 from .field import K as field_const
 
+def autocorr(arr: NDArray, **kwargs) -> float | NDArray:
+    from scipy.signal import correlate
+    return correlate(arr,arr,**kwargs)
+
 def peak_pos(field: NDArray) -> int | tuple[int,int]:
     """Finding the coordinate/s of the maximum
 
@@ -635,6 +639,32 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
     if cond: return True
     else: raise
 
+def corr_check(obj: NDArray, numpeak: int = 3, display_plot: bool = False,**kwargs) -> bool:
+    from scipy.signal import find_peaks
+    rows = obj.flatten()
+    r_corr = autocorr(rows,**kwargs)
+    r_peak = find_peaks(r_corr)
+    cols = np.stack(obj,axis=-1).flatten()
+    c_corr = autocorr(cols,**kwargs)
+    c_peak = find_peaks(c_corr)
+    if display_plot:
+        plt.figure()
+        plt.subplot(2,2,1)
+        plt.plot(rows,'.-')
+        plt.subplot(2,2,2)
+        plt.plot(r_corr,'.-')
+        if len(r_peak) > 0:
+            plt.plot(r_peak,r_corr[r_peak],'x',color='red')
+        plt.subplot(2,2,3)
+        plt.plot(cows,'.-')
+        plt.subplot(2,2,4)
+        plt.plot(c_corr,'.-')
+        if len(c_peak) > 0:
+            plt.plot(c_peak,c_corr[c_peak],'x',color='red')
+    if max(len(r_peak),len(c_peak)) < numpeak:
+        return False
+    else:
+        return True
 
 ##*
 def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-1, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, mindist: int = 5, minsize: int = 3, cutsize: int = 5, grad_new: bool = True, display_fig: bool = False,**kwargs) -> tuple[list[NDArray],NDArray] | None:
