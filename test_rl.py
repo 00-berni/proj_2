@@ -1,5 +1,5 @@
 import numpy as np
-from numpy import correlate
+from scipy.signal import correlate
 import matplotlib.pyplot as plt
 from skysimulation import NDArray
 from skysimulation import field
@@ -242,13 +242,14 @@ if __name__ == '__main__':
         m = mean_val
         s = err / np.sqrt(2*np.log(2))
         mm = np.empty(0,float)
-        for obj in objs:
-            art_noise = np.random.normal(m,s,obj.shape)
-            mcorr, mncorr, acorr, diff = corr_plot(obj,art_noise)
-            mm = np.append(mm,np.mean(diff))
-        plt.figure()
-        plt.plot(mm,'.--')
-        plt.show()
+ 
+        # for obj in objs:
+        #     art_noise = np.random.normal(m,s,obj.shape)
+        #     mcorr, mncorr, acorr, diff = corr_plot(obj,art_noise)
+        #     mm = np.append(mm,np.mean(diff))
+        # plt.figure()
+        # plt.plot(mm,'.--')
+        # plt.show()
         # kernel,(sigma, Dsigma) = restore.kernel_estimation(objs,err,N,all_results=False,display_plot=True)
 
         # rec_I = restore.LR_deconvolution(I,kernel,mean_val,iter=50,sel='rl',display_fig=True)
