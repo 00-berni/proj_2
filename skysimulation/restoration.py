@@ -509,8 +509,51 @@ def new_grad_check(field: NDArray, index: tuple[int,int], back: float, size: int
 
     return a_xysize.reshape(2,2)
 
+def corr_check(obj: NDArray, numpeak: int = 3, display_plot: bool = False,**kwargs) -> bool:
+    from scipy.signal import find_peaks
+    rows = obj.flatten()
+    r_corr = autocorr(rows,**kwargs)
+    r_peak, _ = find_peaks(r_corr)
+    cols = np.stack(obj,axis=-1).flatten()
+    c_corr = autocorr(cols,**kwargs)
+    c_peak, _ = find_peaks(c_corr)
+    if len(r_peak) == 1 and len(c_peak) == 1 and display_plot:
+        app = np.append(rows,cols)
+        app_corr = autocorr(app,**kwargs)
+        app_peak, _ = find_peaks(app_corr)
+        s_corr = autocorr((rows*cols)**3,**kwargs)
+        s_peak, _ = find_peaks(s_corr)
+        plt.figure()
+        plt.subplot(1,2,1)
+        plt.plot(app_corr,'.-')
+        plt.plot(app_peak,app_corr[app_peak],'xr')
+        plt.subplot(1,2,2)
+        plt.plot(s_corr,'.-')
+        plt.plot(s_peak,s_corr[s_peak],'xr')
+    if display_plot:
+        plt.figure()
+        plt.subplot(2,2,1)
+        plt.plot(rows,'.-')
+        plt.subplot(2,2,2)
+        plt.plot(r_corr,'.-')
+        if len(r_peak) > 0:
+            plt.plot(r_peak,r_corr[r_peak],'x',color='red')
+        plt.subplot(2,2,3)
+        plt.plot(cols,'.-')
+        plt.subplot(2,2,4)
+        plt.plot(c_corr,'.-')
+        if len(c_peak) > 0:
+            plt.plot(c_peak,c_corr[c_peak],'x',color='red')
 
-def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: str | Sequence[str] = 'all', mindist: int = 5, minsize: int = 3, cutsize: int = 5, acc: float = 1e-1, reshape: bool = False) -> bool:
+        fast_image(obj)
+    if max(len(r_peak),len(c_peak)) < numpeak:
+        return False
+    else:
+        return True
+
+
+
+def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: str | Sequence[str] = 'all', mindist: int = 5, minsize: int = 3, cutsize: int = 5, numpeaks: int = 3, acc: float = 1e-1, reshape: bool = False, display_plot: bool = False, **kwargs) -> bool:
     """Selecting the objects for the fit
 
     sel:
@@ -606,7 +649,8 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
                         print('END RATIO')
                         return False
                     step00 = step11
-
+    # if sel == 'all' or 'corr' in sel:
+    #     return corr_check(obj,numpeaks,display_plot,**kwargs)
 
         # ind = np.where(lims != 0)[0]
         # if len(ind) == 0 or len(ind) == 1: 
@@ -639,35 +683,9 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
     if cond: return True
     else: raise
 
-def corr_check(obj: NDArray, numpeak: int = 3, display_plot: bool = False,**kwargs) -> bool:
-    from scipy.signal import find_peaks
-    rows = obj.flatten()
-    r_corr = autocorr(rows,**kwargs)
-    r_peak = find_peaks(r_corr)
-    cols = np.stack(obj,axis=-1).flatten()
-    c_corr = autocorr(cols,**kwargs)
-    c_peak = find_peaks(c_corr)
-    if display_plot:
-        plt.figure()
-        plt.subplot(2,2,1)
-        plt.plot(rows,'.-')
-        plt.subplot(2,2,2)
-        plt.plot(r_corr,'.-')
-        if len(r_peak) > 0:
-            plt.plot(r_peak,r_corr[r_peak],'x',color='red')
-        plt.subplot(2,2,3)
-        plt.plot(cols,'.-')
-        plt.subplot(2,2,4)
-        plt.plot(c_corr,'.-')
-        if len(c_peak) > 0:
-            plt.plot(c_peak,c_corr[c_peak],'x',color='red')
-    if max(len(r_peak),len(c_peak)) < numpeak:
-        return False
-    else:
-        return True
 
 ##*
-def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-1, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, mindist: int = 5, minsize: int = 3, cutsize: int = 5, grad_new: bool = True, display_fig: bool = False,**kwargs) -> tuple[list[NDArray],NDArray] | None:
+def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-1, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, mindist: int = 5, minsize: int = 3, cutsize: int = 5, numpeaks: int = 2, grad_new: bool = True, corr_cond: bool = True, display_fig: bool = False,**kwargs) -> tuple[list[NDArray],NDArray] | None:
     """To isolate the most luminous star object.
     The function calls the `size_est()` function to compute the size of the object and
     then to extract it from the field.
@@ -709,8 +727,8 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-
         # finding the maximum value position
         index = peak_pos(tmp_field)
         
-        ctrl = False    #?: solo per me
         #? per me
+        ctrl = False    #?: solo per me
         if 0 in index: 
             print(index)
             ctrl = True
@@ -774,7 +792,7 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-
                 obj = np.pad(obj,(xpad_pos,ypad_pos),'reflect')
             
             # checking if the object is acceptable or not
-            save_cond = selection(obj,index,a_pos,size,sel='all',mindist=mindist,minsize=minsize,cutsize=cutsize) if sel_cond else True
+            save_cond = selection(obj,index,a_pos,size,sel='all',mindist=mindist,minsize=minsize,cutsize=cutsize,numpeaks=numpeaks,display_plot=display_fig) if sel_cond else True
             if save_cond:
                 print(f'** OBJECT SELECTED ->\t{k}')
                 # updating the field to plot
@@ -831,6 +849,29 @@ def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-
         plt.show()
     # if nothing is taken or found
     if len(extraction) == 0: return None
+    
+    if corr_cond:
+        np.warnings.filterwarnings('error', category=np.VisibleDeprecationWarning)                  
+        rem_pos = []
+        print('> START CORRELATION')
+        for i in range(len(extraction)):
+            obj = extraction[i]
+            if not corr_check(obj,numpeaks,display_plot=True):
+                rem_pos += [i]
+        print('> END CORRELATION')
+        if len(rem_pos) != 0 and len(rem_pos) != len(extraction):
+            rej_obj += [extraction[i] for i in rem_pos]
+            rej_pos = np.append(rej_pos, sel_pos[:,rem_pos],axis=1)
+            sel_pos = np.delete(sel_pos,rem_pos,axis=1)
+            extraction = np.delete(np.asarray(extraction,dtype=object),rem_pos,axis=0)
+        else:
+            if len(extraction) > 4:
+                rej_obj += extraction[4:]
+                rej_pos = np.append(rej_pos,sel_pos[:,4:],axis=1)            
+                extraction = extraction[:4]
+                sel_pos = np.delete(sel_pos,[i for i in range(4,len(extraction))],axis=1)
+            print('rem_pos', rem_pos)
+
     print(f'\nRej:\t{len(rej_obj)}\nExt:\t{len(extraction)}')
     print(':: End ::')
     return extraction, sel_pos
@@ -1134,7 +1175,7 @@ def kernel_estimation(extraction: list[NDArray], err: float, dim: int, selected:
         print(f'REMOVE - {errpos}')
         a_sigma = np.delete(a_sigma,errpos,axis=0)
     if len(a_sigma) == 0: raise
-    elif len(a_sigma) == 1: sigma, Dsigma = a_sigma
+    elif len(a_sigma) == 1: sigma, Dsigma = a_sigma[0]
     else:
         # computing the mean and STD
         sigma, Dsigma = mean_n_std(a_sigma[:,0])
