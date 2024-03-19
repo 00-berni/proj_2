@@ -211,7 +211,7 @@ LSOL = 3.84e+33 # erg/s
 # dimension of the field matrix
 N = int(1e2)
 # number of stars
-M = int(1e2)
+M = int(2e2)
 # masses range
 MIN_m = 0.3
 MAX_m = 20
@@ -226,7 +226,7 @@ BACK_MEAN = MAX_m**BETA * 1e-4
 BACK_SIGMA = BACK_MEAN * 20e-2
 BACK_PARAM = ('Gaussian',(BACK_MEAN, BACK_SIGMA))
 # mean detector noise
-NOISE_MEAN = 1e-1
+NOISE_MEAN = 5e-2
 NOISE_SIGMA = NOISE_MEAN * 50e-2
 NOISE_PARAM = ('Gaussian',(NOISE_MEAN,NOISE_SIGMA))
 # sigma of seeing
