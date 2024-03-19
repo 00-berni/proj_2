@@ -65,7 +65,7 @@ def extr_obj(field: NDArray, pos: NDArray | tuple[NDArray,NDArray], null_pos: ND
         a_pos = np.append(a_pos,[[x],[y]],axis=1)
         if not any(([[0,0],[0,0]] == a_size).all(axis=1)):
             obj = field[xr,yr].copy()
-            save_cond = rst.selection(obj,(x,y),a_pos,size,sel='all',acc=acc,**sel_kwarg)
+            save_cond = rst.selection(obj,(x,y),a_pos,size,sel=['size','cut','dist'],acc=acc,**sel_kwarg)
             if save_cond:
                 noise += [obj]
                 if display_fig:
