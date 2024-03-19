@@ -23,12 +23,6 @@ if __name__ == '__main__':
 
     print('\n--- Dark ---')
     dark = restore.dark_elaboration(det,dim=N)
-    rows = np.vstack(dark)
-    plt.figure()
-    for i in range(len(rows)):
-        plt.plot(autocorr(rows[i]),'.',label=f'{i}')
-    plt.legend()
-    plt.show()
 
     print('\n--- Background Estimation ---')
     bkg = restore.bkg_est(I,True)
@@ -40,10 +34,10 @@ if __name__ == '__main__':
     err, mean_val = restore.err_estimation(I,mean_val,thr=thr,display_plot=True)
 
     print(f'MEAN ERR = {mean_val} +- {err}\t{err/mean_val}')
-    objs, obj_pos = restore.object_isolation(I,mean_val,size=7,objnum=15,acc=err/mean_val,reshape=True,reshape_corr=False,sel_cond=True,minsize=2,grad_new=False,display_fig=False,norm=norm)
+    objs, obj_pos = restore.object_isolation(I,mean_val,size=7,objnum=15,acc=err/mean_val,reshape=True,reshape_corr=False,sel_cond=True,minsize=2,grad_new=False,display_fig=False,norm=norm, corr_cond=True)
 
     coor = np.array([*S.pos])
-    ind = np.where(S.lum > mean_val)[0]
+    ind  = np.where(S.lum > mean_val)[0]
     fig, ax = plt.subplots(1,1)
     display.field_image(fig,ax,I)
     if len(obj_pos[1]) != 0:
@@ -57,25 +51,25 @@ if __name__ == '__main__':
 
     print('\n--- Kernel Estimation ---')
     if objs is not None:
-        m = mean_val
-        s = err / np.sqrt(2*np.log(2))
-        for obj in objs:
-            art_noise = np.random.normal(m,s,obj.shape)
-            fig,ax = plt.subplots(1,1)
-            display.field_image(fig,ax,obj)
-            fig,ax = plt.subplots(1,1)
-            display.field_image(fig,ax,art_noise)
-            rows = np.vstack(obj)
-            nrows = np.vstack(art_noise)
-            plt.figure()
-            for i in range(len(rows)):
-                plt.plot(np.correlate(rows[i],nrows[i],'same'),'.-',label=f'{i}')
-            plt.legend()
-            plt.show()
+        # m = mean_val
+        # s = err / np.sqrt(2*np.log(2))
+        # for obj in objs:
+        #     art_noise = np.random.normal(m,s,obj.shape)
+        #     fig,ax = plt.subplots(1,1)
+        #     display.field_image(fig,ax,obj)
+        #     fig,ax = plt.subplots(1,1)
+        #     display.field_image(fig,ax,art_noise)
+        #     rows = np.vstack(obj)
+        #     nrows = np.vstack(art_noise)
+        #     plt.figure()
+        #     for i in range(len(rows)):
+        #         plt.plot(np.correlate(rows[i],nrows[i],'same'),'.-',label=f'{i}')
+        #     plt.legend()
+        #     plt.show()
     
         print('MEAN VAL',mean_val)
-        # kernel, (sigma, Dsigma) = restore.kernel_estimation(objs,err,N,all_results=True,display_plot=False)
-        # rec_I = restore.LR_deconvolution(I,kernel,mean_val,iter=50,sel='rl',display_fig=True)
+        kernel, (sigma, Dsigma) = restore.kernel_estimation(objs,err,N,all_results=True,display_plot=False)
+        # rec_I = restore.LR_deconvolution(I,kernel,mean_val,iter=20,sel='rl',display_fig=True)
         # mask = restore.mask_filter(rec_I,I,True)
         # lum, pos, allpos = restore.find_objects(rec_I,I,kernel,mean_val,sel_pos=obj_pos,acc=1e-1,res_str=['lum','acc','pos'],display_fig=False)
         # l, Dl = lum
