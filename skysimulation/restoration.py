@@ -4,7 +4,7 @@ import numpy as np
 from numpy.typing import NDArray,ArrayLike
 from scipy.signal import find_peaks
 from .display import fast_image, field_image
-from .field import Gaussian, N, Uniform, noise
+from .field import Gaussian, N, Uniform, noise, NOISE_SEED
 from .field import K as field_const
 
 def autocorr(arr: NDArray, **kwargs) -> float | NDArray:
@@ -88,42 +88,44 @@ def fit_routine(xdata: NDArray, ydata: NDArray, method: Callable[[NDArray,Any],N
     # else: raise Exception('Wrong `sel`')
     return results
 
-def mean_n_std(xdata: NDArray) -> tuple[float, float]:
+def mean_n_std(xdata: NDArray, axis: int | None = None) -> tuple[float, float]:
     dim = len(xdata)
-    mean = np.mean(xdata)
-    std = np.sqrt(((xdata-mean)**2).sum()/(dim*(dim-1)))
+    mean = np.mean(xdata,axis=axis)
+    std = np.sqrt( ((xdata-mean)**2).sum(axis=axis) / (dim*(dim-1)) )
     return mean, std
 
 ##*
-def dark_elaboration(params: tuple[str, float | tuple], iteration: int = 3, dim: int = N, display_fig: bool = False, **kwargs) -> NDArray:
-    """The function computes a number (`iteration`) of darks
-    and averages them in order to get a mean estimation 
-    of the detector noise
+# def dark_elaboration(noise_distr: Any, iteration: int = 3, seed: int | None = NOISE_SEED, dim: int = N, display_fig: bool = False, **kwargs) -> NDArray:
+#     """The function computes a number (`iteration`) of darks
+#     and averages them in order to get a mean estimation 
+#     of the detector noise
 
-    :param params: parameters of the signal
-    :type params: tuple[str, float  |  tuple]
-    :param iteration: number of darks, defaults to 3
-    :type iteration: int, optional
-    :param dim: size of the field, defaults to N
-    :type dim: int, optional
-    :param display_fig: if `True` pictures are shown, defaults to False
-    :type display_fig: bool, optional
+#     :param params: parameters of the signal
+#     :type params: tuple[str, float  |  tuple]
+#     :param iteration: number of darks, defaults to 3
+#     :type iteration: int, optional
+#     :param dim: size of the field, defaults to N
+#     :type dim: int, optional
+#     :param display_fig: if `True` pictures are shown, defaults to False
+#     :type display_fig: bool, optional
     
-    :return: mean dark
-    :rtype: NDArray
-    """
-    # generating the first dark
-    dark = noise(params, dim=dim)
-    # making the loop
-    for _ in range(iteration-1):
-        dark += noise(params, dim=dim)
-    # averaging
-    dark /= iteration
-    if display_fig:
-        if 'title' not in kwargs:
-            kwargs['title'] = f'Dark elaboration\nAveraged on {iteration} iterations'
-        fast_image(dark,**kwargs)
-    return dark
+#     :return: mean dark
+#     :rtype: NDArray
+#     """
+#     # generating the first dark
+#     dark = np.empty((0,dim,dim),float)
+#     # making the loop
+#     for _ in range(iteration):
+#         if seed is not None:
+#             seed = None
+#         dark = np.append(dark, noise(noise_distr,dim=dim,seed=seed))
+#     # averaging
+#     mean_dark, std_dark = mean_n_std(dark, axis=0) 
+#     if display_fig:
+#         if 'title' not in kwargs:
+#             kwargs['title'] = f'Dark elaboration\nAveraged on {iteration} iterations'
+#         fast_image(mean_dark,**kwargs)
+#     return mean_dark, std_dark
 
 def bkg_est(field: NDArray, display_fig: bool = False) -> float:
     """Estimating a value for the background
