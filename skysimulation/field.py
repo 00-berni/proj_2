@@ -429,6 +429,44 @@ def noise(distr: Gaussian | Uniform | Poisson, dim: int = N, seed: int | None = 
         n = np.sqrt(n**2)
     return n * K
 
+def add_effects(F: NDArray, background: Any, back_seed: int | None, atm_param: tuple[str, float], cut: int | None, det_noise: Any, det_seed: int | None, i: int, display_fig: bool = False, **kwargs):
+    dim = len(F)
+    # background
+    kwargs['title'] = 'Background'
+    n_b = noise(background,dim,seed=back_seed,display_fig=display_fig,**kwargs)
+    F_b = F + n_b
+    if display_fig:
+        kwargs['title'] = 'Field + Background'
+        fast_image(F_b,**kwargs)        
+    # atm seeing
+    if atm_param[0] == 'Gaussian':
+        sigma = atm_param[1]
+        kwargs['title'] = 'Atmospheric Seeing'
+        F_bs = atm_seeing(F_b,sigma,cut=cut,bkg=background,bkg_seed=back_seed,display_fig=display_fig,**kwargs)
+    # detector
+    kwargs['title'] = 'Detector noise'
+    n_d = noise(det_noise,dim,seed=det_seed,display_fig=display_fig,**kwargs)
+    F_bsd = F_bs + n_d 
+    
+    if display_fig:
+        kwargs = {key: kwargs[key] for key in kwargs.keys() - {'title'}}
+        fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(2,2)
+        fig.suptitle(f'Field Building Process : {i} acquisition')
+        tmp_kwargs = {key: kwargs[key] for key in kwargs.keys() - {'v','norm'}}
+        ax1.set_title('Initial Field')
+        field_image(fig,ax1,F,v=1,norm='log',**tmp_kwargs)
+        ax2.set_title('Background')
+        field_image(fig,ax2,F_b,**kwargs)
+        ax3.set_title('Seeing effect')
+        field_image(fig,ax3,F_bs,**kwargs)
+        ax4.set_title('Detector Noise')
+        field_image(fig,ax4,F_bsd,**kwargs)
+        plt.show()
+
+        kwargs['title'] = f'Final Field: {i} acquisition'
+        fast_image(F_bsd,**kwargs)        
+    return F_bsd
+
 def field_builder(acq_num: int = 3, dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, cut: int | None = 7, back_param: tuple[str, float | tuple] = BACK_PARAM, back_seed: int | None = BACK_SEED, det_param: tuple[str, float | tuple] = NOISE_PARAM, det_seed: int | None = NOISE_SEED, overlap: bool = False, seed: tuple[int,int] = (M_SEED, POS_SEED), iteration: int = 3, results: str | None = None, display_fig: bool = False, **kwargs) -> list[Star | NDArray] | list[Star | NDArray | list[NDArray]]:
     """Constructor of the field
 
@@ -461,10 +499,15 @@ def field_builder(acq_num: int = 3, dim: int = N, stnum: int = M, masses: tuple[
     # creating the starting field
     m_seed, p_seed = seed
     F, S = initialize(dim,stnum,masses,*star_param,overlap=overlap,m_seed=m_seed,p_seed=p_seed,display_fig=display_fig,v=1,norm='log')
+    print('\n- - - Background - - -')
     background = from_parms_to_distr(back_param,infos=True)
+    print('\n- - - Detector noise - - -')
     det_noise = from_parms_to_distr(det_param, infos=True)
-    
-    lights = []
+    print(f'\nAtm Seeing:\n{atm_param[0]} distribution')
+    if atm_param[0] == 'Gaussian':
+        sigma = atm_param[1]
+        print(f'sigma:\t{sigma}')
+
     from sys import maxsize
     if isinstance(back_seed,(int,float)) or back_seed is None:
         seeds_gen = np.random.default_rng(back_seed)
@@ -474,49 +517,15 @@ def field_builder(acq_num: int = 3, dim: int = N, stnum: int = M, masses: tuple[
         seeds_gen = np.random.default_rng(det_seed)
         det_seed = seeds_gen.integers(maxsize,size=acq_num)
         del seeds_gen
-    for i in range(acq_num):
-        # background
-        print('\nBackground:')
-        kwargs['title'] = 'Background'
-        n_b = noise(background,dim,seed=back_seed[i],display_fig=display_fig,**kwargs)
-        F_b = F + n_b
-        if display_fig:
-            kwargs['title'] = 'Field + Background'
-            fast_image(F_b,**kwargs)        
-        # atm seeing
-        print(f'\nAtm Seeing:\n{atm_param[0]} distribution')
-        if atm_param[0] == 'Gaussian':
-            sigma = atm_param[1]
-            print(f'sigma:\t{sigma}')
-            kwargs['title'] = 'Atmospheric Seeing'
-            F_bs = atm_seeing(F_b,sigma,cut=cut,bkg=background,bkg_seed=back_seed[i],display_fig=display_fig,**kwargs)
-        # detector
-        print('\nDetector noise:')
-        kwargs['title'] = 'Detector noise'
-        n_d = noise(det_noise,dim,seed=det_seed[i],display_fig=display_fig,**kwargs)
-        F_bsd = F_bs + n_d 
-        
-        lights += [F_bsd]
-        
-        kwargs = {key: kwargs[key] for key in kwargs.keys() - {'title'}}
-        fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(2,2)
-        fig.suptitle(f'Field Building Process : {i} acquisition')
-        tmp_kwargs = {key: kwargs[key] for key in kwargs.keys() - {'v','norm'}}
-        ax1.set_title('Initial Field')
-        field_image(fig,ax1,F,v=1,norm='log',**tmp_kwargs)
-        ax2.set_title('Background')
-        field_image(fig,ax2,F_b,**kwargs)
-        ax3.set_title('Seeing effect')
-        field_image(fig,ax3,F_bs,**kwargs)
-        ax4.set_title('Detector Noise')
-        field_image(fig,ax4,F_bsd,**kwargs)
-        plt.show()
-
-        kwargs['title'] = f'Final Field: {i} acquisition'
-        fast_image(F_bsd,**kwargs)        
+    lights = [ add_effects(F.copy(), background, back_seed[i], atm_param, cut, det_noise, det_seed[i], i, display_fig=display_fig, **kwargs) for i in range(acq_num)]
 
     from .restoration import mean_n_std
     master_light, std_light = mean_n_std(lights, axis=0)
+
+    fig, (ax1,ax2) = plt.subplots(1,2)
+    field_image(fig,ax1,F)
+    field_image(fig,ax2,master_light)
+    ax2.set_title('Master Light')
 
     fig, axs = plt.subplots(1,acq_num+1)
     
@@ -527,110 +536,16 @@ def field_builder(acq_num: int = 3, dim: int = N, stnum: int = M, masses: tuple[
     field_image(fig, axs[-1], master_light)
     plt.show()
 
-    dark = np.empty((0,dim,dim),float)
-    # making the loop
-    for _ in range(iteration):
-        if det_seed is not None:
-            det_seed += 100
-        dark = np.append(dark, noise(det_noise,dim=dim,seed=seed))
+    # Dark Computation
+    dark_seed = np.random.default_rng(seed=det_seed[0]).integers(maxsize,size=iteration)
+    dark = [noise(det_noise,dim=dim,seed=dark_seed[i]) for i in range(iteration)]
     # averaging
     master_dark, std_dark = mean_n_std(dark, axis=0) 
-
+    fig, ax = plt.subplots(1,iteration+1)
+    for i in range(iteration):
+        field_image(fig,ax[i],dark[i])
+        ax[i].set_title(f'Dark {i}')
+    field_image(fig,ax[-1], master_dark)
+    ax[-1].set_title('Master Dark')
+    plt.show()
     return S, [master_light, std_light], [master_dark, std_dark]
-
-
-
-
-
-# def field_builder(acq_iter: int = 3, dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, back_param: tuple[str, float | tuple] = BACK_PARAM, back_seed: int | None = BACK_SEED, det_param: tuple[str, float | tuple] = NOISE_PARAM, det_seed: int | None = NOISE_SEED, overlap: bool = False, seed: tuple[int,int] = (SEED, SEED), results: str | None = None, display_fig: bool = False, **kwargs) -> list[Star | NDArray] | list[Star | NDArray | list[NDArray]]:
-#     """Constructor of the field
-
-#     :param dim: size of the field, defaults to N
-#     :type dim: int, optional
-#     :param stnum: number of starfish, defaults to M
-#     :type stnum: int, optional
-#     :param masses: mass range extrema, defaults to (MIN_m,MAX_m)
-#     :type masses: tuple[float,float], optional
-#     :param star_param: exponents, defaults to (ALPHA,BETA)
-#     :type star_param: tuple[float,float], optional
-#     :param atm_param: seeing, defaults to ATM_PARAM
-#     :type atm_param: tuple[str,float  |  tuple], optional
-#     :param back_param: background, defaults to BACK_PARAM
-#     :type back_param: tuple[str, float  |  tuple], optional
-#     :param det_param: detector, defaults to NOISE_PARAM
-#     :type det_param: tuple[str, float  |  tuple], optional
-#     :param overlap: if `True` stars can have the same position, defaults to False
-#     :type overlap: bool, optional
-#     :param results: chosen results to return, defaults to None
-#     :type results: str | None, optional
-#     :param display_fig: if `True` pictures are shown, defaults to False
-#     :type display_fig: bool, optional
-    
-#     :return: stars and field (and additional results)
-#     :rtype: list[NDArray]
-#     """
-#     SEP = '-'*10 + '\n'
-#     print(SEP+f'Initialization of the field\nDimension:\t{dim} x {dim}\nNumber of stars:\t{stnum}')
-#     # creating the starting field
-#     m_seed, p_seed = seed
-#     F, S = initialize(dim,stnum,masses,*star_param,overlap=overlap,m_seed=m_seed,p_seed=p_seed,display_fig=display_fig,v=1,norm='log')
-    
-#     background = from_parms_to_distr(back_param,infos=True)
-#     det_noise = from_parms_to_distr(det_param, infos=True)
-
-#     lights = []
-#     if isinstance(back_seed,(int,float)) or back_seed is None:
-#         seeds_gen = np.random.default_rng(back_seed)
-#         back_seed = seeds_gen.random(acq_iter)
-#         del seeds_gen
-#     if isinstance(det_seed,(int,float)) or det_seed is None:
-#         seeds_gen = np.random.default_rng(det_seed)
-#         det_seed = seeds_gen.random(acq_iter)
-#         del seeds_gen
-#     for i in range(acq_iter):  
-#         # background
-#         print('\nBackground:')
-#         kwargs['title'] = 'Background'
-#         n_b = noise(background,dim,seed=back_seed[i],display_fig=display_fig,**kwargs)
-#         F_b = F + n_b
-#         if display_fig:
-#             kwargs['title'] = 'Field + Background'
-#             fast_image(F_b,**kwargs)        
-#         # atm seeing
-#         print(f'\nAtm Seeing:\n{atm_param[0]} distribution')
-#         if atm_param[0] == 'Gaussian':
-#             sigma = atm_param[1]
-#             print(f'sigma:\t{sigma}')
-#             kwargs['title'] = 'Atmospheric Seeing'
-#             F_bs = atm_seeing(F_b,sigma,display_fig=display_fig,**kwargs)
-#         # detector
-#         print('\nDetector noise:')
-#         kwargs['title'] = 'Detector noise'
-#         n_d = noise(det_noise,dim,seed=det_seed[i],display_fig=display_fig,**kwargs)
-#         F_bsd = F_bs + n_d 
-#         # if display_fig:
-#         kwargs['title'] = f'Final Field - acquisition {i+1}'
-#         fast_image(F_bsd,**kwargs)        
-
-#         kwargs = {key: kwargs[key] for key in kwargs.keys() - {'title'}}
-#         fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(2,2)
-#         fig.suptitle('Field Building Process')
-#         tmp_kwargs = {key: kwargs[key] for key in kwargs.keys() - {'v'}}
-#         ax1.set_title('Initial Field')
-#         field_image(fig,ax1,F,v=1,**tmp_kwargs)
-#         ax2.set_title('Background')
-#         field_image(fig,ax2,F_b,**kwargs)
-#         ax3.set_title('Seeing effect')
-#         field_image(fig,ax3,F_bs,**kwargs)
-#         ax4.set_title('Detector Noise')
-#         field_image(fig,ax4,F_bsd,**kwargs)
-#         plt.show()
-
-#         lights += [F_bsd]
-#     from .restoration import mean_n_std
-#     master_light, std_light = mean_n_std(lights, axis=0)
-
-
-#     return 
-
-    
