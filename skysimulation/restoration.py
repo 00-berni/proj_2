@@ -1,4 +1,4 @@
-from typing import Callable, Sequence, Any
+from typing import Callable, Sequence, Any, TypeVar
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import NDArray,ArrayLike
@@ -7,6 +7,71 @@ from .display import fast_image, field_image
 from .field import Gaussian, N, Uniform, noise, NOISE_SEED
 from .field import K as field_const
 
+
+
+class FuncFit():
+
+    def __init__(self, xdata: Any, ydata: Any, yerr: Any = None, xerr: Any = None) -> None:
+        
+        self.data = [xdata, ydata, yerr, xerr]
+        self.fit_par: NDArray | None = None
+        self.fit_err: NDArray | None = None
+        self.res = {}
+
+
+    def fit(self, method: Callable[[Any,Any],Any], initial_values: Sequence[Any],**kwargs) -> None:
+        # importing the function
+        from scipy.optimize import curve_fit
+        xdata, ydata = self.data[:2]
+        sigma = self.data[2]
+        self.res['func'] = method
+        # computing the fit
+        pop, pcov = curve_fit(method, xdata, ydata, initial_values, sigma=sigma,**kwargs)
+        # extracting the errors
+        Dpop = np.sqrt(pcov.diagonal())
+        self.fit_par = pop
+        self.fit_err = Dpop
+        self.res['cov'] = pcov
+        if sigma is not None:
+            # evaluating function in `xdata`
+            fit = method(xdata,*pop)
+            # computing chi squared
+            chisq = (((ydata-fit)/sigma)**2).sum()
+            chi0 = len(ydata) - len(pop)
+            self.res['chisq'] = (chisq, chi0)
+    
+    def infos(self, names: list[str] | None = None) -> None:
+        pop  = self.fit_par
+        Dpop = self.fit_err
+        if names is None:
+            names = [f'par{i}' for i in range(len(pop))]
+        for name, par, Dpar in zip(names,pop,Dpop):
+            print(f'\t{name}: {par:.2} +- {Dpar:.2}')
+        sigma = self.data[2]
+        if sigma is not None:
+            chisq, chi0 = self.res['chisq']
+            print(f'\tred_chi = {chisq/chi0*100:.2} +- {np.sqrt(2/chi0)*100:.2} %')
+
+    def results(self) -> tuple[NDArray, NDArray] | tuple[None, None]:
+        return self.fit_par, self.fit_err
+
+    def pipeline(self,method: Callable[[Any,Any],Any], initial_values: Sequence[Any], names: list[str] | None = None,**kwargs) -> None:
+        self.fit(method=method,initial_values=initial_values,**kwargs)
+        self.infos(names=names)
+    
+    def gaussian_fit(self, intial_values: Sequence[Any], names: list[str] | None = None,**kwargs) -> None:
+   
+        def gauss_func(data: float | NDArray, *args) -> float | NDArray:
+            k, mu, sigma = args
+            z = (data - mu) / sigma
+            return k * np.exp(-z**2/2)
+
+        if names is None: 
+            names = ['k','mu','sigma']
+        self.pipeline(method=gauss_func,initial_values=intial_values,names=names,**kwargs)
+    
+
+
 def autocorr(arr: NDArray, **kwargs) -> float | NDArray:
     from scipy.signal import correlate
     return correlate(arr,arr,**kwargs)
@@ -14,230 +79,161 @@ def autocorr(arr: NDArray, **kwargs) -> float | NDArray:
 def peak_pos(field: NDArray) -> int | tuple[int,int]:
     """Finding the coordinate/s of the maximum
 
-    :param field: array
-    :type field: NDArray
+    Parameters
+    ----------
+    field : NDArray
+        the frame
 
-    :return: coordinate/s
-    :rtype: int | tuple[int,int]
+    Returns
+    -------
+    int | tuple[int,int]
+        position index(es) of the maximum
     """
     if len(field.shape) == 1:
         return field.argmax()
     else:
         return np.unravel_index(field.argmax(),field.shape)
 
-def fit_routine(xdata: NDArray, ydata: NDArray, method: Callable[[NDArray,Any],NDArray], initial_values: list[float] | NDArray, err: NDArray | None = None, sel: str = 'pop', print_res: bool = True, names: list[str | None] = [] ,**kwargs) -> list[NDArray | float ] | dict:
-    """Routine for a fit with `curve_fit`
+# def fit_routine(xdata: NDArray, ydata: NDArray, method: Callable[[NDArray,Any],NDArray], initial_values: list[float] | NDArray, err: NDArray | None = None, sel: str = 'pop', print_res: bool = True, names: list[str | None] = [] ,**kwargs) -> list[NDArray | float ] | dict:
+#     """Routine for a fit with `curve_fit`
 
-    :param xdata: x values
-    :type xdata: NDArray
-    :param ydata: y values
-    :type ydata: NDArray
-    :param method: model
-    :type method: Callable[[NDArray,Any],NDArray]
-    :param initial_values: guesses for parameters
-    :type initial_values: list[float] | NDArray
-    :param err: error values, defaults to `None`
-    :type err: NDArray | None, optional
-    :param sel: selected result/s, defaults to 'pop'
-    :type sel: str, optional
-    :param print_res: if `True` fit results are printed, defaults to `True`
-    :type print_res: bool, optional
-    :param names: names of the parameters, defaults to []
-    :type names: list[str  |  None], optional
+#     :param xdata: x values
+#     :type xdata: NDArray
+#     :param ydata: y values
+#     :type ydata: NDArray
+#     :param method: model
+#     :type method: Callable[[NDArray,Any],NDArray]
+#     :param initial_values: guesses for parameters
+#     :type initial_values: list[float] | NDArray
+#     :param err: error values, defaults to `None`
+#     :type err: NDArray | None, optional
+#     :param sel: selected result/s, defaults to 'pop'
+#     :type sel: str, optional
+#     :param print_res: if `True` fit results are printed, defaults to `True`
+#     :type print_res: bool, optional
+#     :param names: names of the parameters, defaults to []
+#     :type names: list[str  |  None], optional
     
-    :return: estimated parameters and additional info
-    :rtype: list[NDArray | float]
-    """
-    # importing the function
-    from scipy.optimize import curve_fit
-    # computing the fit
-    pop, pcov = curve_fit(method, xdata, ydata, initial_values,sigma=err,**kwargs)
-    # extracting the errors
-    Dpop = np.sqrt(pcov.diagonal())
-    # computing the chi squared
-    if err is not None:
-        # evaluating function in `xdata`
-        fit = method(xdata,*pop)
-        # computing chi squared
-        chisq = (((ydata-fit)/err)**2).sum()
-        chi0 = len(ydata) - len(pop)
-        # Dchi0 = np.sqrt(2*chi0)
-    # print results
-    if print_res:
-        if len(names) == 0:
-            names = [f'pop{i+1}' for i in range(len(pop))]
-        print('- FIT RESULTS -')
-        for i in range(len(pop)):
-            print('\t'+names[i]+f' = {pop[i]} +- {Dpop[i]}\t{Dpop[i]/pop[i]*100:.2} %')
-        if err is not None:
-            print(f'\tred_chi = {chisq/chi0*100} +- {np.sqrt(2/chi0)*100} %')
-        print('- - - -')
-    # collecting results
-    results = []
-    if sel == 'all' or 'pop' in sel:
-        results += [pop, Dpop]
-    elif sel == 'dict' and len(names) != 0:
-        names += ['D'+name for name in names]
-        pop = np.append(pop,Dpop)
-        dpop = {names[i]: pop[i] for i in range(len(names))}
-        results = dpop            
-    if sel == 'all' or 'pcov' in sel:
-        results += [pcov]
-    if sel == 'all' or 'chisq' in sel:
-        results += [chisq] 
-    # else: raise Exception('Wrong `sel`')
-    return results
+#     :return: estimated parameters and additional info
+#     :rtype: list[NDArray | float]
+#     """
+#     # importing the function
+#     from scipy.optimize import curve_fit
+#     # computing the fit
+#     pop, pcov = curve_fit(method, xdata, ydata, initial_values,sigma=err,**kwargs)
+#     # extracting the errors
+#     Dpop = np.sqrt(pcov.diagonal())
+#     # computing the chi squared
+#     if err is not None:
+#         # evaluating function in `xdata`
+#         fit = method(xdata,*pop)
+#         # computing chi squared
+#         chisq = (((ydata-fit)/err)**2).sum()
+#         chi0 = len(ydata) - len(pop)
+#         # Dchi0 = np.sqrt(2*chi0)
+#     # print results
+#     if print_res:
+#         if len(names) == 0:
+#             names = [f'pop{i+1}' for i in range(len(pop))]
+#         print('- FIT RESULTS -')
+#         for i in range(len(pop)):
+#             print('\t'+names[i]+f' = {pop[i]} +- {Dpop[i]}\t{Dpop[i]/pop[i]*100:.2} %')
+#         if err is not None:
+#             print(f'\tred_chi = {chisq/chi0*100} +- {np.sqrt(2/chi0)*100} %')
+#         print('- - - -')
+#     # collecting results
+#     results = []
+#     if sel == 'all' or 'pop' in sel:
+#         results += [pop, Dpop]
+#     elif sel == 'dict' and len(names) != 0:
+#         names += ['D'+name for name in names]
+#         pop = np.append(pop,Dpop)
+#         dpop = {names[i]: pop[i] for i in range(len(names))}
+#         results = dpop            
+#     if sel == 'all' or 'pcov' in sel:
+#         results += [pcov]
+#     if sel == 'all' or 'chisq' in sel:
+#         results += [chisq] 
+#     # else: raise Exception('Wrong `sel`')
+#     return results
 
-def mean_n_std(xdata: NDArray, axis: int | None = None) -> tuple[float, float]:
-    dim = len(xdata)
-    mean = np.mean(xdata,axis=axis)
-    std = np.sqrt( ((xdata-mean)**2).sum(axis=axis) / (dim*(dim-1)) )
+def mean_n_std(data: Sequence, axis: int | None = None) -> tuple[float, float]:
+    """To compute the mean and standard deviation from it
+
+    Parameters
+    ----------
+    data : Sequence
+        values of the sample
+    axis : int | None, optional
+        axis over which averaging, by default None
+
+    Returns
+    -------
+    tuple[float, float]
+        the mean and STD from it
+    """
+    dim = len(data)     #: size of the sample
+    # compute the mean
+    mean = np.mean(data,axis=axis)
+    # compute the STD from it
+    std = np.sqrt( ((data-mean)**2).sum(axis=axis) / (dim*(dim-1)) )
     return mean, std
 
-##*
-# def dark_elaboration(noise_distr: Any, iteration: int = 3, seed: int | None = NOISE_SEED, dim: int = N, display_fig: bool = False, **kwargs) -> NDArray:
-#     """The function computes a number (`iteration`) of darks
-#     and averages them in order to get a mean estimation 
-#     of the detector noise
 
-#     :param params: parameters of the signal
-#     :type params: tuple[str, float  |  tuple]
-#     :param iteration: number of darks, defaults to 3
-#     :type iteration: int, optional
-#     :param dim: size of the field, defaults to N
-#     :type dim: int, optional
-#     :param display_fig: if `True` pictures are shown, defaults to False
-#     :type display_fig: bool, optional
-    
-#     :return: mean dark
-#     :rtype: NDArray
-#     """
-#     # generating the first dark
-#     dark = np.empty((0,dim,dim),float)
-#     # making the loop
-#     for _ in range(iteration):
-#         if seed is not None:
-#             seed = None
-#         dark = np.append(dark, noise(noise_distr,dim=dim,seed=seed))
-#     # averaging
-#     mean_dark, std_dark = mean_n_std(dark, axis=0) 
-#     if display_fig:
-#         if 'title' not in kwargs:
-#             kwargs['title'] = f'Dark elaboration\nAveraged on {iteration} iterations'
-#         fast_image(mean_dark,**kwargs)
-#     return mean_dark, std_dark
+def bkg_est(field: NDArray, err: NDArray, thr: float | None = None, binning: int | Sequence[int | float] | None = None, display_plot: bool = False) -> tuple[float,float]:
+    frame = field.copy()
+    data = frame.flatten()
+    if err is not None:
+        xerr = err.copy().flatten()
+    if binning is None: 
+        binning = len(field)
+    counts, bins = np.histogram(data, bins=binning)
+    if display_plot:
+        plt.figure()
+        plt.stairs(counts,bins,fill=False)
 
-def bkg_est(field: NDArray, display_fig: bool = False) -> float:
-    """Estimating a value for the background
+    xdata = (bins[1:] + bins[:-1])/2
+    ydata = counts
+    if thr is not None:
+        indx = np.where(ydata >= ydata.max()*thr/100)[0]
+        ydata = ydata[indx]
+        xdata = xdata[indx]
 
-    :param field: the field
-    :type field: NDArray
-    :param display_fig: if `True` pictures are shown, defaults to False
-    :type display_fig: bool, optional
-    
-    :return: estimated background value
-    :rtype: float
-    """
-    from .field import K
-    # flattening the field
-    field = np.copy(field).flatten() 
-    # checking the field
-    field = field[np.where(field > 0)[0]]
-    num = np.sqrt(len(field))
-    print(field.max())
-    # binning
-    # bins = np.linspace(field.min(),field.max(),len(field)//3)
-    counts, bins = np.histogram(field,bins=num.astype(int))
-    # normalization coefficient
-    k = (counts.sum()*np.diff(bins).mean())
-    # position of the maximum
-    maxpos = counts.argmax()
-    #? checking 
-    if maxpos == 0: maxpos = counts[1:].argmax()
-    # maximum value
-    maxval = bins[maxpos]    
-    # taking the bin next the maximum
-    shift = 1
-    while bins[maxpos+shift] == maxval:
-        shift += 1
-    # storing this value
-    ebkg = bins[maxpos+shift]
+    fit = FuncFit(xdata, ydata)
+    max_pos = ydata.argmax()
+    k0  = ydata[max_pos]
+    mu0 = xdata[max_pos]
+    hm_pos = abs(ydata - k0/2).argmin()
+    hwhm = abs(xdata[hm_pos] - mu0) 
+    initial_values = [k0, mu0, hwhm]
+    fit.gaussian_fit(initial_values)
+    pop, Dpop = fit.results()
+    mean_bkg, err_bkg = pop[1], Dpop[1]
+    fit_func = fit.res['func']
 
-    ## Old sequence
-    tmp = counts[maxpos+1:]
-    dist = abs(tmp[:-2] - tmp[2:])
-    pos = np.where(counts == tmp[dist.argmax()+2])[0]
-    mbin = (max(bins[pos])+bins[maxpos])/2
-    ##
+    if display_plot:
+        xx = np.linspace(xdata.min(),xdata.max(),500)
+        plt.plot(xx,fit_func(xx,*pop),color='green',label='fit')
+        plt.axvline(mu0, 0, 1, color='orange', linestyle='dotted', label='max value')
+        plt.axvline(mean_bkg, 0, 1, color='red', linestyle='dotted', label='estimated bkg')
+        if thr is not None:
+            thr *= k0/100
+            plt.axhline(thr,0,1,color='black',linestyle='dashed',label='threshold')
+            plt.legend()
 
-    ## Gaussian fit
-    # saving the mean
-    mean = (maxval+ebkg)/2
-    # hm = counts.max()//2
-    # cutbin = bins[:maxpos]
-    # cutcnt = counts[:maxpos]
-    # try:
-    #     hm = abs(cutcnt-hm).argmin()
-    # except ValueError:
-    #     print('Error')
-    #     print(maxpos)
-    #     print(counts.argmax())
-    #     print(len(cutcnt))
-    #     raise
-    # hw = mean - cutbin[hm]
-    # print(hw/K)
-    # sigma = hw / np.sqrt(2*np.log(2))
-    # print('sigma ',sigma)
-    # print('sigma ',sigma/K)
-
-    # def gauss_fit(x,*args):
-    #     sigma, mu = args
-    #     return np.exp(-((x-mu)/sigma)**2/2)
-    
-    # from scipy.optimize import curve_fit
-    # from scipy.stats import norm
-    # # k = counts.max() 
-    # initial_values = [sigma,mean]
-    # pop, pcov = curve_fit(gauss_fit,cutbin,cutcnt,initial_values)
-    # s, m = pop
-    # Ds, Dm = np.sqrt(pcov.diagonal())
-    # print('curve fit')
-    # print('mu ',m/K,Dm/K)
-    # print('sigma ',s/K,Ds/K)
-    # # print('k ',k,Dk)
-    # data = np.sort(field)
-    # mid = abs(data-mean).argmin()
-    # data = data[:2*mid]
-    # (mu, sigma) = norm.fit(data,loc=mean,scale=sigma,method='MM')
-    # print('Different fit')
-    # print('mean ',mu/K)#,Dmu/K)
-    # print('sigma ',sigma/K)#,Dsigma/K)
-    ##
-
-    if display_fig:
-        # bins = np.log10(bins)
-        plt.figure(figsize=(14,10))
-        plt.stairs(counts, bins,fill=True)
-        # plt.axvline(np.log10(ebkg),0,1,linestyle='--',color='red')
-        plt.axvline(mean,0,1,linestyle='--',color='red')
-        if shift != 1:
-            plt.axvline(maxval,0,1,linestyle='--',color='yellow')
-        # plt.axvline(max(bins[pos]),0,1,linestyle='--',color='yellow')
-        # plt.axvline((bins[counts.argmax()]+field.min())/2,0,1,linestyle='--',color='blue')
-        # plt.axvline(mbin,0,1,linestyle='--',color='orange')
-        # plt.axvline(cutbin[hm],0,1,color='green',alpha=0.5)
-        # plt.axvline(2*mean - cutbin[hm],0,1,color='green',alpha=0.5)
-        # plt.axhline(cutcnt[hm],0,1,color='black',alpha=0.5)
-        # xx = np.linspace(cutbin.min()/2,2*mu-cutbin.min()/2,500)
-        # yy = gauss_fit(xx,sigma,mu)
-        # from scipy.integrate import quad
-        # gauss = lambda x : gauss_fit(x,sigma,mu)
-        # plt.plot(xx,yy/quad(gauss,xx.min(),xx.max())[0]*k,'black',linewidth=2)
-        plt.xlabel('$F_{sn}$')
-        plt.ylabel('counts')
-        # plt.xscale('log')
+            plt.figure()
+            plt.stairs(counts,bins,fill=False)
+            plt.plot(xx,fit_func(xx,*pop),color='green',label='fit')
+            plt.axvline(mu0, 0, 1, color='orange', linestyle='dotted', label='max value')
+            plt.axvline(mean_bkg, 0, 1, color='red', linestyle='dotted', label='estimated bkg')
+            plt.ylim(thr,k0+100)
+            plt.xlim(xdata.min(),xdata.max())
+        plt.legend()
+            
         plt.show()
-    return mean
+    
+    return mean_bkg, err_bkg
+
 
 def moving(direction: str, field: NDArray, index: tuple[int,int], back: float, size: int = 3, acc: float = 1e-5) -> list[int] | int:
     """Looking in one direction
@@ -939,7 +935,10 @@ def err_estimation(field: NDArray, mean_val: float, thr: float | int = 30, displ
     print('maxval',maxval)
     cut = slice(pos[0],pos[1]+1)
     # computing the fit
-    pop, Dpop = fit_routine(bins[cut],counts[cut],gauss_fit,[counts[maxpos],maxval,1],names=['k','mu','sigma'])
+    # pop, Dpop = fit_routine(bins[cut],counts[cut],gauss_fit,[counts[maxpos],maxval,1],names=['k','mu','sigma'])
+    fit = FuncFit(xdata=bins[cut], ydata=counts[cut])
+    fit.pipeline(gauss_fit, initial_values=[counts[maxpos],maxval,1], names=['k','mu','sigma'])
+    pop, Dpop = fit.results()
     pop[2] = abs(pop[2])
     mu = pop[1]
     print(f'Pop = {(mu+1)*np.mean(field)} - {mean_val}')
@@ -1019,7 +1018,10 @@ def kernel_fit(obj: NDArray, err: float | None = None, size_cut: int | None = 9,
     xfit = np.vstack((x.ravel(),y.ravel()))
     yfit = obj.ravel()
     errfit = err.ravel() if err is not None else err
-    pop, Dpop = fit_routine(xfit[::-1],yfit,fit_func,initial_values,err=errfit,names=['k','sigma'])    
+    # pop, Dpop = fit_routine(xfit[::-1],yfit,fit_func,initial_values,err=errfit,names=['k','sigma'])    
+    fit = FuncFit(xdata=xfit[::-1],ydata=yfit)
+    fit.pipeline(fit_func,initial_values,yerr=errfit,names=['k','sigma'])
+    pop, Dpop = fit.results()   
     # extracting values
     k, sigma = pop
     Dk, Dsigma = Dpop
@@ -1097,7 +1099,10 @@ def new_kernel_fit(obj: NDArray, err: float | None = None, size_cut: int | None 
     xfit = np.vstack((x.ravel(),y.ravel()))
     yfit = obj.ravel()
     errfit = err.ravel() if err is not None else err
-    pop, Dpop = fit_routine(xfit,yfit,fit_func,initial_values,err=errfit,names=['k','sigma'])    
+    # pop, Dpop = fit_routine(xfit,yfit,fit_func,initial_values,err=errfit,names=['k','sigma'])    
+    fit = FuncFit(xdata=xfit, ydata=yfit, yerr=errfit)
+    fit.pipeline(fit_func,initial_values,names=['k','sigma'])
+    pop, Dpop = fit.results()    
     # extracting values
     k, sigma = pop
     Dk, Dsigma = Dpop
