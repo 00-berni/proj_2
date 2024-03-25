@@ -8,7 +8,7 @@ from scipy.ndimage import gaussian_filter
 from .display import fast_image, field_image
 
 
-##* 
+### CLASS DEFINITIONS
 class Star():
     """Star object class.
     This class will be used only to store the 
@@ -24,7 +24,7 @@ class Star():
         star coordinates (x,y)
     """
     def __init__(self, mass: float | NDArray, lum: float | NDArray, pos: tuple[float | NDArray, float | NDArray]) -> None:
-        """_summary_
+        """Constructor of the class
 
         Parameters
         ----------
@@ -36,13 +36,30 @@ class Star():
             star coordinates (x,y)
         """
         self.m   = mass       #: star mass value
-        self.lum = lum        #: star luminosity value
+        self.lum = lum        #: star brightness value
         self.pos = pos        #: star coordinates
 
-    def plot_info(self, alpha: float, beta: float, sel: str = 'all') -> None:
-        nstars = len(self.m)
+    def plot_info(self, alpha: float, beta: float, sel: {'all', 'm', 'L'} = 'all') -> None:
+        """To plot the mass and brightness distribution of the stars sample
+
+        Through the `sel` parameter it is possible to choose to plot:
+
+            * `'m'`     : mass distribution of the sample
+            * `'L'`     : brightness distribution of the sample
+            * `'all'`   : both  
+
+        Parameters
+        ----------
+        alpha : float
+            exponent of the IMF
+        beta : float
+            exponent of the M-L relation
+        sel : {'all', 'm', 'L'}, optional
+            selection parameter, by default `'all'`
+        """
+        nstars = len(self.m)    #: number of stars
+        ## Mass Distribution Plot
         if sel == 'all' or sel == 'm':
-            ## Plot data for masses
             plt.figure(figsize=(12,8))
             plt.title(f'Mass distribution with $\\alpha = {alpha}$ and {nstars} stars')
             # bins = np.linspace(min(self.m),max(self.m),nstars//3*2)
@@ -60,9 +77,9 @@ class Star():
             plt.xlabel('m [$M_\odot$]')
             plt.ylabel('counts')
             plt.legend()
+        ## Brightness Distribution Plot
         if sel == 'all' or sel == 'L':
-            ## Plot data for corrisponding luminosities
-            # plot the logarithm of L
+            # compute the logarithm of the values
             L = np.log10(self.lum)
             # plt.figure()
             # plt.plot(self.m,self.lum,'.')
@@ -78,19 +95,25 @@ class Star():
 class Gaussian():
     """Gaussian distribution
 
+    Attributes
+    ----------
+    mu : float | None
+        the mean
+    sigma : float
+        root of the variance
     """
     def __init__(self, sigma: float, mu: float | None = None) -> None:
         """Storing sigma and mean of the distribution
 
-        :param sigma: variance
-        :type sigma: float
-        :param mu: mean, defaults to None
-        :type mu: float | None, optional
+        Parameters
+        ----------
+        sigma : float
+            root of the variance
+        mu : float | None, optional
+            the mean, by default `None` 
         """
-        # mean
-        self.mu = mu
-        # sigma
-        self.sigma = sigma
+        self.mu = mu            #: the mean 
+        self.sigma = sigma      #: the root of the variance
     
     def info(self) -> None:
         """Printing the information about the distribution
@@ -100,25 +123,42 @@ class Gaussian():
         print(f'sigma:\t{self.sigma}')
 
     def value(self,r: float | NDArray) -> float | NDArray:
-        """Computing the value
+        """To compute the value of the distribution
 
-        :param r: variable
-        :type r: float | NDArray
-        
-        :return: the value of the distribution
-        :rtype: float | NDArray
+        Parameters
+        ----------
+        r : float | NDArray
+            variable value
+
+        Returns
+        -------
+        float | NDArray
+            the value of the distribution in `r`
         """
         x = r/self.sigma
         return np.exp(-x**2/2)
-    
+##? -- -- -- -- -- -- -- -- -- -- ?##    
     def kernel_norm(self, dim: int) -> float:
-        """Computing the normalization coefficient of a matrix
+        """To compute the normalization coefficient
 
-        :param dim: size of the field
-        :type dim: int
+        Kernel has to be normalized
+
+        Parameters
+        ----------
+        dim : int
+            size of the field
+
+        Returns
+        -------
+        float
+            normalization coefficient
         
-        :return: normalization coefficient
-        :rtype: float
+        Notes
+        -----
+        The normalization coefficient is defined as:
+
+        .. math::  2\pi \, \int_{-\mu}^{\mu} \exp{()}\, dr 
+        
         """
         # kernel must have a odd size
         if dim % 2 == 0: dim -= 1
@@ -150,19 +190,38 @@ class Gaussian():
         # computing kernel
         kernel = self.value(r)
         return kernel / self.kernel_norm(dim)
-
+##? -- -- -- -- -- -- -- -- -- -- ?##    
     def field(self, dim: int, seed: int | None = None) -> NDArray:
-        """Drawing values from Gaussian distribution
+        """To compute a matrix of Gaussian distributed values
 
-        :param dim: size of the field
-        :type dim: int
+        Function draws values from a Gaussian distribution
+        defined by the class attributes `self.mu` and 
+        `self.sigma`
+
+        It is possible to pass a seed value for the 
+        random generator
         
-        :return: matrix
-        :rtype: NDArray
+        Parameters
+        ----------
+        dim : int
+            size of the field
+        seed : int | None, optional
+            seed for the random generator, by default None
+
+        Returns
+        -------
+        NDArray
+            matrix of gaussian distributed values
+        
+        See also
+        --------
+        numpy.random.default_rng : Construct a new Generator with the default BitGenerator
         """
         mu = self.mu
         sigma = self.sigma
+        # construct a random generator
         rng = np.random.default_rng(seed=seed)
+        # draw values from normal distribution
         return rng.normal(mu,sigma,size=(dim,dim))
 
 class Uniform():
@@ -203,8 +262,22 @@ class Poisson():
         return self.k * rng.poisson(self.lam,size=(dim,dim))
         
 
+def from_parms_to_distr(params: tuple[str, float] | tuple[str, tuple], infos: bool = False) -> Gaussian | Uniform:
+    """To get from input parameter the chosen distribution
 
-def from_parms_to_distr(params: tuple[str, float | tuple], infos: bool = False) -> Gaussian | Uniform:
+    Parameters
+    ----------
+    params : tuple[str, float] | tuple[str, tuple]
+        parameters of the distribution
+    infos : bool, optional
+        if `True` the information about 
+        the distribution is printed, by default `False`
+
+    Returns
+    -------
+    Gaussian | Uniform
+        the chosen distribution class object
+    """
     name, vals = params
     if name == 'Gaussian' or name == 'Normal':
         mu, sigma = vals
@@ -219,7 +292,7 @@ def from_parms_to_distr(params: tuple[str, float | tuple], infos: bool = False) 
         distr.info()
     return distr
 
-## Standard values
+### STANDARD VALUES
 # MSOL = 1.989e+33 # g
 # LSOL = 3.84e+33 # erg/s
 N = int(1e2)            #: size of the field matrix
@@ -250,8 +323,8 @@ def generate_mass_array(m_min: float = MIN_m, m_max: float = MAX_m, alpha: float
     """To compute masses sample from the IMF distribution
 
     The function takes the minimum and the maximum masses, the IMF 
-    and generates a `sdim`-dimensional array of masses distributed like 
-    IMF.
+    and generates a `sdim`-dimensional array of masses distributed 
+    like IMF.
 
     The chosen method is a straightforward Monte Carlo: 
     generating uniformly random values for IMF and 
@@ -293,19 +366,25 @@ def star_location(sdim: int = M, dim: int = N, overlap: bool = False, seed: int 
     the drawn coordinates in two different arrays
     (x and y respectively).
 
-    The parameter `replace` in `np.random.choice()` set to
-    `False` forces each star has an unique position;
-    in other words, no superimposition effect happens. 
+    Parameters
+    ----------
+    sdim : int, optional
+        number of stars, by default `M`
+    dim : int, optional
+        size of the field, by default `N`
+    overlap : bool, optional
+        if `True` overlap between stars can occur, by default `False`
+    seed : int, optional
+        seed of the random generator, by default `POS_SEED`
 
-    :param sdim: number of stars, defaults to `M`
-    :type sdim: int, optional
-    :param dim: size of the field, defaults to `N`
-    :type dim: int, optional
-    :param overlap: if `True` overlap between stars can occur, defaults to `False`
-    :type overlap: bool, optional
-
-    :return: tuple of star coordinates arrays `X` and `Y`
-    :rtype: tuple
+    Returns
+    -------
+    tuple[NDArray,NDArray]
+        tuple of star coordinates arrays `X` and `Y`
+    
+    See Also
+    --------
+    numpy.random.choice : generates a random sample from a given 1-D array
     """
     # list with all possible positions in the field
     grid = [(i,j) for i in range(dim) for j in range(dim)]
@@ -317,23 +396,6 @@ def star_location(sdim: int = M, dim: int = N, overlap: bool = False, seed: int 
     Y = np.array([grid[i][1] for i in ind])
     return (X, Y)    
 
-# def update_field(F: NDArray, pos: tuple[NDArray, NDArray], lum: NDArray) -> NDArray:
-#     """Function to update the field.
-#     It adds the generated stars to the field.
-
-#     :param F: field matrix
-#     :type F: NDArray
-#     :param pos: star coordinates
-#     :type pos: tuple[NDArray, NDArray]
-#     :param lum: luminosities array
-#     :type lum: NDArray
-
-#     :return: updated field matrix
-#     :rtype: NDArray
-#     """
-#     # uppdating the field
-#     F[pos] += lum
-#     return F
 
 def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m,MAX_m), alpha: float = ALPHA, beta: float = BETA, overlap: bool = False, m_seed: int = M_SEED, p_seed: int = POS_SEED, display_fig: bool = False, **kwargs) -> tuple[NDArray, Star]:
     """Initialization function for the generation of the "perfect" sky
@@ -374,6 +436,7 @@ def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m
         fast_image(F,**kwargs)
     return F, S
 
+
 def atm_seeing(field: NDArray, sigma: float = SEEING_SIGMA, cut: int = 7, bkg: Any | None = None, bkg_seed: int | None = BACK_SEED, display_fig: bool = False, **kwargs) -> NDArray:
     """Atmosferic seeing function
     It convolves the field with tha Gaussian to
@@ -405,6 +468,7 @@ def atm_seeing(field: NDArray, sigma: float = SEEING_SIGMA, cut: int = 7, bkg: A
     # checking the field and returning it
     return see_field[cut,cut] if cut is not None else see_field
 
+
 def noise(distr: Gaussian | Uniform | Poisson, dim: int = N, seed: int | None = None, display_fig: bool = False, **kwargs) -> NDArray:
     """Noise generator
     It generates a (dim,dim) matrix of noise, using
@@ -428,6 +492,7 @@ def noise(distr: Gaussian | Uniform | Poisson, dim: int = N, seed: int | None = 
     if len(np.where(n < 0)) != 0:
         n = np.sqrt(n**2)
     return n * K
+
 
 def add_effects(F: NDArray, background: Any, back_seed: int | None, atm_param: tuple[str, float], cut: int | None, det_noise: Any, det_seed: int | None, i: int, display_fig: bool = False, **kwargs):
     dim = len(F)
@@ -466,6 +531,7 @@ def add_effects(F: NDArray, background: Any, back_seed: int | None, atm_param: t
         kwargs['title'] = f'Final Field: {i} acquisition'
         fast_image(F_bsd,**kwargs)        
     return F_bsd
+
 
 def field_builder(acq_num: int = 3, dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, cut: int | None = 7, back_param: tuple[str, float | tuple] = BACK_PARAM, back_seed: int | None = BACK_SEED, det_param: tuple[str, float | tuple] = NOISE_PARAM, det_seed: int | None = NOISE_SEED, overlap: bool = False, seed: tuple[int,int] = (M_SEED, POS_SEED), iteration: int = 3, results: str | None = None, display_fig: bool = False, **kwargs) -> list[Star | NDArray] | list[Star | NDArray | list[NDArray]]:
     """Constructor of the field
@@ -523,7 +589,8 @@ def field_builder(acq_num: int = 3, dim: int = N, stnum: int = M, masses: tuple[
     master_light, std_light = mean_n_std(lights, axis=0)
 
     fig, (ax1,ax2) = plt.subplots(1,2)
-    field_image(fig,ax1,F)
+    field_image(fig,ax1,F,v=1,norm='log')
+    ax1.set_title('Starting field')
     field_image(fig,ax2,master_light)
     ax2.set_title('Master Light')
 
