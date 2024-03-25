@@ -1,16 +1,27 @@
 import numpy as np
 from numpy import correlate
 import matplotlib.pyplot as plt
-import skysimulation.display as display
-import skysimulation.field as field
-import skysimulation.restoration as restore
+import skysimulation.display as dpl
+import skysimulation.field as fld
+import skysimulation.restoration as rst
 from skysimulation.field import NDArray, K, MIN_m, BETA, SEEING_SIGMA
 
-def autocorr(vec: restore.Sequence, mode: str = 'same') -> restore.NDArray:
+def autocorr(vec: rst.Sequence, mode: str = 'same') -> rst.NDArray:
     return correlate(vec,vec,mode)
 
 if __name__ == '__main__':
-    S, (m_light, s_light), (m_dark, s_dark) = field.field_builder()
+    ### INITIALIZATION
+    S, (m_light, s_light), (m_dark, s_dark) = fld.field_builder()
+    sci_frame = m_light - s_light
+    sigma = np.sqrt(s_light**2 + s_dark**2)
+    dpl.fast_image(sci_frame,'Scientific Frame')
+
+    ### RESTORING
+    # compute the average dark value
+    mean_dark = m_dark.mean()
+    # estimate background value
+    mean_bkg, fiterr_bkg = rst.bkg_est(sci_frame,None,30,100,display_plot=True)     
+
     # N = 100
     # M = 100
     # figure = False
