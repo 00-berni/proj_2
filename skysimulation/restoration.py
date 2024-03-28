@@ -21,36 +21,49 @@ class FuncFit():
 
     def fit(self, method: Callable[[Any,Any],Any], initial_values: Sequence[Any],**kwargs) -> None:
         # importing the function
-        from scipy.optimize import curve_fit
         xdata, ydata = self.data[:2]
         sigma = self.data[2]
+        Dx = self.data[3]
         self.res['func'] = method
+        from scipy import odr
+        def fit_model(pars, x):
+            return method(x, *pars)
+        model = odr.Model(fit_model)
+        data = odr.RealData(xdata,ydata,sx=Dx,sy=sigma)
+        alg = odr.ODR(data, model, beta0=initial_values)
+        out = alg.run()
+        pop = out.beta
+        pcov = out.cov_beta
+
         # computing the fit
-        pop, pcov = curve_fit(method, xdata, ydata, initial_values, sigma=sigma,**kwargs)
+        # from scipy.optimize import curve_fit
+        # pop, pcov = curve_fit(method, xdata, ydata, initial_values, sigma=sigma,**kwargs)
         # extracting the errors
         Dpop = np.sqrt(pcov.diagonal())
         self.fit_par = pop
         self.fit_err = Dpop
         self.res['cov'] = pcov
-        if sigma is not None:
-            # evaluating function in `xdata`
-            fit = method(xdata,*pop)
-            # computing chi squared
-            chisq = (((ydata-fit)/sigma)**2).sum()
-            chi0 = len(ydata) - len(pop)
-            self.res['chisq'] = (chisq, chi0)
+        # if sigma is not None:
+        #     # evaluating function in `xdata`
+        #     fit = method(xdata,*pop)
+        #     # computing chi squared
+        #     chisq = (((ydata-fit)/sigma)**2).sum()
+        #     chi0 = len(ydata) - len(pop)
+        #     self.res['chisq'] = (chisq, chi0)
+        chisq = out.sum_square
+        chi0 = len(ydata) - len(pop)
+        self.res['chisq'] = (chisq, chi0)
     
     def infos(self, names: list[str] | None = None) -> None:
         pop  = self.fit_par
         Dpop = self.fit_err
+        print('\nFit results:')
         if names is None:
             names = [f'par{i}' for i in range(len(pop))]
         for name, par, Dpar in zip(names,pop,Dpop):
             print(f'\t{name}: {par:.2} +- {Dpar:.2}')
-        sigma = self.data[2]
-        if sigma is not None:
-            chisq, chi0 = self.res['chisq']
-            print(f'\tred_chi = {chisq/chi0*100:.2} +- {np.sqrt(2/chi0)*100:.2} %')
+        chisq, chi0 = self.res['chisq']
+        print(f'\tred_chi = {chisq/chi0*100:.2f} +- {np.sqrt(2/chi0)*100:.2f} %')
 
     def results(self) -> tuple[NDArray, NDArray] | tuple[None, None]:
         return self.fit_par, self.fit_err
@@ -70,7 +83,46 @@ class FuncFit():
             names = ['k','mu','sigma']
         self.pipeline(method=gauss_func,initial_values=intial_values,names=names,**kwargs)
     
+class Histogram():
 
+    def __init__(self, data: NDArray, bins: int | NDArray) -> None:
+        
+        self.data = data.copy()
+        self.bins = bins
+        self.cnts = None
+        self.yerr = None
+    
+    def hist(self, **kwargs) -> tuple[NDArray, NDArray]:    
+        return np.histogram(self.data, bins=self.bins, **kwargs)
+
+    def errhist(self, err: NDArray, **kwargs) -> tuple[NDArray, NDArray, tuple[NDArray, NDArray]]:
+        def in_bin(data: NDArray, edges: NDArray, idx: int) -> NDArray:
+            cond1 = data >= edges[idx]
+            if idx == len(edges)-2:
+                cond2 = data <= edges[idx+1]
+            else:
+                cond2 = data < edges[idx+1]
+            return cond1 & cond2
+
+        rx_data = self.data + err
+        lx_data = self.data - err
+        bins = self.bins
+        if isinstance(bins, int):
+            max_val = rx_data.max()          
+            min_val = lx_data.min()
+            bins = np.linspace(min_val, max_val, bins+1, endpoint=True)
+    
+
+        cnts, _ = np.histogram(self.data,bins=bins,**kwargs)
+        up_cnts = np.array([len(np.where( in_bin(rx_data,bins,i) | in_bin(lx_data,bins,i)  )[0]) for i in range(len(bins)-1)])            
+        dw_cnts = np.array([len(np.where( in_bin(rx_data,bins,i) & in_bin(lx_data,bins,i)  )[0]) for i in range(len(bins)-1)])
+        return cnts, bins, (up_cnts, dw_cnts)            
+
+    def histogram(self, err: NDArray | None = None, **kwargs) -> None:
+        if err is None:
+            self.cnts, self.bins = self.hist(**kwargs)
+        else:
+            self.cnts, self.bins, self.yerr = self.errhist(err,**kwargs)
 
 def autocorr(arr: NDArray, **kwargs) -> float | NDArray:
     from scipy.signal import correlate
@@ -169,8 +221,10 @@ def mean_n_std(data: Sequence, axis: int | None = None) -> tuple[float, float]:
 
     Returns
     -------
-    tuple[float, float]
-        the mean and STD from it
+    mean : float
+        the mean of the data
+    std : float
+        the STD from the mean
     """
     dim = len(data)     #: size of the sample
     # compute the mean
@@ -180,59 +234,105 @@ def mean_n_std(data: Sequence, axis: int | None = None) -> tuple[float, float]:
     return mean, std
 
 
-def bkg_est(field: NDArray, err: NDArray, thr: float | None = None, binning: int | Sequence[int | float] | None = None, display_plot: bool = False) -> tuple[float,float]:
-    frame = field.copy()
-    data = frame.flatten()
-    if err is not None:
-        xerr = err.copy().flatten()
-    if binning is None: 
-        binning = len(field)
-    counts, bins = np.histogram(data, bins=binning)
-    if display_plot:
-        plt.figure()
-        plt.stairs(counts,bins,fill=False)
+def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, display_plot: bool = False) -> tuple[float,float]:
+    """To estimate the background brightness
 
-    xdata = (bins[1:] + bins[:-1])/2
-    ydata = counts
-    if thr is not None:
-        indx = np.where(ydata >= ydata.max()*thr/100)[0]
-        ydata = ydata[indx]
-        xdata = xdata[indx]
-
-    fit = FuncFit(xdata, ydata)
-    max_pos = ydata.argmax()
-    k0  = ydata[max_pos]
-    mu0 = xdata[max_pos]
-    hm_pos = abs(ydata - k0/2).argmin()
-    hwhm = abs(xdata[hm_pos] - mu0) 
-    initial_values = [k0, mu0, hwhm]
-    fit.gaussian_fit(initial_values)
-    pop, Dpop = fit.results()
-    mean_bkg, err_bkg = pop[1], Dpop[1]
-    fit_func = fit.res['func']
-
-    if display_plot:
-        xx = np.linspace(xdata.min(),xdata.max(),500)
-        plt.plot(xx,fit_func(xx,*pop),color='green',label='fit')
-        plt.axvline(mu0, 0, 1, color='orange', linestyle='dotted', label='max value')
-        plt.axvline(mean_bkg, 0, 1, color='red', linestyle='dotted', label='estimated bkg')
-        if thr is not None:
-            thr *= k0/100
-            plt.axhline(thr,0,1,color='black',linestyle='dashed',label='threshold')
-            plt.legend()
-
-            plt.figure()
-            plt.stairs(counts,bins,fill=False)
-            plt.plot(xx,fit_func(xx,*pop),color='green',label='fit')
-            plt.axvline(mu0, 0, 1, color='orange', linestyle='dotted', label='max value')
-            plt.axvline(mean_bkg, 0, 1, color='red', linestyle='dotted', label='estimated bkg')
-            plt.ylim(thr,k0+100)
-            plt.xlim(xdata.min(),xdata.max())
-        plt.legend()
-            
-        plt.show()
+    Assuming the distribution of the background is a normal one,
+    the method estimates the mean and the variance root 
+    respectively from the highest count value and the HWHM of the 
+    histogram of the data 
     
-    return mean_bkg, err_bkg
+    If there are more peaks than one, the methods averages between
+    them 
+
+    Parameters
+    ----------
+    field : NDArray
+        field matrix
+    binning : int | Sequence[int  |  float] | None, optional
+        this variable is related with the bins of the histogram: 
+          - if `int` it is the number of bins 
+          - if `Sequence` type it is sequence of the edges of 
+            the bins 
+          - if `None`, as by default, the binning is computed 
+            from the magnitude between the minimum and maximum 
+            values 
+    display_plot : bool, optional
+        parameter to plot data, by default `False`
+
+    Returns
+    -------
+    mean_bkg : float
+        the mean of the estimated normal distribution
+    sigma_bkg : float
+        the variance root of the estimated normal distribution
+    
+    Notes
+    -----
+    In case of multiple peaks, the method estimates first the 
+    parameters obtained from the highest, then checks the 
+    presence of other maxima only over the height at which the 
+    distribution is at a :math:`\sigma` from the mean
+
+    The method calls the function `find_peaks()` of the package 
+    `scipy.signal` to look for peaks 
+    """
+    ## Initialization
+    frame = field.copy()        #: copy of the field matrix
+    data = frame.flatten()      #: 1-D data array
+    if binning is None:
+        # compute the magnitude between max and min data
+        ratio = int(data.max()/data.min())
+        # set the number of bins
+        binning = ratio*10
+    
+    ## Parameters Estimation
+    # compute the histogram
+    cnts, bins = np.histogram(data,bins=binning)
+    # find the index of the max value
+    max_indx = cnts.argmax()
+    # compute the corresponding brightness value
+    mean_bkg = (bins[max_indx+1] + bins[max_indx])/2
+    # compute the half maximum value    
+    hm = cnts[max_indx]/2
+    # find the value that approximates better `hm`
+    hm_indx = abs(cnts - hm).argmin()
+    # compute HWHM
+    hwhm = abs((bins[hm_indx+1] + bins[hm_indx])/2 - mean_bkg)
+    # compute variance root assuming a normal distribution
+    sigma_bkg = hwhm/np.sqrt(2*np.log(2))
+    
+    ## Peaks Check
+    # compute the height at which the distribution is at a sigma from the mean   
+    sigma_indx = abs(bins - (mean_bkg-sigma_bkg)).argmin()
+    sigma_height = cnts[sigma_indx]*2
+    from scipy.signal import find_peaks
+    peaks, _ = find_peaks(cnts,height=sigma_height)
+    # compute again the parameters in case of multiple peaks
+    if len(peaks) > 1:
+        # average between peaks
+        mean_bkg = np.array([(bins[pk+1]+bins[pk])/2 for pk in peaks]).mean()
+        hm = cnts[peaks].mean()/2
+        hm_indx = abs(cnts - hm).argmin()
+        hwhm = abs((bins[hm_indx+1] + bins[hm_indx])/2 - mean_bkg)
+        sigma_bkg = hwhm/np.sqrt(2*np.log(2))
+    # print the results
+    print('\nBackground estimation')
+    print(f'\tmean:\t{mean_bkg}\n\tsigma:\t{sigma_bkg}\n\trelerr:\t{sigma_bkg/mean_bkg*100:.2f} %')
+    
+    ## Plotting
+    if display_plot:
+        # define variables to plot the estimated distribution
+        xx = np.linspace((bins[1]+bins[0])/2,(bins[-1]+bins[-2])/2,len(data))
+        model = Gaussian(sigma_bkg, mean_bkg).value(xx-mean_bkg) *cnts.max()
+        plt.figure()
+        plt.stairs(cnts, bins, fill=False, label='data')
+        plt.axvline(mean_bkg, 0, 1, color='red', linestyle='dotted', label='estimated mean')
+        plt.plot(xx,model, label='estimated gaussian')
+        plt.legend()
+        plt.show()
+        
+    return mean_bkg, sigma_bkg
 
 
 def moving(direction: str, field: NDArray, index: tuple[int,int], back: float, size: int = 3, acc: float = 1e-5) -> list[int] | int:
