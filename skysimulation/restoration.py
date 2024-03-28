@@ -1,3 +1,11 @@
+""" 
+RESTORATION PACKAGE
+-------------------
+    This package provides all the methods to recover the field
+
+"""
+
+
 from typing import Callable, Sequence, Any, TypeVar
 import matplotlib.pyplot as plt
 import numpy as np
@@ -146,68 +154,6 @@ def peak_pos(field: NDArray) -> int | tuple[int,int]:
     else:
         return np.unravel_index(field.argmax(),field.shape)
 
-# def fit_routine(xdata: NDArray, ydata: NDArray, method: Callable[[NDArray,Any],NDArray], initial_values: list[float] | NDArray, err: NDArray | None = None, sel: str = 'pop', print_res: bool = True, names: list[str | None] = [] ,**kwargs) -> list[NDArray | float ] | dict:
-#     """Routine for a fit with `curve_fit`
-
-#     :param xdata: x values
-#     :type xdata: NDArray
-#     :param ydata: y values
-#     :type ydata: NDArray
-#     :param method: model
-#     :type method: Callable[[NDArray,Any],NDArray]
-#     :param initial_values: guesses for parameters
-#     :type initial_values: list[float] | NDArray
-#     :param err: error values, defaults to `None`
-#     :type err: NDArray | None, optional
-#     :param sel: selected result/s, defaults to 'pop'
-#     :type sel: str, optional
-#     :param print_res: if `True` fit results are printed, defaults to `True`
-#     :type print_res: bool, optional
-#     :param names: names of the parameters, defaults to []
-#     :type names: list[str  |  None], optional
-    
-#     :return: estimated parameters and additional info
-#     :rtype: list[NDArray | float]
-#     """
-#     # importing the function
-#     from scipy.optimize import curve_fit
-#     # computing the fit
-#     pop, pcov = curve_fit(method, xdata, ydata, initial_values,sigma=err,**kwargs)
-#     # extracting the errors
-#     Dpop = np.sqrt(pcov.diagonal())
-#     # computing the chi squared
-#     if err is not None:
-#         # evaluating function in `xdata`
-#         fit = method(xdata,*pop)
-#         # computing chi squared
-#         chisq = (((ydata-fit)/err)**2).sum()
-#         chi0 = len(ydata) - len(pop)
-#         # Dchi0 = np.sqrt(2*chi0)
-#     # print results
-#     if print_res:
-#         if len(names) == 0:
-#             names = [f'pop{i+1}' for i in range(len(pop))]
-#         print('- FIT RESULTS -')
-#         for i in range(len(pop)):
-#             print('\t'+names[i]+f' = {pop[i]} +- {Dpop[i]}\t{Dpop[i]/pop[i]*100:.2} %')
-#         if err is not None:
-#             print(f'\tred_chi = {chisq/chi0*100} +- {np.sqrt(2/chi0)*100} %')
-#         print('- - - -')
-#     # collecting results
-#     results = []
-#     if sel == 'all' or 'pop' in sel:
-#         results += [pop, Dpop]
-#     elif sel == 'dict' and len(names) != 0:
-#         names += ['D'+name for name in names]
-#         pop = np.append(pop,Dpop)
-#         dpop = {names[i]: pop[i] for i in range(len(names))}
-#         results = dpop            
-#     if sel == 'all' or 'pcov' in sel:
-#         results += [pcov]
-#     if sel == 'all' or 'chisq' in sel:
-#         results += [chisq] 
-#     # else: raise Exception('Wrong `sel`')
-#     return results
 
 def mean_n_std(data: Sequence, axis: int | None = None) -> tuple[float, float]:
     """To compute the mean and standard deviation from it
@@ -331,7 +277,7 @@ def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, 
         plt.plot(xx,model, label='estimated gaussian')
         plt.legend()
         plt.show()
-        
+
     return mean_bkg, sigma_bkg
 
 
@@ -503,10 +449,10 @@ def new_moving(direction: str, field: NDArray, index: tuple[int,int], back: floa
     x,y = index
     results = []
     hm = field[index]/2
-    # inizializing the variable for the direction
-    #    1 : forward
-    #    0 : ignored
-    #   -1 : backward
+    #> inizialize the variable for the direction
+    #>    1 : forward
+    #>    0 : ignored
+    #>   -1 : backward
     xd = 0
     yd = 0
     # initializing the limits
@@ -569,10 +515,10 @@ def new_moving(direction: str, field: NDArray, index: tuple[int,int], back: floa
         print(xcond(xsize,xmax),xmax)
         # routine to compute the size
         while condition:
-            step = field[x+xd*xsize, y+yd*ysize]
+            step = field[x + xd*xsize, y + yd*ysize]
             if step == 0: 
-                if 'x' in direction and xd != 0: results  = [xsize+size] + results
-                if 'y' in direction and yd != 0: results += [ysize+size]
+                if 'x' in direction and xd != 0: results  = [xsize] + results
+                if 'y' in direction and yd != 0: results += [ysize]
                 if len(results) == 1: results = results[0]
                 return results
             elif step <= hm: 
@@ -783,7 +729,7 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
 
 
 ##*
-def object_isolation(field: NDArray, thr: float, size: int = 3, acc: float = 1e-1, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, mindist: int = 5, minsize: int = 3, cutsize: int = 5, numpeaks: int = 2, grad_new: bool = True, corr_cond: bool = True, display_fig: bool = False,**kwargs) -> tuple[list[NDArray],NDArray] | None:
+def object_isolation(field: NDArray, thr: float, size: int = 7, acc: float = 1e-1, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, mindist: int = 5, minsize: int = 3, cutsize: int = 5, numpeaks: int = 2, grad_new: bool = True, corr_cond: bool = True, display_fig: bool = False,**kwargs) -> tuple[list[NDArray],NDArray] | None:
     """To isolate the most luminous star object.
     The function calls the `size_est()` function to compute the size of the object and
     then to extract it from the field.
