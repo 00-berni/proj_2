@@ -46,6 +46,13 @@ In addition to the package (that is the aim of the exercise), the project direct
 - a compilable file to do some operation quickly (see commands section or makefile section)
 - a directory for tests (see the test section)
 
+### Comments notation
+
+- `#:` is used for definitions
+- `#` is used to comment instructions
+- `#>` is used to explain an instruction in more lines than one
+- `##` is used for the title of a paragraph
+- `###` is used for the title of a section
 
 
 ## <a id='toc2_'></a>[Project tree](#toc0_)
