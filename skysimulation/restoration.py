@@ -444,111 +444,125 @@ def grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 7
     return a_size
 
 
-def new_moving(direction: str, field: NDArray, index: tuple[int,int], back: float, size: int = 7) -> list[int] | int:
-    dim = len(field)
-    x,y = index
-    results = []
-    hm = field[index]/2
+def new_moving(direction: str, field: NDArray, index: tuple[int,int], back: float, size: int = 7, debug_check: bool = False) -> list[int] | int:
+    dim = len(field)        #: size of the field
+    x,y = index             #: coordinates of the brightest pixel
+    results = []            #: list to collect results
+    hm = field[index]/2     #: half maximum
+    
+    ## Initialization
     #> inizialize the variable for the direction
     #>    1 : forward
     #>    0 : ignored
     #>   -1 : backward
     xd = 0
     yd = 0
-    # initializing the limits
+    # initialize the limits
     xmax = x
     ymax = y
-    # initializing the conditions on x and y 
-    xcond = lambda xval, xlim: True
-    ycond = lambda yval, ylim: True
+    # initialize the condition on x and y to stop
+    xcond = lambda *args: True
+    ycond = lambda *args: True
     
-    # forward along x
-    if 'fx' in direction:
-        print('hey')
-        # computing the edge
+    ## Along x Direction
+    if 'fx' in direction:   #: forward
+        #?
+        if debug_check:
+            print('hey')
+        #?
+        # compute the edge
         xmax = min(size, dim-1-x)
-        # impossible movement
-        if xmax == 0: 
+        if xmax == 0:       #: impossible movement case
             results += [0]
-        # updating the condition on x
-        else: 
+        else:               #: update the condition on x instead
             xd = 1
             xcond = lambda xval, xlim: xval < xlim
-    # backward along x
-    elif 'bx' in direction:
-        # computing the edge
+    elif 'bx' in direction: #: backward 
+        # compute the edge
         xmax = min(size, x)
-        # impossible movement
-        if xmax == 0: results += [0]
-        # updating the condition on x
-        else: 
+        if xmax == 0:       #: impossible movement case
+            results += [0]
+        else:               #: update the condition on x instead
             xd = -1
             xcond = lambda xval, xlim: xval < xlim 
     
-    # forward along y
-    if 'fy' in direction:
-        # computing the edge
-        ymax = min(size, dim-1-y)
-        # impossible movement
-        if ymax == 0: results += [0]
-        # updating the condition on y
-        else: 
+    ## Along y Direction
+    if 'fy' in direction:   #: forward
+        # compute the edge
+        ymax = min(size, dim-1-y)        
+        if ymax == 0:       #: impossible movement 
+            results += [0]
+        else:               #: update the condition on y
             yd = 1
-            ycond = lambda yval, ylim: yval < ylim 
-    # backward along y
-    elif 'by' in direction:
-        # computing the edge
+            ycond = lambda yval, ylim: yval < ylim  
+    elif 'by' in direction: #: backward
+        # compute the edge
         ymax = min(size, y)
-        # impossible movement
-        if ymax == 0: results += [0]
-        # updating the condition on y
-        else: 
+        if ymax == 0:       #: impossible movement 
+            results += [0]
+        else:               #: update the condition on y
             yd = -1
             ycond = lambda yval, ylim: yval < ylim 
     
-    # if there are no forbidden directions
-    if xd != 0 or yd != 0:
-        # inizilizing the variables for the size
+    ## Steps Routine
+    if xd != 0 or yd != 0:  #: if there are no forbidden directions
+        # inizilize the variables for the size
         xsize = 1
         ysize = 1
-        condition = xcond(xsize,xmax) and ycond(ysize,ymax)
-        print(xcond(xsize,xmax),xmax)
-        # routine to compute the size
-        while condition:
+        #?
+        if debug_check:
+            print(xcond(xsize,xmax),xmax)
+        #?
+        while (xcond(xsize,xmax) and ycond(ysize,ymax)):
+            # compute the step
             step = field[x + xd*xsize, y + yd*ysize]
-            if step == 0: 
+            if step == 0 or step < back:
+                # store the value
                 if 'x' in direction and xd != 0: results  = [xsize] + results
                 if 'y' in direction and yd != 0: results += [ysize]
                 if len(results) == 1: results = results[0]
                 return results
-            elif step <= hm: 
-                if 'x' in direction and xd != 0: results  = [xsize] + results
-                if 'y' in direction and yd != 0: results += [ysize]
-                if len(results) == 1: results = results[0]
-                return results
-            else:
-                xsize += 1
-                ysize += 1
-                condition = xcond(xsize,xmax) and ycond(ysize,ymax)
+            elif step <= hm:
+                # compute the gradient with the previuos pixel
+                step0 = field[x + xd*(xsize-1), y + yd*(ysize-1)]
+                grad = step0 - step
+                if grad < 0:
+                    # store the value
+                    if 'x' in direction and xd != 0: results  = [xsize-1] + results
+                    if 'y' in direction and yd != 0: results += [ysize-1]
+                    if len(results) == 1: results = results[0]
+                    return results
+            # go on to the next step
+            xsize += 1
+            ysize += 1
+        # 
         if 'x' in direction and xd != 0: results  = [-1] + results
         if 'y' in direction and yd != 0: results += [-1]
-
+    # check the results
     if len(results) == 0: raise
     if len(results) == 1: results = results[0]
     return results
 
-def new_grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 7, acc: float = 1e-5) -> NDArray:
-    # 
+def new_grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 7, acc: float = 1e-5, debug_check: bool = False) -> NDArray:
+    # define a method to move from the brightest pixel
     n_mov = lambda val : new_moving(val,field,index,back,size)
-    xf_dir = ['fx','bx','fy','by']      #: directions
+    xf_dir = ['fx','bx','fy','by']      #: list of all directions
+    # compute the size in each directions of `xf_dir`
     a_xysize = np.array([n_mov(dir) for dir in xf_dir]) 
-    print('A_XF',type(a_xysize))
+    #?
+    if debug_check:
+        print('A_XF',type(a_xysize))
+    #?
+    # check the 
     n_pos = np.where(a_xysize == -1)[0]
     if len(n_pos) != 0:
-        dim = len(field)
-        # a_xysize[n_pos] = np.array([mov(xf_dir[i]) for i in n_pos])
+        dim = len(field)    #: size of the field
+        # compute the size in each direction 
         a_xysize[n_pos] = np.array([ min(size, ((i+1)%2)*dim + (i%2*2-1)*(index[i//2])) for i in n_pos])
-        print('A_XF',type(a_xysize),a_xysize)
+        #?
+        if debug_check:
+            print('A_XF',type(a_xysize),a_xysize)
+        #?
     a_xysize = np.where(a_xysize > size, a_xysize-size, a_xysize)
 
     return a_xysize.reshape(2,2)
@@ -597,7 +611,7 @@ def corr_check(obj: NDArray, numpeak: int = 3, display_plot: bool = False,**kwar
 
 
 
-def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: str | Sequence[str] = 'all', mindist: int = 5, minsize: int = 3, cutsize: int = 5, numpeaks: int = 3, acc: float = 1e-1, reshape: bool = False, display_plot: bool = False, **kwargs) -> bool:
+def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: str | Sequence[str] = 'all', mindist: int = 5, minsize: int = 3, cutsize: int = 5, numpeaks: int = 3, acc: float = 1e-1, reshape: bool = False, debug_check: bool = False, display_plot: bool = False, **kwargs) -> bool:
     """Selecting the objects for the fit
 
     sel:
@@ -626,7 +640,8 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
     if sel == 'all' or 'size' in sel:
         cond = True
         if size != 1 and dim <= minsize: 
-            print(f'\t:Selection:\tdim = {dim}')
+            if debug_check:
+                print(f'\t:Selection:\tdim = {dim}')
             return False
     if sel == 'all' or 'dist' in sel:
         cond = True
@@ -641,7 +656,8 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
             adist = np.array( [dist(xi[i]-x, yi[i]-y) for i in range(len(xi))] )
             pos = np.where(np.logical_and(adist <= mindist, adist != 0))  
             if len(pos[0]) != 0: 
-                    print(f'\t:Selection:\tdist = {adist[pos]} - adist = {adist} - mindist = {mindist}')
+                    if debug_check:
+                        print(f'\t:Selection:\tdist = {adist[pos]} - adist = {adist} - mindist = {mindist}')
                     return False
             del x, y, xi, yi, dist, adist, pos
     if sel == 'all' or 'cut' in sel:    
@@ -649,12 +665,14 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
         x, y = peak_pos(obj)
         if reshape:  
             if abs(x - xdim//2) > 1 or abs(y - ydim//2) > 1: 
-                print(f'\t:Selection:\t(x,y) = ({x},{y}) - dim//2 = {dim//2}')
+                if debug_check:
+                    print(f'\t:Selection:\t(x,y) = ({x},{y}) - dim//2 = {dim//2}')
                 return False 
         lims = np.array([x, xdim-1 - x, y, ydim-1 - y])
-        print(obj.shape)
-        print(x,y)
-        print('LIMS',lims)
+        if debug_check:
+            print(obj.shape)
+            print(x,y)
+            print('LIMS',lims)
         ind = np.where(lims > 1)[0]
         if len(ind) == 0: 
             return False
@@ -665,22 +683,26 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
             dirc = lambda i : i%2*2-1
             xpos = lambda x : dirc(x)*(1-x//2)
             ypos = lambda y : dirc(y)*(y//2)
-            print('IND',ind)
+            if debug_check:
+                print('IND',ind)
             diag = np.array([[1,3],[0,2],[0,3],[1,2]])
             dpos = np.array([ j in ind for j in diag.flatten()]).reshape(4,2).all(axis=1)
             xind = np.where(dpos == False)[0]
             if len(xind) != 0:
                 diag = np.delete(diag,xind,axis=0)
-            print('DPOS',dpos)
-            print('DIAG',diag)
+            if debug_check:
+                print('DPOS',dpos)
+                print('DIAG',diag)
             del xind, dpos
             for i in range(1,lim+1):
                 values = np.array([obj[x+xpos(j)*i,y+ypos(j)*i] for j in ind])
                 step1 = np.mean(values)
                 ratio = step1/step0 - 1
-                print('RATIO',ratio)
+                if debug_check:
+                    print('RATIO',ratio)
                 if ratio > acc:
-                    print('END RATIO')
+                    if debug_check:
+                        print('END RATIO')
                     return False
                 step0 = step1
 
@@ -688,9 +710,11 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
                     values = np.array([obj[x+dirc(d[0])*i,y+dirc(d[1])*i] for d in diag])
                     step11 = np.mean(values) if len(values) > 1 else values[0]
                     ratio = step11/step00 - 1
-                    print('RATIO 00',ratio)
+                    if debug_check:
+                        print('RATIO 00',ratio)
                     if ratio > acc:
-                        print('END RATIO')
+                        if debug_check:
+                            print('END RATIO')
                         return False
                     step00 = step11
     # if sel == 'all' or 'corr' in sel:
@@ -729,7 +753,7 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
 
 
 ##*
-def object_isolation(field: NDArray, thr: float, size: int = 7, acc: float = 1e-1, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, mindist: int = 5, minsize: int = 3, cutsize: int = 5, numpeaks: int = 2, grad_new: bool = True, corr_cond: bool = True, display_fig: bool = False,**kwargs) -> tuple[list[NDArray],NDArray] | None:
+def object_isolation(field: NDArray, thr: float, size: int = 5, acc: float = 1e-1, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, mindist: int = 5, minsize: int = 3, cutsize: int = 5, numpeaks: int = 2, grad_new: bool = True, corr_cond: bool = True, debug_check: bool = False, display_fig: bool = False,**kwargs) -> tuple[list[NDArray],NDArray] | None:
     """To isolate the most luminous star object.
     The function calls the `size_est()` function to compute the size of the object and
     then to extract it from the field.
@@ -767,15 +791,17 @@ def object_isolation(field: NDArray, thr: float, size: int = 7, acc: float = 1e-
     # routine to extract objects
     k = 0           #: counter of selected objects
     ctrl_cnt = 0    #: counter of iterations
+    print('\n- - - Object Extraction - - -')
     while k < objnum:
         # finding the maximum value position
         index = peak_pos(tmp_field)
         
         #? per me
-        ctrl = False    #?: solo per me
-        if 0 in index: 
-            print(index)
-            ctrl = True
+        if debug_check:
+            ctrl = False    #?: solo per me
+            if 0 in index: 
+                print(index)
+                ctrl = True
         #?
         
         peak = tmp_field[index]
@@ -786,11 +812,11 @@ def object_isolation(field: NDArray, thr: float, size: int = 7, acc: float = 1e-
         a_size = new_grad_check(tmp_field,index,thr,size,acc) if grad_new else grad_check(tmp_field,index,thr,size,acc)
         
         #? per me
-        if ctrl: 
-            print(index)
-            print(a_size)
+        if debug_check:
+            if ctrl: 
+                print(index)
+                print(a_size)
         #?
-        
         print(f':: Iteration {k} of object_isolation :: ')
         print('a_size',a_size)
         # removing the object from `tmp_field`
@@ -798,21 +824,24 @@ def object_isolation(field: NDArray, thr: float, size: int = 7, acc: float = 1e-
         xu, xd, yu, yd = a_size.flatten()
         xr = slice(x-xd, x+xu+1) 
         yr = slice(y-yd, y+yu+1)
-        print('Slices: ',xr,yr)
         tmp_field[xr,yr] = 0.0
-        print('a_size 2',a_size)
+        if debug_check:
+            print('Slices: ',xr,yr)
+            print('a_size 2',a_size)
         a_pos = np.append(a_pos,[[x],[y]],axis=1)
         # if the object is a single px it is rejected
         if any(([[0,0],[0,0]] == a_size).all(axis=1)):
             rej_obj += [field[xr,yr].copy()]
             rej_pos = np.append(rej_pos,[[x],[y]],axis=1)
-            print(f'Rejected obj: ({x},{y})')
+        if debug_check:
+                print(f'Rejected obj: ({x},{y})')
         else: 
             if reshape:
                 # reshaping the object in order to 
                 # get the same size in each directions
                 pos = np.where(a_size != 0)
-                print('POS: ',pos)
+                if debug_check:
+                    print('POS: ',pos)
                 min_size = a_size[pos].min()
                 a_size[pos] = min_size
                 xu, xd, yu, yd = a_size.flatten()
@@ -831,14 +860,16 @@ def object_isolation(field: NDArray, thr: float, size: int = 7, acc: float = 1e-
 
                 xpad_pos = (xpadu,xpadd)
                 ypad_pos = (ypadu,ypadd)
-                print('Pad',xpad_pos,ypad_pos)
+                if debug_check:
+                    print('Pad',xpad_pos,ypad_pos)
                 # extending the object
                 obj = np.pad(obj,(xpad_pos,ypad_pos),'reflect')
             
             # checking if the object is acceptable or not
             save_cond = selection(obj,index,a_pos,size,sel='all',mindist=mindist,minsize=minsize,cutsize=cutsize,numpeaks=numpeaks,display_plot=display_fig) if sel_cond else True
             if save_cond:
-                print(f'** OBJECT SELECTED ->\t{k}')
+                if debug_check:
+                    print(f'** OBJECT SELECTED ->\t{k}')
                 # updating the field to plot
                 display_field[xr,yr] = 0.0
                 # storing the selected object
@@ -849,7 +880,8 @@ def object_isolation(field: NDArray, thr: float, size: int = 7, acc: float = 1e-
                 # updating the counter
                 k += 1 
             else: 
-                print(f'!! OBJECT REJECTED ->\t{k}')
+                if debug_check:
+                    print(f'!! OBJECT REJECTED ->\t{k}')
                 # storing the rejected object
                 rej_obj += [obj]
                 rej_pos = np.append(rej_pos,[[x],[y]],axis=1)
