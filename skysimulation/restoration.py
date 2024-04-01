@@ -445,6 +445,28 @@ def grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 7
 
 
 def new_moving(direction: str, field: NDArray, index: tuple[int,int], back: float, size: int = 7, debug_check: bool = False) -> list[int] | int:
+    """To compute the size in one direction
+
+    Parameters
+    ----------
+    direction : str
+        the chosen direction
+    field : NDArray
+        the field matrix
+    index : tuple[int,int]
+        the coordinates of the brightest pixel
+    back : float
+        the estimation of mean background value
+    size : int, optional
+        maximum size of the object, by default 7
+    debug_check : bool, optional
+        . . ., by default False
+
+    Returns
+    -------
+    results : list[int] | int
+        size(s) in the chosen direction
+    """
     dim = len(field)        #: size of the field
     x,y = index             #: coordinates of the brightest pixel
     results = []            #: list to collect results
@@ -535,7 +557,7 @@ def new_moving(direction: str, field: NDArray, index: tuple[int,int], back: floa
             # go on to the next step
             xsize += 1
             ysize += 1
-        # 
+        #! CHECK 
         if 'x' in direction and xd != 0: results  = [-1] + results
         if 'y' in direction and yd != 0: results += [-1]
     # check the results
@@ -543,8 +565,31 @@ def new_moving(direction: str, field: NDArray, index: tuple[int,int], back: floa
     if len(results) == 1: results = results[0]
     return results
 
-def new_grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 7, acc: float = 1e-5, debug_check: bool = False) -> NDArray:
-    # define a method to move from the brightest pixel
+def new_grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 7, debug_check: bool = False) -> NDArray:
+    """To compute the size of an object
+
+    Parameters
+    ----------
+    field : NDArray
+        the field matrix
+    index : tuple[int,int]
+        the coordinates of the brightest pixel
+    back : float
+        the estimation of mean background value
+    size : int, optional
+        maximum size of the object, by default 7
+    debug_check : bool, optional
+        . . ., by default False
+
+    Returns
+    -------
+    a_xysize : NDArray
+        object sizes. 
+        It is a matrix 2x2:
+            [ [xsize_inf, xsize_sup]
+              [ysize_inf, ysize_sup] ]
+    """
+    # define a method to move out from the brightest pixel
     n_mov = lambda val : new_moving(val,field,index,back,size)
     xf_dir = ['fx','bx','fy','by']      #: list of all directions
     # compute the size in each directions of `xf_dir`
@@ -563,8 +608,7 @@ def new_grad_check(field: NDArray, index: tuple[int,int], back: float, size: int
         if debug_check:
             print('A_XF',type(a_xysize),a_xysize)
         #?
-    a_xysize = np.where(a_xysize > size, a_xysize-size, a_xysize)
-
+    # a_xysize = np.where(a_xysize > size, a_xysize-size, a_xysize)
     return a_xysize.reshape(2,2)
 
 def corr_check(obj: NDArray, numpeak: int = 3, display_plot: bool = False,**kwargs) -> bool:
@@ -611,7 +655,7 @@ def corr_check(obj: NDArray, numpeak: int = 3, display_plot: bool = False,**kwar
 
 
 
-def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: str | Sequence[str] = 'all', mindist: int = 5, minsize: int = 3, cutsize: int = 5, numpeaks: int = 3, acc: float = 1e-1, reshape: bool = False, debug_check: bool = False, display_plot: bool = False, **kwargs) -> bool:
+def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: {'all','size','dist'} | Sequence[str] = 'all', mindist: int = 5, minsize: int = 3, debug_check: bool = False) -> bool:
     """Selecting the objects for the fit
 
     sel:
@@ -631,14 +675,11 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
     :return: list of the selected and rejected objects 
     :rtype: tuple[list[NDArray], list[None | NDArray]]
     """
-    # distance must be 
-    if (size+mindist) < 0: raise
-    cond = False        #: variable to check if `sel` is correct
-    obj = np.copy(obj)
-    xdim, ydim = obj.shape
-    dim = min(xdim,ydim)
+    cond = False                #: variable to check if `sel` is correct
+    xdim, ydim = obj.shape      #: sizes of the object 
     if sel == 'all' or 'size' in sel:
         cond = True
+        dim = min(xdim,ydim)        #: minimum size of the object
         if size != 1 and dim <= minsize: 
             if debug_check:
                 print(f'\t:Selection:\tdim = {dim}')
@@ -646,77 +687,81 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
     if sel == 'all' or 'dist' in sel:
         cond = True
         if len(apos[0]) > 0:    
-            #: method to compute the length
+            # distance must be 
+            if (size+mindist) < 0: raise Exception(f'ErrorValues: the `size + mindist` is negative, change the values')
+            # define method to compute the length of a segment
             dist = lambda x,y: np.sqrt(x**2 + y**2)
-            # extracting positions
-            x, y = index
-            xi, yi = np.copy(apos[:,:])
-            # computing distances
+            x, y = index                    #: coordinates of the brightest pixel
+            xi, yi = np.copy(apos[:,:])     #: coordinates of extracted objects pixel
+            # update the minimum distance
             mindist += size
+            # compute distances from the extracted objects
             adist = np.array( [dist(xi[i]-x, yi[i]-y) for i in range(len(xi))] )
+            # check the presence of a near object
             pos = np.where(np.logical_and(adist <= mindist, adist != 0))  
             if len(pos[0]) != 0: 
                     if debug_check:
                         print(f'\t:Selection:\tdist = {adist[pos]} - adist = {adist} - mindist = {mindist}')
                     return False
+            # delete useless variables
             del x, y, xi, yi, dist, adist, pos
-    if sel == 'all' or 'cut' in sel:    
-        cond = True
-        x, y = peak_pos(obj)
-        if reshape:  
-            if abs(x - xdim//2) > 1 or abs(y - ydim//2) > 1: 
-                if debug_check:
-                    print(f'\t:Selection:\t(x,y) = ({x},{y}) - dim//2 = {dim//2}')
-                return False 
-        lims = np.array([x, xdim-1 - x, y, ydim-1 - y])
-        if debug_check:
-            print(obj.shape)
-            print(x,y)
-            print('LIMS',lims)
-        ind = np.where(lims > 1)[0]
-        if len(ind) == 0: 
-            return False
-        else:
-            step0 = obj[x,y]
-            step00 = obj[x,y]
-            lim = lims[ind].min()
-            dirc = lambda i : i%2*2-1
-            xpos = lambda x : dirc(x)*(1-x//2)
-            ypos = lambda y : dirc(y)*(y//2)
-            if debug_check:
-                print('IND',ind)
-            diag = np.array([[1,3],[0,2],[0,3],[1,2]])
-            dpos = np.array([ j in ind for j in diag.flatten()]).reshape(4,2).all(axis=1)
-            xind = np.where(dpos == False)[0]
-            if len(xind) != 0:
-                diag = np.delete(diag,xind,axis=0)
-            if debug_check:
-                print('DPOS',dpos)
-                print('DIAG',diag)
-            del xind, dpos
-            for i in range(1,lim+1):
-                values = np.array([obj[x+xpos(j)*i,y+ypos(j)*i] for j in ind])
-                step1 = np.mean(values)
-                ratio = step1/step0 - 1
-                if debug_check:
-                    print('RATIO',ratio)
-                if ratio > acc:
-                    if debug_check:
-                        print('END RATIO')
-                    return False
-                step0 = step1
+    # if sel == 'all' or 'cut' in sel:    
+    #     cond = True
+    #     x, y = peak_pos(obj)
+    #     if reshape:  
+    #         if abs(x - xdim//2) > 1 or abs(y - ydim//2) > 1: 
+    #             if debug_check:
+    #                 print(f'\t:Selection:\t(x,y) = ({x},{y}) - dim//2 = {dim//2}')
+    #             return False 
+    #     lims = np.array([x, xdim-1 - x, y, ydim-1 - y])
+    #     if debug_check:
+    #         print(obj.shape)
+    #         print(x,y)
+    #         print('LIMS',lims)
+    #     ind = np.where(lims > 1)[0]
+    #     if len(ind) == 0: 
+    #         return False
+    #     else:
+    #         step0 = obj[x,y]
+    #         step00 = obj[x,y]
+    #         lim = lims[ind].min()
+    #         dirc = lambda i : i%2*2-1
+    #         xpos = lambda x : dirc(x)*(1-x//2)
+    #         ypos = lambda y : dirc(y)*(y//2)
+    #         if debug_check:
+    #             print('IND',ind)
+    #         diag = np.array([[1,3],[0,2],[0,3],[1,2]])
+    #         dpos = np.array([ j in ind for j in diag.flatten()]).reshape(4,2).all(axis=1)
+    #         xind = np.where(dpos == False)[0]
+    #         if len(xind) != 0:
+    #             diag = np.delete(diag,xind,axis=0)
+    #         if debug_check:
+    #             print('DPOS',dpos)
+    #             print('DIAG',diag)
+    #         del xind, dpos
+    #         for i in range(1,lim+1):
+    #             values = np.array([obj[x+xpos(j)*i,y+ypos(j)*i] for j in ind])
+    #             step1 = np.mean(values)
+    #             ratio = step1/step0 - 1
+    #             if debug_check:
+    #                 print('RATIO',ratio)
+    #             if ratio > acc:
+    #                 if debug_check:
+    #                     print('END RATIO')
+    #                 return False
+    #             step0 = step1
 
-                if len(diag) != 0:
-                    values = np.array([obj[x+dirc(d[0])*i,y+dirc(d[1])*i] for d in diag])
-                    step11 = np.mean(values) if len(values) > 1 else values[0]
-                    ratio = step11/step00 - 1
-                    if debug_check:
-                        print('RATIO 00',ratio)
-                    if ratio > acc:
-                        if debug_check:
-                            print('END RATIO')
-                        return False
-                    step00 = step11
+    #             if len(diag) != 0:
+    #                 values = np.array([obj[x+dirc(d[0])*i,y+dirc(d[1])*i] for d in diag])
+    #                 step11 = np.mean(values) if len(values) > 1 else values[0]
+    #                 ratio = step11/step00 - 1
+    #                 if debug_check:
+    #                     print('RATIO 00',ratio)
+    #                 if ratio > acc:
+    #                     if debug_check:
+    #                         print('END RATIO')
+    #                     return False
+    #                 step00 = step11
     # if sel == 'all' or 'corr' in sel:
     #     return corr_check(obj,numpeaks,display_plot,**kwargs)
 
@@ -748,12 +793,12 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
                 # if diff1 >= 0.3 or diff2 >= 0.3 or (diff1 > 0.25 and diff2 > 0.25): 
                 #     print(f'\t:Selection:\tdiff1 = {diff1} -  diff2 = {diff2}')
                 #     return False
-    if cond: return True
-    else: raise
+    if not cond: raise Exception(f'ErrorValue: `sel`={sel} is not allowed')
+    return True    
 
 
 ##*
-def object_isolation(field: NDArray, thr: float, size: int = 5, acc: float = 1e-1, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, mindist: int = 5, minsize: int = 3, cutsize: int = 5, numpeaks: int = 2, grad_new: bool = True, corr_cond: bool = True, debug_check: bool = False, display_fig: bool = False,**kwargs) -> tuple[list[NDArray],NDArray] | None:
+def object_isolation(field: NDArray, thr: float, sigma: NDArray, size: int = 5, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, mindist: int = 5, minsize: int = 3, cutsize: int = 5, numpeaks: int = 2, grad_new: bool = True, corr_cond: bool = True, debug_check: bool = False, display_fig: bool = False,**kwargs) -> tuple[list[tuple[NDArray]], NDArray] | None:
     """To isolate the most luminous star object.
     The function calls the `size_est()` function to compute the size of the object and
     then to extract it from the field.
@@ -809,7 +854,7 @@ def object_isolation(field: NDArray, thr: float, size: int = 5, acc: float = 1e-
         if peak <= thr:
             break
         # computing size
-        a_size = new_grad_check(tmp_field,index,thr,size,acc) if grad_new else grad_check(tmp_field,index,thr,size,acc)
+        a_size = new_grad_check(tmp_field,index,thr,size)
         
         #? per me
         if debug_check:
@@ -849,6 +894,7 @@ def object_isolation(field: NDArray, thr: float, size: int = 5, acc: float = 1e-
                 yr = slice(y-yd, y+yu+1)
             # extracting the object
             obj = field[xr,yr].copy() 
+            err = sigma[xr,yr].copy()
 
             if reshape_corr and (0 in [xu,xd,yu,yd]):
                 # reshaping the object in order to 
@@ -873,7 +919,7 @@ def object_isolation(field: NDArray, thr: float, size: int = 5, acc: float = 1e-
                 # updating the field to plot
                 display_field[xr,yr] = 0.0
                 # storing the selected object
-                extraction += [obj]
+                extraction += [(obj, err)]
                 sel_pos = np.append(sel_pos,[[x],[y]],axis=1)
                 if display_fig:
                     tmp_kwargs['title'] = f'N. {k+1} object {index} - {ctrl_cnt}'
@@ -883,7 +929,7 @@ def object_isolation(field: NDArray, thr: float, size: int = 5, acc: float = 1e-
                 if debug_check:
                     print(f'!! OBJECT REJECTED ->\t{k}')
                 # storing the rejected object
-                rej_obj += [obj]
+                rej_obj += [(obj, err)]
                 rej_pos = np.append(rej_pos,[[x],[y]],axis=1)
                 if display_fig:
                     tmp_kwargs['title'] = f'Rejected object {index} - {ctrl_cnt}'
@@ -931,7 +977,7 @@ def object_isolation(field: NDArray, thr: float, size: int = 5, acc: float = 1e-
         rem_pos = []
         print('> START CORRELATION')
         for i in range(len(extraction)):
-            obj = extraction[i]
+            obj = extraction[i][0]
             if not corr_check(obj,numpeaks,display_plot=True):
                 rem_pos += [i]
         print('> END CORRELATION')
@@ -939,7 +985,7 @@ def object_isolation(field: NDArray, thr: float, size: int = 5, acc: float = 1e-
             rej_obj += [extraction[i] for i in rem_pos]
             rej_pos = np.append(rej_pos, sel_pos[:,rem_pos],axis=1)
             sel_pos = np.delete(sel_pos,rem_pos,axis=1)
-            extraction = np.delete(np.asarray(extraction,dtype=object),rem_pos,axis=0)
+            extraction = np.delete(np.asarray(extraction,dtype=object),rem_pos,axis=0).astype(list)
         else:
             if len(extraction) > 4:
                 rej_obj += extraction[4:]
