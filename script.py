@@ -52,6 +52,6 @@ mean_bkg, sigma_bkg = rst.bkg_est(sci_frame, display_plot=False)
 
 ## Kernel Estimation
 # extract objects for the kernel recovery
-(obj, err), pos = rst.object_isolation(sci_frame,mean_bkg, size=5, sel_cond=True, corr_cond=False, display_fig=False)
-# # estimate kernel
-# r = rst.new_kernel_fit(obj[0], display_fig=True)
+objs, errs, pos = rst.object_isolation(sci_frame, mean_bkg, sigma, size=5, sel_cond=True, corr_cond=False, display_fig=False)
+# estimate kernel
+r = rst.new_kernel_fit(objs[0], err=errs[0], display_fig=True)
