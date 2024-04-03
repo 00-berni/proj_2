@@ -856,38 +856,10 @@ def object_isolation(field: NDArray, thr: float, sigma: NDArray, size: int = 5, 
             rej_pos = np.append(rej_pos,[[x],[y]],axis=1)
             if debug_check:
                 print(f'Rejected obj: ({x},{y})')
-        else:  
-            # if reshape:
-            #     # reshaping the object in order to 
-            #     # get the same size in each directions
-            #     pos = np.where(a_size != 0)
-            #     if debug_check:
-            #         print('POS: ',pos)
-            #     min_size = a_size[pos].min()
-            #     a_size[pos] = min_size
-            #     xu, xd, yu, yd = a_size.flatten()
-            #     xr = slice(x-xd, x+xu+1) 
-            #     yr = slice(y-yd, y+yu+1)
-            
+        else:            
             # store the object and its std
             obj = field[xr,yr].copy() 
             err = sigma[xr,yr].copy()
-
-            # if reshape_corr and (0 in [xu,xd,yu,yd]):
-            #     # reshaping the object in order to 
-            #     # get a squared matrix
-            #     xpadu = 0 if xd != 0 else xu
-            #     xpadd = 0 if xu != 0 else xd
-            #     ypadu = 0 if yd != 0 else yu
-            #     ypadd = 0 if yu != 0 else yd
-
-            #     xpad_pos = (xpadu,xpadd)
-            #     ypad_pos = (ypadu,ypadd)
-            #     if debug_check:
-            #         print('Pad',xpad_pos,ypad_pos)
-            #     # extending the object
-            #     obj = np.pad(obj,(xpad_pos,ypad_pos),'reflect')
-            
             # check the condition to accept an object
             save_cond = selection(obj,index,a_pos,size,sel='all',mindist=mindist,minsize=minsize) if sel_cond else True
             if save_cond:       #: accepted object
@@ -1052,156 +1024,190 @@ def err_estimation(field: NDArray, mean_val: float, thr: float | int = 30, displ
 
 
 
-def kernel_fit(obj: NDArray, err: float | None = None, size_cut: int | None = 9, display_fig: bool = False, **kwargs) -> tuple[NDArray,NDArray]:
-    """Estimating the sigma of the kernel
+# def kernel_fit(obj: NDArray, err: float | None = None, size_cut: int | None = 9, display_fig: bool = False, **kwargs) -> tuple[NDArray,NDArray]:
+#     """Estimating the sigma of the kernel
 
-    :param obj: extracted objects
-    :type obj: NDArray
-    :param back: estimated value of the background
-    :type back: float
-    :param noise: mean noise value
-    :type noise: float
+#     :param obj: extracted objects
+#     :type obj: NDArray
+#     :param back: estimated value of the background
+#     :type back: float
+#     :param noise: mean noise value
+#     :type noise: float
     
-    :return: mean sigma of the kernel
-    :rtype: float
-    """
-    # data need to be flattened 
-    if size_cut is not None:
-        if len(obj) > size_cut:
-            cut = (len(obj)-size_cut)//2
-            obj = np.copy(obj[cut:-cut,cut:-cut])
-            del cut
-    dim = len(obj)
-    m = np.arange(dim)
-    x, y = np.meshgrid(m,m)
-    xmax, ymax = peak_pos(obj)  #: maximum value coordinates
+#     :return: mean sigma of the kernel
+#     :rtype: float
+#     """
+#     # data need to be flattened 
+#     if size_cut is not None:
+#         if len(obj) > size_cut:
+#             cut = (len(obj)-size_cut)//2
+#             obj = np.copy(obj[cut:-cut,cut:-cut])
+#             del cut
+#     dim = len(obj)
+#     m = np.arange(dim)
+#     x, y = np.meshgrid(m,m)
+#     xmax, ymax = peak_pos(obj)  #: maximum value coordinates
 
-    def fit_func(pos: tuple[NDArray,NDArray],*args) -> NDArray:
+#     def fit_func(pos: tuple[NDArray,NDArray],*args) -> NDArray:
+#         """Gaussian model for the fit
+
+#         :param pos: coordinates (x,y)
+#         :type pos: tuple[NDArray,NDArray]
+
+#         :return: value of the gaussian
+#         :rtype: NDArray
+#         """
+#         x, y = pos
+#         k, sigma, index = args
+#         x0, y0 = index #xmax, ymax
+#         kernel = Gaussian(sigma)
+#         return k * kernel.value(x-x0)*kernel.value(y-y0)
+    
+#     # computing the error matrix
+#     if err is not None:
+#         err = np.full(obj.shape,err,dtype=float)
+#     # computing the fit
+#     sigma0 = 1
+#     print('sigma',sigma0)
+#     k0 = obj.max()
+#     initial_values = [k0,sigma0,(xmax,ymax)]
+#     xfit = np.vstack((x.ravel(),y.ravel()))
+#     yfit = obj.ravel()
+#     errfit = err.ravel() if err is not None else err
+#     fit = FuncFit(xdata=xfit[::-1],ydata=yfit)
+#     fit.pipeline(fit_func,initial_values,yerr=errfit,names=['k','sigma','index'])
+#     pop, Dpop = fit.results()   
+#     # extracting values
+#     k, sigma = pop
+#     Dk, Dsigma = Dpop
+#     print(f'\tDerivative: ')
+
+#     if display_fig:
+#         figsize = kwargs['figsize'] if 'figsize' in kwargs.keys() else None
+#         title = kwargs['title'] if 'title' in kwargs.keys() else ''
+#         fig, ax = plt.subplots(1,1,figsize=figsize)
+#         ax.set_title(title)
+#         field_image(fig,ax,obj)
+#         mm = np.linspace(m[0],m[-1],100)
+#         xx, yy = np.meshgrid(mm,mm)
+#         ax.contour(xx,yy,fit_func((xx,yy),*pop),colors='b',linestyles='dashed',alpha=0.7)
+#         # kwargs.pop('title')
+#         # kwargs.pop('figsize')
+#         if err is not None:
+#             plt.figure()
+#             plt.subplot(1,2,1)
+#             plt.title('On x axis')
+#             plt.errorbar(m,obj[xmax,:],yerr=err[xmax,:],fmt='.')
+#             plt.plot(mm,fit_func([xmax,mm],*pop))
+#             plt.subplot(1,2,2)
+#             plt.title('On y axis')
+#             plt.errorbar(m,obj[:,ymax],yerr=err[:,ymax],fmt='.')
+#             plt.plot(mm,fit_func([mm,ymax],*pop))
+#         plt.show()
+#     return pop, Dpop
+
+
+def new_kernel_fit(obj: NDArray, err: NDArray | None = None, initial_values: list[int] | None = None, display_fig: bool = False, **kwargs) -> tuple[NDArray,NDArray]:
+    """To compute a gaussian fit for an object
+
+    Parameters
+    ----------
+    obj : NDArray
+        the object matrix
+    err : NDArray | None, default None
+        the STD of the object 
+    initial_values : list[int] | None, default None
+        values to initialize the fit process
+    display_fig : bool, default False
+        parameter to display the result of the fitting 
+        procedure
+
+    Returns
+    -------
+    pop : NDArray
+        parameters from best fit
+    Dpop : NDArray
+        uncertainties on `pop`
+    """
+    ## Fit Function
+    # define the fit function
+    def fit_func(pos: tuple[NDArray,NDArray], k: float, sigma: float, x0: int, y0: int) -> NDArray:
         """Gaussian model for the fit
 
-        :param pos: coordinates (x,y)
-        :type pos: tuple[NDArray,NDArray]
+        Parameters
+        ----------
+        pos : tuple[NDArray,NDArray]
+            x and y coordinates of each pixel of the object
+        k : float
+            normalization constant
+        sigma : float
+            variance root of the gaussian function
+        x0 : int
+            mean along x-axis
+        y0 : int
+            mean along y-axis
 
-        :return: value of the gaussian
-        :rtype: NDArray
+        Returns
+        -------
+        NDArray
+            the value of the Gaussian
         """
-        x, y = pos
-        k, sigma = args
-        x0, y0 = xmax, ymax
+        x, y = pos      #: coordinates of object pixels        
+        # initialize the gaussian
         kernel = Gaussian(sigma)
+        # compute the value
         return k * kernel.value(x-x0)*kernel.value(y-y0)
-    
-    # computing the error matrix
-    if err is not None:
-        err = np.full(obj.shape,err,dtype=float)
-    # computing the fit
-    sigma0 = 1
-    print('sigma',sigma0)
-    k0 = obj.max()
-    initial_values = [k0,sigma0]
-    xfit = np.vstack((x.ravel(),y.ravel()))
-    yfit = obj.ravel()
-    errfit = err.ravel() if err is not None else err
-    # pop, Dpop = fit_routine(xfit[::-1],yfit,fit_func,initial_values,err=errfit,names=['k','sigma'])    
-    fit = FuncFit(xdata=xfit[::-1],ydata=yfit)
-    fit.pipeline(fit_func,initial_values,yerr=errfit,names=['k','sigma'])
-    pop, Dpop = fit.results()   
-    # extracting values
-    k, sigma = pop
-    Dk, Dsigma = Dpop
-    print(f'\tDerivative: ')
 
-    if display_fig:
-        figsize = kwargs['figsize'] if 'figsize' in kwargs.keys() else None
-        title = kwargs['title'] if 'title' in kwargs.keys() else ''
-        fig, ax = plt.subplots(1,1,figsize=figsize)
-        ax.set_title(title)
-        field_image(fig,ax,obj)
-        mm = np.linspace(m[0],m[-1],100)
-        xx, yy = np.meshgrid(mm,mm)
-        ax.contour(xx,yy,fit_func((xx,yy),*pop),colors='b',linestyles='dashed',alpha=0.7)
-        # kwargs.pop('title')
-        # kwargs.pop('figsize')
-        if err is not None:
-            plt.figure()
-            plt.subplot(1,2,1)
-            plt.title('On x axis')
-            plt.errorbar(m,obj[xmax,:],yerr=err[xmax,:],fmt='.')
-            plt.plot(mm,fit_func([xmax,mm],*pop))
-            plt.subplot(1,2,2)
-            plt.title('On y axis')
-            plt.errorbar(m,obj[:,ymax],yerr=err[:,ymax],fmt='.')
-            plt.plot(mm,fit_func([mm,ymax],*pop))
-        plt.show()
-    return pop, Dpop
+    xdim, ydim = obj.shape      #: sizes of the object
+    xmax, ymax = peak_pos(obj)  #: coordinates of the brightest pixel
 
-
-def new_kernel_fit(obj: NDArray, err: float | None = None, size_cut: int | None = 9, initial_values: list[int] | None = None, display_fig: bool = False, **kwargs) -> tuple[NDArray,NDArray]:
-    """Estimating the sigma of the kernel
-
-    :param obj: extracted objects
-    :type obj: NDArray
-    :param back: estimated value of the background
-    :type back: float
-    :param noise: mean noise value
-    :type noise: float
-    
-    :return: mean sigma of the kernel
-    :rtype: float
-    """
-
-    xdim, ydim = obj.shape
-    xmax, ymax = peak_pos(obj)  #: maximum value coordinates
+    ## Fit Pipeline
+    # prepare data for the fit
     x = np.arange(xdim)
     y = np.arange(ydim) 
-    y,x = np.meshgrid(y,x)
-
-    def fit_func(pos: tuple[NDArray,NDArray],*args) -> NDArray:
-        """Gaussian model for the fit
-
-        :param pos: coordinates (x,y)
-        :type pos: tuple[NDArray,NDArray]
-
-        :return: value of the gaussian
-        :rtype: NDArray
-        """
-        x, y = pos
-        k, sigma = args
-        x0, y0 = xmax, ymax
-        kernel = Gaussian(sigma)
-        return k * kernel.value(x-x0)*kernel.value(y-y0)
-    
-    # computing the error matrix
-    if err is not None:
-        err = np.full(obj.shape,err,dtype=float)
-    # computing the fit
-    if initial_values is None:
-        sigma0 = 1
-        print('sigma',sigma0)
-        k0 = obj.max()
-        initial_values = [k0,sigma0]
+    y,x = np.meshgrid(y,x)      
+    if initial_values is None:  #: default values to initialize the fit
+        k0 = obj.max()      #: normalization constant
+        # compute the initial value for sigma from HWHM
+        hm = obj[xmax,ymax]/2   #: half maximum
+        # find coordinates of the best estimation of `hm`
+        hm_x, hm_y = np.unravel_index(abs(obj-hm).argmin(), obj.shape)
+        # compute hwhm
+        hwhm = np.sqrt((hm_x - xmax)**2 + (hm_y - ymax)**2)
+        # compute sigma from it
+        sigma0 = hwhm / (2*np.log(2))
+        print('\nsigma0 =',sigma0)
+        # collect initial values
+        initial_values = [k0,sigma0,xmax,ymax]
+    # adjust data shape for the fit
     xfit = np.vstack((x.ravel(),y.ravel()))
     yfit = obj.ravel()
     errfit = err.ravel() if err is not None else err
-    # pop, Dpop = fit_routine(xfit,yfit,fit_func,initial_values,err=errfit,names=['k','sigma'])    
+    # compute the fit
     fit = FuncFit(xdata=xfit, ydata=yfit, yerr=errfit)
-    fit.pipeline(fit_func,initial_values,names=['k','sigma'])
+    fit.pipeline(fit_func,initial_values,names=['k','sigma','x0','y0'])
+    # store the results
     pop, Dpop = fit.results()    
-    # extracting values
-    k, sigma = pop
-    Dk, Dsigma = Dpop
-
+    
+    ## Plotting
     if display_fig:
+        sigma, Dsigma = pop[1], Dpop[1]
+        x0, y0 = pop[2:]
         figsize = kwargs['figsize'] if 'figsize' in kwargs.keys() else None
         title = kwargs['title'] if 'title' in kwargs.keys() else ''
+        title = title + f' sigma0 = {sigma0:.2}\nsigma = {sigma:.2} +- {Dsigma:.2}'
         fig, ax = plt.subplots(1,1,figsize=figsize)
         ax.set_title(title)
         field_image(fig,ax,obj)
-        mx = np.linspace(0,xdim-1,50)
-        my = np.linspace(0,ydim-1,50)
+        mx = np.linspace(-1,xdim,50)
+        my = np.linspace(-1,ydim,50)
         yy, xx = np.meshgrid(my,mx)
         ax.contour(yy,xx,fit_func((xx,yy),*pop),colors='b',linestyles='dashed',alpha=0.7)
-        ax.plot(ymax,xmax,'.r')
+        ax.plot(ymax,xmax,'.r',label='Brightest pixel')
+        ax.plot(y0,x0,'xb',label='Estimated mean')
+        ax.set_xlim(0,obj.shape[1]-1)
+        ax.set_ylim(0,obj.shape[0]-1)
+        ax.legend()
         # kwargs.pop('title')
         # kwargs.pop('figsize')
         if err is not None:
@@ -1217,7 +1223,7 @@ def new_kernel_fit(obj: NDArray, err: float | None = None, size_cut: int | None 
         plt.show()
     return pop, Dpop
 
-def kernel_estimation(extraction: list[NDArray], err: float, dim: int, selected: slice = slice(None), size_cut: int | None = 9, all_results: bool = False, display_plot: bool = False, **kwargs) -> NDArray | tuple[NDArray,tuple[float,float]]:
+def kernel_estimation(extraction: list[NDArray], errors: list[NDArray], dim: int, selected: slice = slice(None), size_cut: int | None = 9, all_results: bool = False, display_plot: bool = False, **kwargs) -> NDArray | tuple[NDArray,tuple[float,float]]:
     """Estimation of the kernel from a Gaussian model
 
     :param extraction: extracted objects
@@ -1236,35 +1242,29 @@ def kernel_estimation(extraction: list[NDArray], err: float, dim: int, selected:
     :return: kernel (and sigma with the error)
     :rtype: NDArray | tuple[NDArray,tuple[float,float]]
     """
-    # copying the list
-    sel_extr = [*extraction[selected]]
-    a_sigma = np.empty(shape=(0,2),dtype=float)  #: array to store values of sigma
-    a_k = np.empty(shape=(0,2),dtype=float)      #: array to store values of k
-    # computing an initial value for sigma and a threshold
-    obj = sel_extr[0]
-    xmax, ymax = peak_pos(obj)
-    hm = obj[xmax,ymax]/2
-    xmin, ymin = np.unravel_index(abs(obj-hm).argmin(),obj.shape)
-    sigma0 = int(np.sqrt((xmax-xmin)**2 + (ymax-ymin)**2))*2
-    print(sigma0)
-    del obj,xmax,ymax,xmin,ymin,hm
+    # copy the list to prevent errors
+    sel_obj = [*extraction[selected]]
+    sel_err = [*errors[selected]]
+    a_sigma = np.empty(shape=(0,2),dtype=float)  #: array to store values and uncertainties of sigma
+    # a_k = np.empty(shape=(0,2),dtype=float)      #: array to store values and uncertainties of k
     # routine
-    for obj in sel_extr:
-        initial_values = [obj.max(),sigma0//4 if sigma0//4 != 0 else 1]
-        pop, Dpop = new_kernel_fit(obj,err,size_cut=size_cut,initial_values=initial_values,display_fig=display_plot,**kwargs)
-        k, sigma = pop
-        Dk, Dsigma = Dpop
-        if Dsigma/sigma < 2 and sigma <= sigma0:
-            a_k = np.append(a_k,[[k,Dk]],axis=0)
+    for obj, err in zip(sel_obj, sel_err):
+        pop, Dpop = new_kernel_fit(obj,err,initial_values=None,display_fig=display_plot,**kwargs)
+        sigma = pop[1]
+        Dsigma = Dpop[1]
+        if sigma > 0:
             a_sigma = np.append(a_sigma,[[sigma,Dsigma]],axis=0)
-        del sigma, Dsigma, k, Dk
+        # if Dsigma/sigma < 2 and sigma <= sigma0:
+        #     a_k = np.append(a_k,[[k,Dk]],axis=0)
+        #     a_sigma = np.append(a_sigma,[[sigma,Dsigma]],axis=0)
+        del sigma, Dsigma
     maxpos = a_sigma[:,0].argmax()
     maxval, maxerr = a_sigma[maxpos]
     discr = (a_sigma[:,0]-maxval)/maxerr
     errpos = np.where(discr > 1)[0]
-    if len(errpos) != 0 and len(errpos) != len(a_sigma[:,0]):
-        print(f'REMOVE - {errpos}')
-        a_sigma = np.delete(a_sigma,errpos,axis=0)
+    # if len(errpos) != 0 and len(errpos) != len(a_sigma[:,0]):
+    #     print(f'REMOVE - {errpos}')
+    #     a_sigma = np.delete(a_sigma,errpos,axis=0)
     if len(a_sigma) == 0: raise
     elif len(a_sigma) == 1: sigma, Dsigma = a_sigma[0]
     else:
@@ -1276,13 +1276,13 @@ def kernel_estimation(extraction: list[NDArray], err: float, dim: int, selected:
     kernel = kernel.kernel(dim)
     
     if 'title' not in kwargs:
-        kwargs['title'] = f'Estimated kernel\n$\\sigma = $ {sigma}'
+        kwargs['title'] = f'Estimated kernel\n$\\sigma = $ {sigma:.2} $\pm$ {Dsigma:.2}'
     fast_image(kernel,**kwargs)
-
-    if all_results:
-        return kernel, (a_sigma,a_k)
-    else:
-        return kernel, (sigma,Dsigma)
+    return sigma, Dsigma
+    # if all_results:
+    #     return kernel, (a_sigma,a_k)
+    # else:
+    #     return kernel, (sigma,Dsigma)
 
 
 def LR_deconvolution(field: NDArray, kernel: NDArray, mean_val: float, iter: int = 10, sel: str = 'all', display_fig: bool = False, **kwargs) -> NDArray:
