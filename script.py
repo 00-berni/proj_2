@@ -27,14 +27,14 @@ def plot_obj(obj0: NDArray) -> None:
 
 
 ### INITIALIZATION
-# mass_seed = None
-# pos_seed  = None
-# bkg_seed  = None
-# det_seed  = None
-mass_seed = fld.M_SEED
-pos_seed  = fld.POS_SEED
-bkg_seed  = fld.BACK_SEED
-det_seed  = fld.NOISE_SEED
+mass_seed = None
+pos_seed  = None
+bkg_seed  = None
+det_seed  = None
+# mass_seed = fld.M_SEED
+# pos_seed  = fld.POS_SEED
+# bkg_seed  = fld.BACK_SEED
+# det_seed  = fld.NOISE_SEED
 # generate the field
 S, (m_light, s_light), (m_dark, s_dark) = fld.field_builder(seed=(mass_seed,pos_seed), back_seed=bkg_seed, det_seed=det_seed)
 # compute the scientific frame
@@ -54,4 +54,4 @@ mean_bkg, sigma_bkg = rst.bkg_est(sci_frame, display_plot=False)
 # extract objects for the kernel recovery
 objs, errs, pos = rst.object_isolation(sci_frame, mean_bkg, sigma, size=5, sel_cond=True, corr_cond=False, display_fig=False)
 # estimate kernel
-r = rst.new_kernel_fit(objs[0], err=errs[0], display_fig=True)
+sigma, Dsigma = rst.kernel_estimation(objs, errs, len(sci_frame), display_plot=True)    
