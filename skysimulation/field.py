@@ -170,7 +170,7 @@ class Gaussian():
         from scipy.integrate import quad
         return quad(self.value,inf,sup)[0]
 
-    def kernel(self, dim: int) -> NDArray:
+    def kernel(self) -> NDArray:
         """Computing a Gaussian kernel
 
         :param dim: size of the field
@@ -180,7 +180,7 @@ class Gaussian():
         :rtype: NDArray
         """
         # kernel must have a odd size
-        if dim % 2 == 0: dim -= 1
+        dim = 5*self.sigma + 1
         if self.mu is None:
             self.mu = dim // 2
         # generating coordinates
@@ -189,7 +189,7 @@ class Gaussian():
         r = np.sqrt((x-self.mu)**2 + (y-self.mu)**2)
         # computing kernel
         kernel = self.value(r)
-        return kernel / self.kernel_norm(dim)
+        return kernel / kernel.sum()
 ##? -- -- -- -- -- -- -- -- -- -- ?##    
     def field(self, dim: int, seed: int | None = None) -> NDArray:
         """To compute a matrix of Gaussian distributed values
@@ -533,7 +533,7 @@ def add_effects(F: NDArray, background: Any, back_seed: int | None, atm_param: t
     return F_bsd
 
 
-def field_builder(acq_num: int = 3, dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, cut: int | None = 7, back_param: tuple[str, float | tuple] = BACK_PARAM, back_seed: int | None = BACK_SEED, det_param: tuple[str, float | tuple] = NOISE_PARAM, det_seed: int | None = NOISE_SEED, overlap: bool = False, seed: tuple[int,int] = (M_SEED, POS_SEED), iteration: int = 3, results: str | None = None, display_fig: bool = False, **kwargs) -> list[Star | NDArray] | list[Star | NDArray | list[NDArray]]:
+def field_builder(acq_num: int = 3, dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, cut: int | None = 7, back_param: tuple[str, float | tuple] = BACK_PARAM, back_seed: int | None = BACK_SEED, det_param: tuple[str, float | tuple] = NOISE_PARAM, det_seed: int | None = NOISE_SEED, overlap: bool = False, seed: tuple[int,int] = (M_SEED, POS_SEED), iteration: int = 3, results: bool = True, display_fig: bool = False, **kwargs) -> list[Star | NDArray] | list[Star | NDArray | list[NDArray]]:
     """Constructor of the field
 
     :param dim: size of the field, defaults to N
@@ -588,31 +588,33 @@ def field_builder(acq_num: int = 3, dim: int = N, stnum: int = M, masses: tuple[
     from .restoration import mean_n_std
     master_light, std_light = mean_n_std(lights, axis=0)
 
-    fig, (ax1,ax2) = plt.subplots(1,2)
-    field_image(fig,ax1,F,v=1,norm='log')
-    ax1.set_title('Starting field')
-    field_image(fig,ax2,master_light)
-    ax2.set_title('Master Light')
+    if results:
+        fig, (ax1,ax2) = plt.subplots(1,2)
+        field_image(fig,ax1,F,v=1,norm='log')
+        ax1.set_title('Starting field')
+        field_image(fig,ax2,master_light)
+        ax2.set_title('Master Light')
 
-    fig, axs = plt.subplots(1,acq_num+1)
-    
-    for i in range(acq_num):
-        axs[i].set_title(f'Light {i}')
-        field_image(fig, axs[i], lights[i])
-    axs[-1].set_title('Master Light')
-    field_image(fig, axs[-1], master_light)
-    plt.show()
+        fig, axs = plt.subplots(1,acq_num+1)
+        
+        for i in range(acq_num):
+            axs[i].set_title(f'Light {i}')
+            field_image(fig, axs[i], lights[i])
+        axs[-1].set_title('Master Light')
+        field_image(fig, axs[-1], master_light)
+        plt.show()
 
     # Dark Computation
     dark_seed = np.random.default_rng(seed=det_seed[0]).integers(maxsize,size=iteration)
     dark = [noise(det_noise,dim=dim,seed=dark_seed[i]) for i in range(iteration)]
     # averaging
     master_dark, std_dark = mean_n_std(dark, axis=0) 
-    fig, ax = plt.subplots(1,iteration+1)
-    for i in range(iteration):
-        field_image(fig,ax[i],dark[i])
-        ax[i].set_title(f'Dark {i}')
-    field_image(fig,ax[-1], master_dark)
-    ax[-1].set_title('Master Dark')
-    plt.show()
+    if results:
+        fig, ax = plt.subplots(1,iteration+1)
+        for i in range(iteration):
+            field_image(fig,ax[i],dark[i])
+            ax[i].set_title(f'Dark {i}')
+        field_image(fig,ax[-1], master_dark)
+        ax[-1].set_title('Master Dark')
+        plt.show()
     return S, [master_light, std_light], [master_dark, std_dark]
