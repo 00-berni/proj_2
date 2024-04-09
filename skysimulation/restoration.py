@@ -155,15 +155,17 @@ def peak_pos(field: NDArray) -> int | tuple[int,int]:
         return np.unravel_index(field.argmax(),field.shape)
 
 
-def mean_n_std(data: Sequence, axis: int | None = None) -> tuple[float, float]:
+def mean_n_std(data: Sequence[Any], axis: int | None = None, weights: Sequence[Any] | None = None) -> tuple[float, float]:
     """To compute the mean and standard deviation from it
 
     Parameters
     ----------
-    data : Sequence
+    data : Sequence[Any]
         values of the sample
-    axis : int | None, optional
-        axis over which averaging, by default None
+    axis : int | None, default None
+        axis over which averaging
+    weights : Sequence[Any] | None, default None
+        array of weights associated with data
 
     Returns
     -------
@@ -174,9 +176,12 @@ def mean_n_std(data: Sequence, axis: int | None = None) -> tuple[float, float]:
     """
     dim = len(data)     #: size of the sample
     # compute the mean
-    mean = np.mean(data,axis=axis)
+    mean = np.average(data,axis=axis,weights=weights)
     # compute the STD from it
-    std = np.sqrt( ((data-mean)**2).sum(axis=axis) / (dim*(dim-1)) )
+    if weights is None:
+        std = np.sqrt( ((data-mean)**2).sum(axis=axis) / (dim*(dim-1)) )
+    else:
+        std = np.sqrt(np.average((data-mean)**2, weights=weights) / (dim-1) * dim)
     return mean, std
 
 
@@ -738,7 +743,7 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
 
 
 ##*
-def object_isolation(field: NDArray, thr: float, sigma: NDArray, size: int = 5, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, mindist: int = 5, minsize: int = 3, cutsize: int = 5, numpeaks: int = 2, grad_new: bool = True, corr_cond: bool = True, debug_check: bool = False, display_fig: bool = False,**kwargs) -> tuple[list[NDArray], list[NDArray], NDArray] | None:
+def object_isolation(field: NDArray, thr: float, sigma: NDArray, size: int = 5, objnum: int = 10, reshape: bool = False, reshape_corr: bool = False, sel_cond: bool = False, mindist: int = 5, minsize: int = 3, cutsize: int = 5, numpeaks: int = 2, grad_new: bool = True, corr_cond: bool = True, debug_check: bool = False, results: bool = True, display_fig: bool = False,**kwargs) -> tuple[list[NDArray], list[NDArray], NDArray] | None:
     """To isolate the most luminous star object.
    
     The function calls the `size_est()` function to compute the size of the object and
@@ -901,12 +906,13 @@ def object_isolation(field: NDArray, thr: float, sigma: NDArray, size: int = 5, 
             ctrl_cnt += 1
 
     # display the field after extraction
-    if 'title' not in kwargs:
-        kwargs['title'] = 'Field after extraction'
-    fast_image(display_field,**kwargs)
-    fast_image(tmp_field,**kwargs)    
+    if results:
+        if 'title' not in kwargs:
+            kwargs['title'] = 'Field after extraction'
+        fast_image(display_field,**kwargs)
+        fast_image(tmp_field,**kwargs)    
     # show the field with markers for rejected and selected objects
-    if sel_cond and len(sel_obj[0]) > 0:
+    if sel_cond and len(sel_obj[0]) > 0 and results:
         fig, ax = plt.subplots(1,1)
         kwargs.pop('title',None)
         field_image(fig,ax,display_field,**kwargs)
@@ -929,98 +935,6 @@ def object_isolation(field: NDArray, thr: float, sigma: NDArray, size: int = 5, 
     # extract list of objects and their std
     obj, err = sel_obj
     return obj, err, sel_pos
-
-def err_estimation(field: NDArray, mean_val: float, thr: float | int = 30, display_plot: bool = False) -> tuple[float,float]:
-    """Estimating the mean fluctuation of the background
-
-    :param field: field matrix
-    :type field: NDArray
-    :param mean_val: mean value of background
-    :type mean_val: float
-    :param thr: threshold from which fit is computed in % of the maximum value, defaults to 30
-    :type thr: float | int, optional
-    :param display_plot: if `True` plots are shown, defaults to False
-    :type display_plot: bool, optional
-    
-    :return: estimation of the mean fluctuation
-    :rtype: float
-    """
-    # copying the field
-    field = np.copy(field)
-    # computing the ratio of each pixels with the others
-    diff = np.array([i/field for i in field])
-    print(f'diff = {diff.shape}')
-    print(f'diff -> {diff[0]}')
-    diff = diff.flatten()
-    print(f'diff = {diff.shape}')
-    #! da migliorare !
-    # removing the ratio of same pixels
-    pos = np.where(diff!=1.)[0]
-    print(len(np.where(diff==1.)[0]))
-    #!               !
-    # computing the contrast
-    diff = diff[pos] - 1
-    print(f'diff = {diff.shape}')
-    # computing the histogram
-    bins = np.linspace(min(diff),max(diff),np.sqrt(len(diff)).astype(int)*2)
-    counts, bins = np.histogram(diff,bins=bins)
-    # computing the maximum
-    maxpos = counts.argmax()
-    maxval = (bins[maxpos+1] + bins[maxpos])/2
-
-    def gauss_fit(x: float | NDArray,*args) -> float | NDArray:
-        """Gaussian model for the fit
-
-        :param x: variable
-        :type x: float | NDArray
-
-        :return: Gaussian value
-        :rtype: float | NDArray
-        """
-        k,mu,sigma = args
-        r = (x-mu)/sigma
-        return k * np.exp(-r**2/2)
-
-    # computing the threshold as the fraction of the maximum
-    thr = counts[maxpos] * thr/100
-    # taking only values over the threshold
-    pos = np.sort(np.where(counts >= thr)[0])[[0,-1]]
-    print('edges',pos)
-    edges = bins[pos]
-    print('edges',edges)
-    print('maxval',maxval)
-    cut = slice(pos[0],pos[1]+1)
-    # computing the fit
-    # pop, Dpop = fit_routine(bins[cut],counts[cut],gauss_fit,[counts[maxpos],maxval,1],names=['k','mu','sigma'])
-    fit = FuncFit(xdata=bins[cut], ydata=counts[cut])
-    fit.pipeline(gauss_fit, initial_values=[counts[maxpos],maxval,1], names=['k','mu','sigma'])
-    pop, Dpop = fit.results()
-    pop[2] = abs(pop[2])
-    mu = pop[1]
-    print(f'Pop = {(mu+1)*np.mean(field)} - {mean_val}')
-    sigma = pop[2]
-    print(f'Sigma_pop = {sigma*mean_val} - {sigma*np.mean(field)} - {(sigma * np.sqrt(2*np.log(2))) * mean_val}')
-    mean_val = np.mean(field)
-    mean_val = (mu+1)*mean_val
-    if display_plot:
-        plt.figure()
-        plt.title('Fluctuations')
-        plt.stairs(counts,bins,fill=True, label='data')
-        xx = np.linspace(min(bins),max(bins),1000)
-        plt.plot(xx,gauss_fit(xx,*pop),color='green',label='fit')
-
-        plt.axhline(thr,0,1,color='black',linestyle='dotted',label='threshold')
-        plt.axvline(maxval,0,1,linestyle='--',color='red',label='max value')
-        plt.axvline(mu,0,1,linestyle='--',color='violet',label='$\mu_{fit}$')
-        plt.axvline(edges[0],0,1,color='pink')
-        plt.axvline(edges[1],0,1,color='pink')
-        
-        plt.legend()
-        plt.xlabel('$I_i/I_j$')
-        plt.ylabel('counts')
-        plt.show()
-    # computing the mean fluctuation
-    return (sigma * np.sqrt(2*np.log(2))) * mean_val, mean_val
 
 
 
@@ -1208,8 +1122,6 @@ def new_kernel_fit(obj: NDArray, err: NDArray | None = None, initial_values: lis
         ax.set_xlim(0,obj.shape[1]-1)
         ax.set_ylim(0,obj.shape[0]-1)
         ax.legend()
-        # kwargs.pop('title')
-        # kwargs.pop('figsize')
         if err is not None:
             plt.figure()
             plt.subplot(1,2,1)
@@ -1223,8 +1135,8 @@ def new_kernel_fit(obj: NDArray, err: NDArray | None = None, initial_values: lis
         plt.show()
     return pop, Dpop
 
-def kernel_estimation(extraction: list[NDArray], errors: list[NDArray], dim: int, selected: slice = slice(None), size_cut: int | None = 9, all_results: bool = False, display_plot: bool = False, **kwargs) -> NDArray | tuple[NDArray,tuple[float,float]]:
-    """Estimation of the kernel from a Gaussian model
+def kernel_estimation(extraction: list[NDArray], errors: list[NDArray], dim: int, selected: slice = slice(None), results: bool = True, display_plot: bool = False, **kwargs) -> tuple[float, float]:
+    """To estimate the parameters of gaussian kernel
 
     :param extraction: extracted objects
     :type extraction: list[NDArray]
@@ -1241,121 +1153,157 @@ def kernel_estimation(extraction: list[NDArray], errors: list[NDArray], dim: int
     
     :return: kernel (and sigma with the error)
     :rtype: NDArray | tuple[NDArray,tuple[float,float]]
+
+    Parameters
+    ----------
+    extraction : list[NDArray]
+        list of extracted objects
+    errors : list[NDArray]
+        list of uncertainties of `extraction`
+    dim : int
+        size of the field matrix
+    selected : slice, default slice(None)
+        it is possible to select a certain number of object only over which the fit is computed
+    display_plot : bool, default False
+        parameter to display plots and figures
+
+    Returns
+    -------
+    sigma : float
+        computed mean from all fit estimations
+    Dsigma : float
+        computed STD from the mean `sigma`
     """
-    # copy the list to prevent errors
+    # copy the lists to prevent errors
     sel_obj = [*extraction[selected]]
     sel_err = [*errors[selected]]
-    a_sigma = np.empty(shape=(0,2),dtype=float)  #: array to store values and uncertainties of sigma
-    # a_k = np.empty(shape=(0,2),dtype=float)      #: array to store values and uncertainties of k
-    # routine
+    a_sigma = np.empty(shape=(0,2),dtype=float) #: array to store values and uncertainties of sigma
+    a_w = []
+
+    ## Fit Routine
     for obj, err in zip(sel_obj, sel_err):
+        # compute the fit
         pop, Dpop = new_kernel_fit(obj,err,initial_values=None,display_fig=display_plot,**kwargs)
         sigma = pop[1]
         Dsigma = Dpop[1]
-        if sigma > 0:
+        if sigma > 0:   #: check the goodness of the fit estimation
+            # store the values
             a_sigma = np.append(a_sigma,[[sigma,Dsigma]],axis=0)
-        # if Dsigma/sigma < 2 and sigma <= sigma0:
-        #     a_k = np.append(a_k,[[k,Dk]],axis=0)
-        #     a_sigma = np.append(a_sigma,[[sigma,Dsigma]],axis=0)
+            a_w += [obj.max()]
         del sigma, Dsigma
-    maxpos = a_sigma[:,0].argmax()
-    maxval, maxerr = a_sigma[maxpos]
-    discr = (a_sigma[:,0]-maxval)/maxerr
-    errpos = np.where(discr > 1)[0]
-    # if len(errpos) != 0 and len(errpos) != len(a_sigma[:,0]):
-    #     print(f'REMOVE - {errpos}')
-    #     a_sigma = np.delete(a_sigma,errpos,axis=0)
+    
+    ## Estimation
+    # check the presence of data
     if len(a_sigma) == 0: raise
     elif len(a_sigma) == 1: sigma, Dsigma = a_sigma[0]
     else:
         # computing the mean and STD
-        sigma, Dsigma = mean_n_std(a_sigma[:,0])
+        sigma, Dsigma = mean_n_std(a_sigma[:,0],weights=a_w)
+        # sigma, Dsigma = mean_n_std(a_sigma[:,0])
     print(f'\nsigma = {sigma:.5f} +- {Dsigma:.5f} -> {Dsigma/sigma*100:.2} %')
+    
+    ## Plotting
     # computing the kernel
-    kernel = Gaussian(sigma)
-    kernel = kernel.kernel(dim)
+    kernel = Gaussian(sigma).kernel()    
+    if results:
+        if 'title' not in kwargs:
+            kwargs['title'] = f'Estimated kernel\n$\\sigma = $ {sigma:.2} $\pm$ {Dsigma:.2}'
+        fast_image(kernel,**kwargs)
     
-    if 'title' not in kwargs:
-        kwargs['title'] = f'Estimated kernel\n$\\sigma = $ {sigma:.2} $\pm$ {Dsigma:.2}'
-    fast_image(kernel,**kwargs)
     return sigma, Dsigma
-    # if all_results:
-    #     return kernel, (a_sigma,a_k)
-    # else:
-    #     return kernel, (sigma,Dsigma)
 
 
-def LR_deconvolution(field: NDArray, kernel: NDArray, mean_val: float, iter: int = 10, sel: str = 'all', display_fig: bool = False, **kwargs) -> NDArray:
-    """Richardson-Lucy deconvolution algorithm
+def LR_deconvolution(field: NDArray, kernel: NDArray, mean_val: float, sigma: NDArray, max_iter: int | None = None, display_fig: bool = False, **kwargs) -> NDArray:
+    """To provide the Richardson-Lucy algorithm
 
-    :param field: the field
-    :type field: NDArray
-    :param kernel: estimated kernel
-    :type kernel: NDArray
-    :param back: estimated value of the background
-    :type back: float
-    :param noise: mean noise
-    :type noise: float
-    :param iter: number of iterations, defaults to 17
-    :type iter: int, optional
+    Parameters
+    ----------
+    field : NDArray
+        the field matrix
+    kernel : NDArray
+        the estimated psf kernel
+    mean_val : float
+        the mean value of background
+    sigma : NDArray
+        the uncertainty of each pixel
+    max_iter : int | None, default None 
+        the algorithm is recursive, then one can set an iterations limit to avoid `StackOverflow Error`
+    display_fig : bool, default False
+        parameter to display plots and figures
+
+    Returns
+    -------
+    rec_field : NDArray
+        the field after the recover procedure
     
-    :return: recostructed field
-    :rtype: NDArray
+    Notes
+    -----
+    The algorithm (see [1]_ and [2]_) provides `I = S @ P + N`
+
+        1. `I[r] = S[r] @ P`
+        2. `S[r+1] = S[r] * (I/I[r] @ P)`
+
+    `@` is the convolution operation
+
+    The routine stops when:
+        
+        3. `| int I[r+1] - I[r] | < sqrt(Var(N))` 
+
+    References
+    ----------
+    .. [1] L. B. Lucy, "An iterative technique for the rectification of observed distributions", 
+        ApJ, 79:745, June 1974. doi: 10.1086/111605. 
+
+    .. [2] W. H. Richardson, "Bayesian-based iterative method of image restoration", 
+        Journal of the Optical Society of America (1917-1983), 62(1):55, January 1972. 
     """
-    pos = np.where(field <= mean_val)
-    tmp_field = field[pos].copy()
-    n = np.mean(tmp_field)
-    Dn = np.sqrt(np.mean((tmp_field-n)**2))
-    
+    # import the package required to integrate and convolve
     from scipy.integrate import trapezoid
     from scipy.ndimage import convolve
-    from skimage.restoration import richardson_lucy
-    I = np.copy(field)
-    P = np.copy(kernel)
-    if sel == 'all' or 'mine' in sel:
-        Ir = lambda S: convolve(S,P)
-        Sr = lambda S,Ir: S * convolve(I/Ir,P)
 
-        r = 1
-        Ir0 = Ir(I)
-        Sr1 = Sr(I,Ir0)
+    ## Parameters    
+    Dn = sigma.std()        #: the variance root of the uncertainties
+    I = np.copy(field)      #: the field before recovery routine
+    P = np.copy(kernel)     #: the estimated kernel
+    #> define the two recursive functions of the algorithm
+    #> they compute the value of `I` and `S` respectively at
+    #> the iteration r 
+    Ir = lambda S: convolve(S, P, mode='constant', cval=mean_val)
+    Sr = lambda S,Ir: S * convolve(I/Ir, P, mode='constant', cval=mean_val)
+
+    ## Initialization
+    r = 1               #: number of iteration
+    Ir0 = Ir(I)         #: initial value for `I`
+    # compute the first step
+    Sr1 = Sr(I,Ir0)
+    Ir1 = Ir(Sr1)
+    # estimate the error
+    diff = abs(trapezoid(trapezoid(Ir1-Ir0)))
+    # print
+    print('Dn', Dn)
+    print(f'{r:03d}: - diff {diff}')
+    while diff > Dn:
+        r += 1
+        # store the previous values
+        Sr0 = Sr1
+        Ir0 = Ir1
+        # compute the next step
+        Sr1 = Sr(Sr0,Ir0)
         Ir1 = Ir(Sr1)
+        # estimate the error
         diff = abs(trapezoid(trapezoid(Ir1-Ir0)))
-        print('Dn', Dn)
-        print(f'{r:02d}: - diff {diff}')
-        while r < iter: #diff > Dn:
-            r += 1
-            Sr0 = Sr1
-            Ir0 = Ir1
-            Sr1 = Sr(Sr0,Ir0)
-            Ir1 = Ir(Sr1)
-            diff = abs(trapezoid(trapezoid(Ir1-Ir0)))
-            print(f'{r:02d}: - diff {diff}')
-        SrD = Sr(Sr1,Ir1)
-        if display_fig: fast_image(SrD,**kwargs)    
-        Sr = SrD
-    if sel == 'all' or 'rl' in sel:
-        Sr1 = richardson_lucy(I,P,iter)
-        if display_fig: fast_image(Sr1,**kwargs)   
-        Sr = Sr1
+        print(f'{r:03d}: - diff {diff}')
+        if max_iter is not None:    #: limit in iterations 
+            if r > max_iter: 
+                print(f'Routine stops due to the limit in iterations: {r} reached')
+                break
+    # store the result
+    rec_field = Sr(Sr1,Ir1)
+
+    ## Plotting
     if display_fig:
-        if sel == 'all':
-            fig, (ax1,ax2) = plt.subplots(1,2)
-            field_image(fig,ax1,SrD,**kwargs)
-            field_image(fig,ax2,Sr1,**kwargs)
-            plt.show()
-        if 'rl' in sel:
-            fig, (ax1,ax2) = plt.subplots(1,2)
-            fig.suptitle(f'RL recover - {iter} iterations')
-            ax1.set_title('Before')
-            field_image(fig,ax1,field,**kwargs)
-            ax2.set_title('After')
-            field_image(fig,ax2,Sr1,**kwargs)
-            plt.show()
-            kwargs['title'] = 'Image - mean value'
-            new_pic = Sr1-mean_val
-            fast_image(np.where(new_pic<0, 0, new_pic),**kwargs)    
-    return Sr
+        fast_image(rec_field,**kwargs)
+    return rec_field
 
 def mask_size(recover_field: NDArray, field: NDArray | None = None, display_fig: bool = False, **kwargs) -> int:
     tmp_field = recover_field.copy()
