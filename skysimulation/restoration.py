@@ -1,8 +1,39 @@
 """ 
 RESTORATION PACKAGE
--------------------
+===================
     This package provides all the methods to recover the field
 
+***
+
+::METHODS::
+-----------
+    - [x] **Background Estimation**
+    - [x] **Object Extraction**
+    - [x] **Kernel Fit**
+    - [x] **RL Algorithm**
+    - [] **Object Detector** 
+    - [] **Light Recovery**
+
+***
+
+!TO DO!
+-------
+    - [] Try to understand the meaning of weighted std and **find some references**
+    - [] Documentation
+    - [] Check the meaning of all actions
+    - [x] Add the exact uncertainties to the objects
+    - [] Look for a use of the [-1] size check 
+    - [] **Investigate better the different results for different seeds**
+    - [] **Understand the squared artifact due to RL**
+
+***
+    
+?WHAT ASK TO STEVE?
+-------------------
+    - [] ***What's the role of binning? Is mine correct or not?***
+    - [] *Is it good to use the brightness as a weight?*
+    - [] *Is it ok to use this method for the fit?*
+    - [] ***Is the RL output good?***
 """
 
 
@@ -12,15 +43,38 @@ import numpy as np
 from numpy.typing import NDArray,ArrayLike
 from scipy.signal import find_peaks
 from .display import fast_image, field_image
-from .field import Gaussian, N, Uniform, noise, NOISE_SEED
-from .field import K as field_const
+from .field import Gaussian, field_convolve, N, Uniform, noise, NOISE_SEED, DISTR
 
 
 
 class FuncFit():
+    """To compute the fit procedure of some data
 
+    Attributes
+    ----------
+    data : list[NDArray | None]
+        the x and y data and (if there are) their uncertanties
+    fit_par : NDArray | None
+        fit estimated parameters
+    fit_err : NDArray | None
+        uncertanties of `fit_par`
+    res : dict
+        it collects all the results  
+    """
     def __init__(self, xdata: Any, ydata: Any, yerr: Any = None, xerr: Any = None) -> None:
-        
+        """Constructor of the class
+
+        Parameters
+        ----------
+        xdata : Any
+            x data points
+        ydata : Any
+            y data points
+        yerr : Any, default None
+            if there is, the uncertainties of `ydata` 
+        xerr : Any, default None
+            if there is, the uncertainties of `xdata` 
+        """
         self.data = [xdata, ydata, yerr, xerr]
         self.fit_par: NDArray | None = None
         self.fit_err: NDArray | None = None
@@ -28,6 +82,15 @@ class FuncFit():
 
 
     def fit(self, method: Callable[[Any,Any],Any], initial_values: Sequence[Any],**kwargs) -> None:
+        """To compute the fit
+
+        Parameters
+        ----------
+        method : Callable[[Any,Any],Any]
+            the fit function
+        initial_values : Sequence[Any]
+            initial values
+        """
         # importing the function
         xdata, ydata = self.data[:2]
         sigma = self.data[2]
@@ -63,6 +126,13 @@ class FuncFit():
         self.res['chisq'] = (chisq, chi0)
     
     def infos(self, names: list[str] | None = None) -> None:
+        """To plot information about the fit
+
+        Parameters
+        ----------
+        names : list[str] | None, default None
+            list of fit parameters names
+        """
         pop  = self.fit_par
         Dpop = self.fit_err
         print('\nFit results:')
@@ -236,6 +306,11 @@ def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, 
         ratio = int(data.max()/data.min())
         # set the number of bins
         binning = ratio*10
+        # print information
+        print('\nBinning Results')
+        print('Number of pixels:', data.shape[0])
+        print('Magnitudes:', ratio)
+        print('Number of bins:', binning)
     
     ## Parameters Estimation
     # compute the histogram
@@ -284,170 +359,6 @@ def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, 
         plt.show()
 
     return mean_bkg, sigma_bkg
-
-
-def moving(direction: str, field: NDArray, index: tuple[int,int], back: float, size: int = 3, acc: float = 1e-5) -> list[int] | int:
-    """Looking in one direction
-
-    `direction` is a string and contains two parameters:
-
-      1. `'f'` or `'b'` mean forward or backward, respectively.
-      2. `'x'` or `'y'` mean horizontal or vertical direction, respectively.
-
-    It is also possible to combine different directions such as `'fxby'`
-    (combinations along same axis are not allowed) 
-
-    :param direction: selected direction
-    :type direction: str
-    :param field: the field
-    :type field: NDArray
-    :param index: the coordinates of the object
-    :type index: tuple[int,int]
-    :param size: maximum size of the object, defaults to 3
-    :type size: int, optional
-    
-    :return: the size of the object in different directions
-    :rtype: list[int]
-    """
-    print(f':: Results of moving() func for {direction} direction ::')
-    tmp_field = field.copy()
-    dim = len(tmp_field)
-    x, y = index    #: pixel coordinates
-    # size += 1
-    
-    results = []    #: list to store results
-    # inizializing the variable for the direction
-    #    1 : forward
-    #    0 : ignored
-    #   -1 : backward
-    xd = 0
-    yd = 0
-    # initializing the limits
-    xmax = x
-    ymax = y
-    # initializing the conditions on x and y 
-    xcond = lambda xval, xlim: True
-    ycond = lambda yval, ylim: True
-    
-    # forward along x
-    if 'fx' in direction:
-        print('hey')
-        # computing the edge
-        xmax = min(size, dim-1-x)
-        # impossible movement
-        if xmax == 0: 
-            results += [0]
-        # updating the condition on x
-        else: 
-            xd = 1
-            xcond = lambda xval, xlim: xval < xlim
-    # backward along x
-    elif 'bx' in direction:
-        # computing the edge
-        xmax = min(size, x)
-        # impossible movement
-        if xmax == 0: results += [0]
-        # updating the condition on x
-        else: 
-            xd = -1
-            xcond = lambda xval, xlim: xval < xlim 
-    
-    # forward along y
-    if 'fy' in direction:
-        # computing the edge
-        ymax = min(size, dim-1-y)
-        # impossible movement
-        if ymax == 0: results += [0]
-        # updating the condition on y
-        else: 
-            yd = 1
-            ycond = lambda yval, ylim: yval < ylim 
-    # backward along y
-    elif 'by' in direction:
-        # computing the edge
-        ymax = min(size, y)
-        # impossible movement
-        if ymax == 0: results += [0]
-        # updating the condition on y
-        else: 
-            yd = -1
-            ycond = lambda yval, ylim: yval < ylim 
-    
-    print('1 result',results)
-
-    # if there are no forbidden directions
-    if xd != 0 or yd != 0:
-        # inizilizing the variables for the size
-        xsize = 0
-        ysize = 0
-        condition = xcond(xsize,xmax) and ycond(ysize,ymax)
-        print(xcond(xsize,xmax),xmax)
-        # routine to compute the size
-        while condition:
-            # near pixels
-            step0 = tmp_field[x + xsize*xd, y + ysize*yd]
-            step1 = tmp_field[x + (xsize+1)*xd, y + (ysize+1)*yd]
-            if step0 == 0: 
-                print(f'Error:\n\tx,y = {x,y}\n\txd,yd = {xd},{yd}\n\txsize,ysize = {xsize},{ysize}\nstep1 = {step1}')
-                raise
-            grad = step1 - step0    #: gradient
-            ratio = step1/step0     #: ratio
-            # condition to stop
-            if step1 == 0 or step1 < back or (ratio - 1) > acc:
-                print('ratio',ratio)
-                print('grad and step',grad,step1)
-                print('size',xsize,ysize)
-                break
-            # condition to go on
-            else:
-                xsize += 1
-                ysize += 1
-                condition = xcond(xsize,xmax) and ycond(ysize,ymax)
-        # saving the results
-        if 'x' in direction and xd != 0: results = [xsize] + results
-        if 'y' in direction and yd != 0: results += [ysize]
-    
-    if len(results) == 1: results = results[0] 
-    print('2 result',results)
-    print(':: End ::')
-    return results
-
-def grad_check(field: NDArray, index: tuple[int,int], back: float, size: int = 7, acc: float = 1e-5) -> NDArray:
-    """Checking the gradient trend around an object
-
-    :param field: the field
-    :type field: NDArray
-    :param index: coordinates of the object
-    :type index: tuple[int,int]
-    :param size: the maximum size of the object, defaults to 3
-    :type size: int, optional
-    
-    :return: size of the object (x,y)
-    :rtype: tuple[NDArray,NDArray]
-    """
-    # defining method to move in a direction
-    mov = lambda val: moving(val,field,index,back,size=size,acc=acc)
-    # setting the diagonal directions
-    xy_dir = ['fxfy','fxby','bxfy','bxby'] 
-    a_xysize = np.array([mov(dir) for dir in xy_dir])
-    print(':: Resutls of grad_check() ::')
-    print('sizes',a_xysize)
-    # extracting resukts
-    xf_size = a_xysize[:2,0]
-    xb_size = a_xysize[2:,0]
-    yf_size = a_xysize[(0,2),1]
-    yb_size = a_xysize[(1,3),1]
-    # building a matrix of sizes
-    a_size = np.array([[[mov('fx'),*xf_size],
-                        [mov('bx'),*xb_size]],
-                       [[mov('fy'),*yf_size],
-                        [mov('by'),*yb_size]]])
-    print('matrix',a_size)
-    # taking the maxima
-    a_size = a_size.max(axis=2)
-    print(':: End ::')
-    return a_size
-
 
 def new_moving(direction: str, field: NDArray, index: tuple[int,int], back: float, size: int = 7, debug_check: bool = False) -> list[int] | int:
     """To compute the size in one direction
@@ -937,90 +848,6 @@ def object_isolation(field: NDArray, thr: float, sigma: NDArray, size: int = 5, 
     return obj, err, sel_pos
 
 
-
-# def kernel_fit(obj: NDArray, err: float | None = None, size_cut: int | None = 9, display_fig: bool = False, **kwargs) -> tuple[NDArray,NDArray]:
-#     """Estimating the sigma of the kernel
-
-#     :param obj: extracted objects
-#     :type obj: NDArray
-#     :param back: estimated value of the background
-#     :type back: float
-#     :param noise: mean noise value
-#     :type noise: float
-    
-#     :return: mean sigma of the kernel
-#     :rtype: float
-#     """
-#     # data need to be flattened 
-#     if size_cut is not None:
-#         if len(obj) > size_cut:
-#             cut = (len(obj)-size_cut)//2
-#             obj = np.copy(obj[cut:-cut,cut:-cut])
-#             del cut
-#     dim = len(obj)
-#     m = np.arange(dim)
-#     x, y = np.meshgrid(m,m)
-#     xmax, ymax = peak_pos(obj)  #: maximum value coordinates
-
-#     def fit_func(pos: tuple[NDArray,NDArray],*args) -> NDArray:
-#         """Gaussian model for the fit
-
-#         :param pos: coordinates (x,y)
-#         :type pos: tuple[NDArray,NDArray]
-
-#         :return: value of the gaussian
-#         :rtype: NDArray
-#         """
-#         x, y = pos
-#         k, sigma, index = args
-#         x0, y0 = index #xmax, ymax
-#         kernel = Gaussian(sigma)
-#         return k * kernel.value(x-x0)*kernel.value(y-y0)
-    
-#     # computing the error matrix
-#     if err is not None:
-#         err = np.full(obj.shape,err,dtype=float)
-#     # computing the fit
-#     sigma0 = 1
-#     print('sigma',sigma0)
-#     k0 = obj.max()
-#     initial_values = [k0,sigma0,(xmax,ymax)]
-#     xfit = np.vstack((x.ravel(),y.ravel()))
-#     yfit = obj.ravel()
-#     errfit = err.ravel() if err is not None else err
-#     fit = FuncFit(xdata=xfit[::-1],ydata=yfit)
-#     fit.pipeline(fit_func,initial_values,yerr=errfit,names=['k','sigma','index'])
-#     pop, Dpop = fit.results()   
-#     # extracting values
-#     k, sigma = pop
-#     Dk, Dsigma = Dpop
-#     print(f'\tDerivative: ')
-
-#     if display_fig:
-#         figsize = kwargs['figsize'] if 'figsize' in kwargs.keys() else None
-#         title = kwargs['title'] if 'title' in kwargs.keys() else ''
-#         fig, ax = plt.subplots(1,1,figsize=figsize)
-#         ax.set_title(title)
-#         field_image(fig,ax,obj)
-#         mm = np.linspace(m[0],m[-1],100)
-#         xx, yy = np.meshgrid(mm,mm)
-#         ax.contour(xx,yy,fit_func((xx,yy),*pop),colors='b',linestyles='dashed',alpha=0.7)
-#         # kwargs.pop('title')
-#         # kwargs.pop('figsize')
-#         if err is not None:
-#             plt.figure()
-#             plt.subplot(1,2,1)
-#             plt.title('On x axis')
-#             plt.errorbar(m,obj[xmax,:],yerr=err[xmax,:],fmt='.')
-#             plt.plot(mm,fit_func([xmax,mm],*pop))
-#             plt.subplot(1,2,2)
-#             plt.title('On y axis')
-#             plt.errorbar(m,obj[:,ymax],yerr=err[:,ymax],fmt='.')
-#             plt.plot(mm,fit_func([mm,ymax],*pop))
-#         plt.show()
-#     return pop, Dpop
-
-
 def new_kernel_fit(obj: NDArray, err: NDArray | None = None, initial_values: list[int] | None = None, display_fig: bool = False, **kwargs) -> tuple[NDArray,NDArray]:
     """To compute a gaussian fit for an object
 
@@ -1138,22 +965,6 @@ def new_kernel_fit(obj: NDArray, err: NDArray | None = None, initial_values: lis
 def kernel_estimation(extraction: list[NDArray], errors: list[NDArray], dim: int, selected: slice = slice(None), results: bool = True, display_plot: bool = False, **kwargs) -> tuple[float, float]:
     """To estimate the parameters of gaussian kernel
 
-    :param extraction: extracted objects
-    :type extraction: list[NDArray]
-    :param back: estimated value of the background
-    :type back: float
-    :param noise: mean noise
-    :type noise: float
-    :param dim: size of the kernel
-    :type dim: int
-    :param display_plot: if `True` pictures are shown, defaults to False
-    :type display_plot: bool, optional
-    :param all_results: if `True` additional results are returned, defaults to False
-    :type all_results: bool, optional
-    
-    :return: kernel (and sigma with the error)
-    :rtype: NDArray | tuple[NDArray,tuple[float,float]]
-
     Parameters
     ----------
     extraction : list[NDArray]
@@ -1213,7 +1024,7 @@ def kernel_estimation(extraction: list[NDArray], errors: list[NDArray], dim: int
     return sigma, Dsigma
 
 
-def LR_deconvolution(field: NDArray, kernel: NDArray, mean_val: float, sigma: NDArray, max_iter: int | None = None, display_fig: bool = False, **kwargs) -> NDArray:
+def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: float, sigma_bkg: float, max_iter: int | None = None, display_fig: bool = False, **kwargs) -> NDArray:
     """To provide the Richardson-Lucy algorithm
 
     Parameters
@@ -1259,17 +1070,34 @@ def LR_deconvolution(field: NDArray, kernel: NDArray, mean_val: float, sigma: ND
     """
     # import the package required to integrate and convolve
     from scipy.integrate import trapezoid
-    from scipy.ndimage import convolve
+    from scipy.signal import convolve2d
+    # from scipy.ndimage import convolve
+
+    # def convolve(arr: NDArray, ker: NDArray) -> NDArray:
+    #     bkg = Gaussian(sigma=sigma_bkg, mu=mean_bkg)
+    #     pad_size = int(4*kernel.sigma)
+    #     ext_arr = np.pad(arr,pad_size,mode='constant')
+    #     mask = np.where(ext_arr == 0)
+    #     pad_shape = ext_arr[mask].shape
+    #     if len(pad_shape) == 1: 
+    #         pad_shape = pad_shape[0] 
+    #     ext_arr[mask] = bkg.field(pad_shape)
+    #     conv_arr = convolve2d(ext_arr, ker, mode='same', boundary='fill', fillvalue=mean_bkg)
+    #     edges = slice(pad_size, -pad_size)
+    #     return conv_arr[edges, edges]
 
     ## Parameters    
     Dn = sigma.std()        #: the variance root of the uncertainties
-    I = np.copy(field)      #: the field before recovery routine
-    P = np.copy(kernel)     #: the estimated kernel
+    I = np.copy(field)     #: the field before recovery routine
+    P = np.copy(kernel.kernel())     #: the estimated kernel
+    bkg = Gaussian(sigma_bkg, mean_bkg)
     #> define the two recursive functions of the algorithm
-    #> they compute the value of `I` and `S` respectively at
-    #> the iteration r 
-    Ir = lambda S: convolve(S, P, mode='constant', cval=mean_val)
-    Sr = lambda S,Ir: S * convolve(I/Ir, P, mode='constant', cval=mean_val)
+    #.. they compute the value of `I` and `S` respectively at
+    #.. the iteration r 
+    # Ir = lambda S: convolve(S, P)
+    # Sr = lambda S,Ir: S * convolve(I/Ir, P)
+    Ir = lambda S: field_convolve(S, P, bkg)
+    Sr = lambda S,Ir: S * field_convolve(I/Ir, P, bkg)
 
     ## Initialization
     r = 1               #: number of iteration
@@ -1303,38 +1131,36 @@ def LR_deconvolution(field: NDArray, kernel: NDArray, mean_val: float, sigma: ND
     ## Plotting
     if display_fig:
         fast_image(rec_field,**kwargs)
+        fast_image(rec_field, norm='log',**kwargs)
     return rec_field
 
 def mask_size(recover_field: NDArray, field: NDArray | None = None, display_fig: bool = False, **kwargs) -> int:
     tmp_field = recover_field.copy()
     dim = len(tmp_field)
     size = 0
-    cond = np.array([False]*4)
-    diff = np.zeros(4)
-    for i in range(dim-1):
-        if not cond[0]: 
-            diff[0] = tmp_field[i+1,i+1] - tmp_field[i,i]
-        if not cond[1]: 
-            diff[1] = tmp_field[dim-1-i-1,dim-1-i-1] - tmp_field[dim-1-i,dim-1-i]
-        if not cond[2]: 
-            diff[2] = tmp_field[i+1,dim-1-i-1] - tmp_field[i,dim-1-i]
-        if not cond[3]: 
-            diff[3] = tmp_field[dim-1-i-1,i+1] - tmp_field[dim-1-i,i]
-        cond = diff <= 0
-        if all(cond): 
-            size = i
-            break
+    methods = lambda i : np.array([ 1 if tmp_field[i+1,i+1] - tmp_field[i,i] > 0 else 0,
+                                    1 if tmp_field[dim-1-i-1,dim-1-i-1] - tmp_field[dim-1-i,dim-1-i] > 0 else 0,
+                                    1 if tmp_field[i+1,dim-1-i-1] - tmp_field[i,dim-1-i] > 0 else 0,
+                                    1 if tmp_field[dim-1-i-1,i+1] - tmp_field[dim-1-i,i] > 0 else 0
+                                  ])
+    i = 0
+    diff = methods(i)
+    while diff.sum() != 0: 
+        diff[diff != 0] = methods(i)[diff != 0]
+        i += 1
+    size = i
     print('Lim Cut',size)
     size0 = size
-    diff = np.zeros((4,dim-size-1))
-    for i in range(size+1,dim-1):
-        diff[0] = tmp_field[size+1:,i+1] - tmp_field[size+1:,i]
-        diff[1] = tmp_field[size+1:,dim-1-i-1] - tmp_field[size+1:,dim-1-i]
-        diff[2] = tmp_field[i+1,size+1:] - tmp_field[i,size+1:]
-        diff[3] = tmp_field[dim-1-i-1,size+1:] - tmp_field[dim-1-i,size+1:]
-        if diff.max() >= 0:
-            size = 4*i//3
-            break
+    methods = lambda i : np.array([ tmp_field[size+1:,i+1] - tmp_field[size+1:,i],
+                                    tmp_field[size+1:,dim-1-i-1] - tmp_field[size+1:,dim-1-i],
+                                    tmp_field[i+1,size+1:] - tmp_field[i,size+1:],
+                                    tmp_field[dim-1-i-1,size+1:] - tmp_field[dim-1-i,size+1:]
+                                  ]).max()
+    i = size + 1
+    while methods(i) < 0: 
+        i += 1
+    size = i 
+    # size = 4*i//3 
     print('Lim Cut',size)
     if display_fig:
         if field is not None:
@@ -1447,7 +1273,7 @@ def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: flo
             rej += [i]
             rej_pos = np.append(rej_pos,[[x],[y]],axis=1) 
         else:
-            a_size = grad_check(tmp_field,(x,y),mean_val,size=size,acc=acc)
+            a_size = new_grad_check(tmp_field,(x,y),mean_val,size=size)
             xu, xd, yu, yd = a_size.flatten()
             xr = slice(x-xd, x+xu+1) 
             yr = slice(y-yd, y+yu+1)
@@ -1494,7 +1320,7 @@ def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: flo
     while peak > mean_val:
         x,y = index
         pos = np.append(pos,[[x],[y]],axis=1)
-        a_size = grad_check(tmp_field,index,mean_val,size=size,acc=acc)
+        a_size = new_grad_check(tmp_field,index,mean_val,size=size)
         xu, xd, yu, yd = a_size.flatten()
         xr = slice(x-xd, x+xu+1) 
         yr = slice(y-yd, y+yu+1)
