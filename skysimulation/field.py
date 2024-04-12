@@ -1,5 +1,5 @@
 import os
-from typing import Any
+from typing import Any, Sequence
 import numpy as np
 from numpy.typing import NDArray
 import matplotlib.pyplot as plt
@@ -115,6 +115,9 @@ class Gaussian():
         self.mu = mu            #: the mean 
         self.sigma = sigma      #: the root of the variance
     
+    def mean(self) -> float:
+        return self.mu
+
     def info(self) -> None:
         """Printing the information about the distribution
         """
@@ -180,7 +183,7 @@ class Gaussian():
         :rtype: NDArray
         """
         # kernel must have a odd size
-        dim = 5*self.sigma + 1
+        dim = 8*self.sigma + 1
         if self.mu is None:
             self.mu = dim // 2
         # generating coordinates
@@ -191,7 +194,7 @@ class Gaussian():
         kernel = self.value(r)
         return kernel / kernel.sum()
 ##? -- -- -- -- -- -- -- -- -- -- ?##    
-    def field(self, dim: int, seed: int | None = None) -> NDArray:
+    def field(self, shape: int | Sequence[int], seed: int | None = None) -> NDArray:
         """To compute a matrix of Gaussian distributed values
 
         Function draws values from a Gaussian distribution
@@ -222,7 +225,7 @@ class Gaussian():
         # construct a random generator
         rng = np.random.default_rng(seed=seed)
         # draw values from normal distribution
-        return rng.normal(mu,sigma,size=(dim,dim))
+        return rng.normal(mu,sigma,size=shape)
 
 class Uniform():
     """Uniform distribution
@@ -238,29 +241,36 @@ class Uniform():
         self.max = maxval
         self.min = minval
 
+    def mean(self) -> float:
+        return (self.max - self.min)/2
+
     def info(self) -> None:
         print('Uniform distribution')
         print(f'minval:\t{self.min}')
         print(f'maxval:\t{self.max}')
 
-    def field(self, dim: int, seed: int | None = None) -> NDArray:
+    def field(self, shape: int | Sequence[int], seed: int | None = None) -> NDArray:
         n = self.max
         rng = np.random.default_rng(seed=seed)
-        return rng.uniform(self.min,n,size=(dim,dim))
+        return rng.uniform(self.min,n,size=shape)
 
 class Poisson():
     def __init__(self,lam: float, k: float = 1) -> None:
         self.lam = lam
         self.k = k
 
+    def mean(self) -> float:
+        return self.lam
+
     def info(self) -> None:
         print('Poisson distribution')
         print(f'lambda:\t{self.lam}')
 
-    def field(self, dim: int, seed: int | None = None) -> NDArray:
+    def field(self, shape: int | Sequence[int], seed: int | None = None) -> NDArray:
         rng = np.random.default_rng(seed = seed)
-        return self.k * rng.poisson(self.lam,size=(dim,dim))
+        return self.k * rng.poisson(self.lam,size=shape)
         
+DISTR = Gaussian | Uniform | Poisson
 
 def from_parms_to_distr(params: tuple[str, float] | tuple[str, tuple], infos: bool = False) -> Gaussian | Uniform:
     """To get from input parameter the chosen distribution
@@ -291,6 +301,47 @@ def from_parms_to_distr(params: tuple[str, float] | tuple[str, tuple], infos: bo
     if infos:
         distr.info()
     return distr
+
+def field_convolve(field: NDArray, kernel: NDArray, bkg: DISTR, norm_cost: float = 1) -> NDArray:
+    """To convolve the field with a kernel
+
+    Parameters
+    ----------
+    field : NDArray
+        field matrix
+    kernel : NDArray
+        kernel to provide convolution
+    bkg : DISTR
+        background distribution
+
+    Returns
+    -------
+    conv_field : NDArray
+        field convolved with the kernel
+    
+    See also
+    --------
+    scipy.signal.convolve2d : 2-D convolution
+
+    Notes
+    -----
+
+    """
+    from scipy.signal import convolve2d    
+    dim = len(field)                        #: size of the field
+    pad_size = (len(kernel)-1) // 2         #: number of pixels to pad the field
+    pad_dim = dim + 2*pad_size              #: new size of the board
+    pad_slice = slice(pad_size,-pad_size)   #: field size cut
+    # start from a board with only background 
+    tmp_field = bkg.field(shape=(pad_dim,pad_dim)) * norm_cost
+    # put the field
+    tmp_field[pad_slice,pad_slice] = field.copy()
+    # convolve
+    conv_field = convolve2d(tmp_field, kernel, mode='same',boundary='fill',fillvalue=bkg.mean()*norm_cost)
+    # cut the field
+    return conv_field[pad_slice,pad_slice]
+
+
 
 ### STANDARD VALUES
 # MSOL = 1.989e+33 # g
@@ -437,7 +488,7 @@ def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m
     return F, S
 
 
-def atm_seeing(field: NDArray, sigma: float = SEEING_SIGMA, cut: int = 7, bkg: Any | None = None, bkg_seed: int | None = BACK_SEED, display_fig: bool = False, **kwargs) -> NDArray:
+def atm_seeing(field: NDArray, sigma: float = SEEING_SIGMA, pad_num: int = 2, bkg: DISTR | None = None, bkg_seed: int | None = BACK_SEED, display_fig: bool = False, **kwargs) -> NDArray:
     """Atmosferic seeing function
     It convolves the field with tha Gaussian to
     make the atmosferic seeing
@@ -450,26 +501,17 @@ def atm_seeing(field: NDArray, sigma: float = SEEING_SIGMA, cut: int = 7, bkg: A
     :return: field matrix with seeing
     :rtype: NDArray
     """
-    dim = len(field)
-    tmp_field = field.copy()
-    if cut is not None:
-        tmp_field = noise(bkg, dim=(dim+2*cut), seed=bkg_seed)
-        cut = slice(cut,-cut)
-        tmp_field[cut,cut] = field.copy()
-    from astropy.convolution import convolve_fft, Gaussian2DKernel
-    see_field = convolve_fft(tmp_field, Gaussian2DKernel(sigma))
+    kernel = Gaussian(sigma).kernel()
+    see_field = field_convolve(field, kernel, bkg, norm_cost=K)
     if display_fig:
         if 'title' not in kwargs:
             kwargs['title'] = 'Atmospheric Seeing '
-        if cut is not None:
-            fast_image(see_field[cut,cut],**kwargs)
-        else:
-            fast_image(see_field,**kwargs)
+        fast_image(see_field,**kwargs)
     # checking the field and returning it
-    return see_field[cut,cut] if cut is not None else see_field
+    return see_field
 
 
-def noise(distr: Gaussian | Uniform | Poisson, dim: int = N, seed: int | None = None, display_fig: bool = False, **kwargs) -> NDArray:
+def noise(distr: DISTR, dim: int = N, seed: int | None = None, display_fig: bool = False, **kwargs) -> NDArray:
     """Noise generator
     It generates a (dim,dim) matrix of noise, using
     an arbitrary maximum intensity n.
@@ -482,7 +524,7 @@ def noise(distr: Gaussian | Uniform | Poisson, dim: int = N, seed: int | None = 
     :return: noise matrix
     :rtype: NDArray
     """
-    n = distr.field(dim, seed=seed)
+    n = distr.field(shape=(dim,dim), seed=seed)
     if display_fig:
         fast_image(n,**kwargs)
         plt.figure()
@@ -494,7 +536,7 @@ def noise(distr: Gaussian | Uniform | Poisson, dim: int = N, seed: int | None = 
     return n * K
 
 
-def add_effects(F: NDArray, background: Any, back_seed: int | None, atm_param: tuple[str, float], cut: int | None, det_noise: Any, det_seed: int | None, i: int, display_fig: bool = False, **kwargs):
+def add_effects(F: NDArray, background: Any, back_seed: int | None, atm_param: tuple[str, float], pad_num: int | None, det_noise: Any, det_seed: int | None, i: int, display_fig: bool = False, **kwargs):
     dim = len(F)
     # background
     kwargs['title'] = 'Background'
@@ -507,7 +549,7 @@ def add_effects(F: NDArray, background: Any, back_seed: int | None, atm_param: t
     if atm_param[0] == 'Gaussian':
         sigma = atm_param[1]
         kwargs['title'] = 'Atmospheric Seeing'
-        F_bs = atm_seeing(F_b,sigma,cut=cut,bkg=background,bkg_seed=back_seed,display_fig=display_fig,**kwargs)
+        F_bs = atm_seeing(F_b,sigma,pad_num=pad_num,bkg=background,bkg_seed=back_seed,display_fig=display_fig,**kwargs)
     # detector
     kwargs['title'] = 'Detector noise'
     n_d = noise(det_noise,dim,seed=det_seed,display_fig=display_fig,**kwargs)
@@ -533,7 +575,7 @@ def add_effects(F: NDArray, background: Any, back_seed: int | None, atm_param: t
     return F_bsd
 
 
-def field_builder(acq_num: int = 3, dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, cut: int | None = 7, back_param: tuple[str, float | tuple] = BACK_PARAM, back_seed: int | None = BACK_SEED, det_param: tuple[str, float | tuple] = NOISE_PARAM, det_seed: int | None = NOISE_SEED, overlap: bool = False, seed: tuple[int,int] = (M_SEED, POS_SEED), iteration: int = 3, results: bool = True, display_fig: bool = False, **kwargs) -> list[Star | NDArray] | list[Star | NDArray | list[NDArray]]:
+def field_builder(acq_num: int = 3, dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, pad_num: int | None = 4, back_param: tuple[str, float | tuple] = BACK_PARAM, back_seed: int | None = BACK_SEED, det_param: tuple[str, float | tuple] = NOISE_PARAM, det_seed: int | None = NOISE_SEED, overlap: bool = False, seed: tuple[int,int] = (M_SEED, POS_SEED), iteration: int = 3, results: bool = True, display_fig: bool = False, **kwargs) -> list[Star | NDArray] | list[Star | NDArray | list[NDArray]]:
     """Constructor of the field
 
     :param dim: size of the field, defaults to N
@@ -583,7 +625,7 @@ def field_builder(acq_num: int = 3, dim: int = N, stnum: int = M, masses: tuple[
         seeds_gen = np.random.default_rng(det_seed)
         det_seed = seeds_gen.integers(maxsize,size=acq_num)
         del seeds_gen
-    lights = [ add_effects(F.copy(), background, back_seed[i], atm_param, cut, det_noise, det_seed[i], i, display_fig=display_fig, **kwargs) for i in range(acq_num)]
+    lights = [ add_effects(F.copy(), background, back_seed[i], atm_param, pad_num, det_noise, det_seed[i], i, display_fig=display_fig, **kwargs) for i in range(acq_num)]
 
     from .restoration import mean_n_std
     master_light, std_light = mean_n_std(lights, axis=0)
