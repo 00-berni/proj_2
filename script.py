@@ -39,7 +39,7 @@ def pipeline(*args,**kwargs) -> dict[str, fld.Any]:
     print(f'SIGMA = {m_sigma} +- {s_sigma}')
     # plot it
     if kwargs['results']:
-        dpl.fast_image(sci_frame,'Scientific Frame')
+        dpl.fast_image(sci_frame,'Scientific Frame',norm='log')
 
     ### RESTORING
     # compute the average dark value
@@ -54,8 +54,47 @@ def pipeline(*args,**kwargs) -> dict[str, fld.Any]:
     ker_sigma, ker_Dsigma = rst.kernel_estimation(objs, errs, len(sci_frame), display_plot=False,**kwargs)
 
     ## R-L
-    kernel = fld.Gaussian(ker_sigma).kernel()
-    rec_field = rst.LR_deconvolution(sci_frame,kernel,mean_bkg,sigma,display_fig=True)
+    from astropy.convolution import Gaussian2DKernel
+    kernel = fld.Gaussian(ker_sigma)
+    # kernel = Gaussian2DKernel(ker_sigma)
+    rec_field = rst.LR_deconvolution(sci_frame,kernel,sigma, mean_bkg, sigma_bkg,display_fig=True)
+
+    dim = len(rec_field)
+    cut0 = int(kernel.sigma)
+    cut1 = int(kernel.sigma * 2)
+    cut2 = int(kernel.sigma * 4)
+
+    fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(2,2)
+    dpl.field_image(fig,ax1,rec_field[-20:,:20])
+    dpl.field_image(fig,ax2,rec_field[-20:,-20:])
+    dpl.field_image(fig,ax3,rec_field[:20,:20])
+    dpl.field_image(fig,ax4,rec_field[:20,-20:])
+    ax3.axhline(cut0,0,1,color='orange')
+    ax3.axhline(cut1,0,1,color='blue')
+    ax3.axhline(cut2,0,1,color='green')
+    ax3.axvline(cut0,0,1,color='orange')
+    ax3.axvline(cut1,0,1,color='blue')
+    ax3.axvline(cut2,0,1,color='green')
+
+    fig1, ax = plt.subplots(1,1)
+    dpl.field_image(fig1,ax,rec_field)
+    ax.plot([cut0,dim-cut0,dim-cut0,cut0,cut0],[cut0,cut0,dim-cut0,dim-cut0,cut0],color='orange')
+    ax.plot([cut1,dim-cut1,dim-cut1,cut1,cut1],[cut1,cut1,dim-cut1,dim-cut1,cut1],color='blue')
+    ax.plot([cut2,dim-cut2,dim-cut2,cut2,cut2],[cut2,cut2,dim-cut2,dim-cut2,cut2],color='green')
+    plt.show()
+
+    cut = slice(cut1+1,-cut1-1)
+    cut_field = rec_field[cut,cut]
+    dpl.fast_image(cut_field)
+    fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(2,2)
+    dpl.field_image(fig,ax1,cut_field[-20:,:20])
+    dpl.field_image(fig,ax2,cut_field[-20:,-20:])
+    dpl.field_image(fig,ax3,cut_field[:20,:20])
+    dpl.field_image(fig,ax4,cut_field[:20,-20:])
+    plt.show()
+
+    ## Light Recovery
+    # _ = rst.mask_filter(rec_field,sci_frame,True)
 
     ### STUFF
     results = {}
@@ -72,6 +111,10 @@ mass_seed = fld.M_SEED
 pos_seed  = fld.POS_SEED
 bkg_seed  = fld.BACK_SEED
 det_seed  = fld.NOISE_SEED
+# mass_seed = None
+# pos_seed  = None
+# bkg_seed  = None
+# det_seed  = None
 
 default_res = pipeline(mass_seed, pos_seed, bkg_seed, det_seed,results=True)
 
