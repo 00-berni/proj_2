@@ -1,3 +1,25 @@
+""" 
+FIELD PACKAGE
+=============
+    This package provides all the methods to generate the field
+
+***
+
+::METHODS::
+-----------
+
+***
+
+!TO DO!
+-------
+    - [] **Implement a class `Field` to collect all the methods**
+
+***
+    
+?WHAT ASK TO STEVE?
+-------------------
+"""
+
 import os
 from typing import Any, Sequence
 import numpy as np
@@ -302,6 +324,33 @@ def from_parms_to_distr(params: tuple[str, float] | tuple[str, tuple], infos: bo
         distr.info()
     return distr
 
+def pad_field(field: NDArray, pad_size: int, bkg: DISTR, norm_cost: float = 1) -> NDArray:
+    """To generate a frame of background values around the field
+
+    Parameters
+    ----------
+    field : NDArray
+        initial field matrix
+    pad_size : int
+        pixel width of the frame
+    bkg : DISTR
+        true/estimated background distribution
+    norm_cost : float, default 1
+        normalization constant for the values drwan from 
+        background distribution
+
+    Returns
+    -------
+    new_field : NDArray
+        the field with the frame
+    """
+    # make a frame with negative numbers around the field
+    new_field = np.pad(field, pad_size,'constant',constant_values=-1)
+    # substitute negative numbers with values drawn from background distribution
+    frame = new_field[new_field < 0]
+    new_field[new_field < 0] = bkg.field(frame.shape)*norm_cost
+    return new_field
+
 def field_convolve(field: NDArray, kernel: NDArray, bkg: DISTR, norm_cost: float = 1) -> NDArray:
     """To convolve the field with a kernel
 
@@ -327,18 +376,14 @@ def field_convolve(field: NDArray, kernel: NDArray, bkg: DISTR, norm_cost: float
     -----
 
     """
-    from scipy.signal import convolve2d    
-    dim = len(field)                        #: size of the field
+    from scipy.signal import fftconvolve   
     pad_size = (len(kernel)-1) // 2         #: number of pixels to pad the field
-    pad_dim = dim + 2*pad_size              #: new size of the board
-    pad_slice = slice(pad_size,-pad_size)   #: field size cut
-    # start from a board with only background 
-    tmp_field = bkg.field(shape=(pad_dim,pad_dim)) * norm_cost
-    # put the field
-    tmp_field[pad_slice,pad_slice] = field.copy()
+    pad_slice = slice(pad_size, -pad_size)  #: frame cut
+    # pad the field to avoid edge artifacts after convolution
+    tmp_field = pad_field(field, pad_size, bkg, norm_cost=norm_cost)
     # convolve
-    conv_field = convolve2d(tmp_field, kernel, mode='same',boundary='fill',fillvalue=bkg.mean()*norm_cost)
-    # cut the field
+    conv_field = fftconvolve(tmp_field, kernel, mode='same')
+    # cut and remove the frame
     return conv_field[pad_slice,pad_slice]
 
 
@@ -501,7 +546,8 @@ def atm_seeing(field: NDArray, sigma: float = SEEING_SIGMA, pad_num: int = 2, bk
     :return: field matrix with seeing
     :rtype: NDArray
     """
-    kernel = Gaussian(sigma).kernel()
+    kernel = Gaussian(sigma).kernel()   #: estimated kernel
+    # convolve with the kernel
     see_field = field_convolve(field, kernel, bkg, norm_cost=K)
     if display_fig:
         if 'title' not in kwargs:
