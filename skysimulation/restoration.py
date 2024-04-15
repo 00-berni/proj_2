@@ -24,16 +24,25 @@ RESTORATION PACKAGE
     - [x] Add the exact uncertainties to the objects
     - [] Look for a use of the [-1] size check 
     - [] **Investigate better the different results for different seeds**
-    - [] **Understand the squared artifact due to RL**
+    - [x] ~**Understand the squared artifact due to RL**~
+          > They were convolution artifacts. I solved them padding the field before the routine
+    - [] **Does padding the field before routine add some addition light?**
+    - [] **Find a better way to extract objects**
 
 ***
     
 ?WHAT ASK TO STEVE?
 -------------------
-    - [] ***What's the role of binning? Is mine correct or not?***
-    - [] *Is it good to use the brightness as a weight?*
-    - [] *Is it ok to use this method for the fit?*
-    - [] ***Is the RL output good?***
+    - [x] ***What's the role of binning? Is mine correct or not?***
+          > Don't do the histogram, but a bar plot. You can do it also
+            reducing data through grid (2x2 or 3x3 ...)
+    - [x] *Is it good to use the brightness as a weight?*
+          > Yes is a good choice
+    - [] *Is it ok to use this method for the fit?*  
+    - [x] ***Is the RL output good?***
+          > No. You have to prevent the RL to touch the edge  
+    - [x] ***After RL dec is taking the std of noise as error of each pixel good choice?***
+          > (I_r - I_r-1) / (I_r + I_r-1)/2 
 """
 
 
@@ -43,7 +52,7 @@ import numpy as np
 from numpy.typing import NDArray,ArrayLike
 from scipy.signal import find_peaks
 from .display import fast_image, field_image
-from .field import Gaussian, field_convolve, N, Uniform, noise, NOISE_SEED, DISTR
+from .field import Gaussian, pad_field, N, Uniform, noise, NOISE_SEED, DISTR
 
 
 
@@ -1004,13 +1013,14 @@ def kernel_estimation(extraction: list[NDArray], errors: list[NDArray], dim: int
         del sigma, Dsigma
     
     ## Estimation
-    # check the presence of data
+    # check the results
     if len(a_sigma) == 0: raise
     elif len(a_sigma) == 1: sigma, Dsigma = a_sigma[0]
     else:
-        # computing the mean and STD
-        sigma, Dsigma = mean_n_std(a_sigma[:,0],weights=a_w)
-        # sigma, Dsigma = mean_n_std(a_sigma[:,0])
+        # computing the harmonic mean and STD
+        s, Ds = mean_n_std(1/(a_sigma[:,0])**2,weights=a_w)
+        sigma = np.sqrt(1/s)
+        Dsigma = Ds/s * sigma / 2
     print(f'\nsigma = {sigma:.5f} +- {Dsigma:.5f} -> {Dsigma/sigma*100:.2} %')
     
     ## Plotting
@@ -1068,40 +1078,29 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
     .. [2] W. H. Richardson, "Bayesian-based iterative method of image restoration", 
         Journal of the Optical Society of America (1917-1983), 62(1):55, January 1972. 
     """
-    # import the package required to integrate and convolve
+    # import the package required to integrate
     from scipy.integrate import trapezoid
-    from scipy.signal import convolve2d
-    # from scipy.ndimage import convolve
-
-    # def convolve(arr: NDArray, ker: NDArray) -> NDArray:
-    #     bkg = Gaussian(sigma=sigma_bkg, mu=mean_bkg)
-    #     pad_size = int(4*kernel.sigma)
-    #     ext_arr = np.pad(arr,pad_size,mode='constant')
-    #     mask = np.where(ext_arr == 0)
-    #     pad_shape = ext_arr[mask].shape
-    #     if len(pad_shape) == 1: 
-    #         pad_shape = pad_shape[0] 
-    #     ext_arr[mask] = bkg.field(pad_shape)
-    #     conv_arr = convolve2d(ext_arr, ker, mode='same', boundary='fill', fillvalue=mean_bkg)
-    #     edges = slice(pad_size, -pad_size)
-    #     return conv_arr[edges, edges]
+    from scipy.signal import fftconvolve
 
     ## Parameters    
-    Dn = sigma.std()        #: the variance root of the uncertainties
-    I = np.copy(field)     #: the field before recovery routine
-    P = np.copy(kernel.kernel())     #: the estimated kernel
-    bkg = Gaussian(sigma_bkg, mean_bkg)
-    #> define the two recursive functions of the algorithm
+    Dn = sigma.std()                        #: the variance root of the uncertainties
+    P = np.copy(kernel.kernel())            #: the estimated kernel
+    bkg = Gaussian(sigma_bkg, mean_bkg)     #: estimated background distribution
+    # define the two recursive functions of the algorithm
     #.. they compute the value of `I` and `S` respectively at
     #.. the iteration r 
-    # Ir = lambda S: convolve(S, P)
-    # Sr = lambda S,Ir: S * convolve(I/Ir, P)
-    Ir = lambda S: field_convolve(S, P, bkg)
-    Sr = lambda S,Ir: S * field_convolve(I/Ir, P, bkg)
+    Ir = lambda S: fftconvolve(S, P, 'same')
+    Sr = lambda S,Ir: S * fftconvolve(I/Ir, P, 'same')
+    # pad the field before convolutions
+    #.. the field is put in a frame filled by drawing values 
+    #.. from `bkg` distribution
+    pad_size = (len(P)-1) // 2              #: number of pixels to pad the field
+    pad_slice = slice(pad_size,-pad_size)   #: field size cut
+    I = pad_field(field, pad_size, bkg)
 
-    ## Initialization
+    ## RL Algorithm
     r = 1               #: number of iteration
-    Ir0 = Ir(I)         #: initial value for `I`
+    Ir0 = Ir(I)         #: initial value for I
     # compute the first step
     Sr1 = Sr(I,Ir0)
     Ir1 = Ir(Sr1)
@@ -1125,287 +1124,36 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
             if r > max_iter: 
                 print(f'Routine stops due to the limit in iterations: {r} reached')
                 break
-    # store the result
-    rec_field = Sr(Sr1,Ir1)
+    # store the result and remove the added frame
+    rec_field = Sr(Sr1,Ir1)[pad_slice,pad_slice]
 
     ## Plotting
     if display_fig:
         fast_image(rec_field,**kwargs)
         fast_image(rec_field, norm='log',**kwargs)
+    
     return rec_field
 
-def mask_size(recover_field: NDArray, field: NDArray | None = None, display_fig: bool = False, **kwargs) -> int:
-    tmp_field = recover_field.copy()
-    dim = len(tmp_field)
-    size = 0
-    methods = lambda i : np.array([ 1 if tmp_field[i+1,i+1] - tmp_field[i,i] > 0 else 0,
-                                    1 if tmp_field[dim-1-i-1,dim-1-i-1] - tmp_field[dim-1-i,dim-1-i] > 0 else 0,
-                                    1 if tmp_field[i+1,dim-1-i-1] - tmp_field[i,dim-1-i] > 0 else 0,
-                                    1 if tmp_field[dim-1-i-1,i+1] - tmp_field[dim-1-i,i] > 0 else 0
-                                  ])
-    i = 0
-    diff = methods(i)
-    while diff.sum() != 0: 
-        diff[diff != 0] = methods(i)[diff != 0]
-        i += 1
-    size = i
-    print('Lim Cut',size)
-    size0 = size
-    methods = lambda i : np.array([ tmp_field[size+1:,i+1] - tmp_field[size+1:,i],
-                                    tmp_field[size+1:,dim-1-i-1] - tmp_field[size+1:,dim-1-i],
-                                    tmp_field[i+1,size+1:] - tmp_field[i,size+1:],
-                                    tmp_field[dim-1-i-1,size+1:] - tmp_field[dim-1-i,size+1:]
-                                  ]).max()
-    i = size + 1
-    while methods(i) < 0: 
-        i += 1
-    size = i 
-    # size = 4*i//3 
-    print('Lim Cut',size)
-    if display_fig:
-        if field is not None:
-            fig, (ax1,ax2) = plt.subplots(1,2)
-            field_image(fig,ax1,field,colorbar=False)
-            ax1.axhline(size0,0,1,color='red',label='size0')
-            ax1.axhline(4*size0//3,0,1,color='orange',label='1/3')
-            ax1.axhline(size,0,1,label='size')
-            ax1.axhline(dim-1-size,0,1)
-            ax1.axvline(size,0,1)
-            ax1.axvline(dim-1-size,0,1)
-            field_image(fig,ax2,tmp_field)
-            ax2.axhline(size0,0,1,color='red',label='size0')
-            ax2.axhline(4*size0//3,0,1,color='orange',label='1/3')
-            ax2.axhline(size,0,1,label='size')
-            ax2.axhline(dim-1-size,0,1)
-            ax2.axvline(size,0,1)
-            ax2.axvline(dim-1-size,0,1)
-            fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(2,2)
-            field_image(fig,ax1,tmp_field,sct=((dim//2,None),(0,dim//2)),colorbar=False)
-            ax1.axhline(dim//2-4*size0//3,0,1,color='orange',label='1/3')
-            ax1.axvline(4*size0//3,0,1,color='orange',label='1/3')
-            ax1.axhline(dim//2-size,0,1)
-            ax1.axvline(size,0,1)
-            field_image(fig,ax2,tmp_field,sct=(dim//2,None),colorbar=False)
-            ax2.axhline(dim//2-4*size0//3,0,1,color='orange',label='1/3')
-            ax2.axvline(dim//2-4*size0//3,0,1,color='orange',label='1/3')
-            ax2.axhline(dim//2-size,0,1)
-            ax2.axvline(dim//2-size,0,1)
-            field_image(fig,ax3,tmp_field,sct=(0,dim//2),colorbar=False)
-            ax3.axhline(4*size0//3,0,1,color='orange',label='1/3')
-            ax3.axvline(4*size0//3,0,1,color='orange',label='1/3')
-            ax3.axhline(size,0,1)
-            ax3.axvline(size,0,1)
-            field_image(fig,ax4,tmp_field,sct=((0,dim//2),(dim//2,None)),colorbar=False)
-            ax4.axhline(4*size0//3,0,1,color='orange',label='1/3')
-            ax4.axvline(dim//2-4*size0//3,0,1,color='orange',label='1/3')
-            ax4.axhline(size,0,1)
-            ax4.axvline(dim//2-size,0,1)
-            plt.show()
-        else:
-            fig, ax = plt.subplots(1,1)
-            field_image(fig,ax,tmp_field)
-            ax.axhline(size0,0,1,color='red')
-            ax.axhline(4*size0//3,0,1,color='orange')
-            ax.axhline(size,0,1)
-            ax.axhline(dim-1-size,0,1)
-            ax.axvline(size,0,1)
-            ax.axvline(dim-1-size,0,1)
-            plt.show()
-    return size
-
-def mask_filter(field: NDArray, field0: NDArray | None = None, display_fig: bool = False,**kwargs) -> tuple[NDArray,int]:
-    lim = mask_size(field,field0,display_fig=display_fig,**kwargs)
-    mask = field.copy()
-    dim = len(field)
-    cut = slice(lim,dim-lim)
-    mask[cut,cut] = 0.0
-    if display_fig:
-        fast_image(field-mask,**kwargs)
-    # cut = slice(2*lim,dim - 2*lim)
-    # amp, Damp = mean_n_std(field[cut,cut]/field0[cut,cut])
-    # print(f'New Amp:\t{amp*100} +- {Damp*100} %')
-    return field - mask, lim
-
 def light_recover(obj: NDArray, a_size: NDArray[np.int64] | None = None, kernel: NDArray | None = None, mode: str = 'mean') -> tuple[float, float] | float:
-    if mode == 'mean':
-        xmax, ymax = peak_pos(kernel)
-        xu, xd, yu, yd = a_size.flatten()
-        xr = slice(xmax-xd,xmax+xu+1)
-        yr = slice(ymax-yd,xmax+yu+1)
-        cut = kernel[xr,yr].copy()
-        l = obj/cut
-        if len(l) == 1: 
-            print(obj)
-            fast_image(obj)
-            raise
-        L, DL = mean_n_std(l)
-        return L, DL
-    elif mode == 'integrate':
-        from scipy.integrate import trapezoid,simpson
-        L = trapezoid(trapezoid(obj))
-        print(f'SIM = {simpson(simpson(obj))}')
-        return L, L
+    from scipy.integrate import trapezoid
+    L = trapezoid(trapezoid(obj))
+    return L
     
-def find_objects(field: NDArray, field0: NDArray, kernel: NDArray, mean_val: float, sel_pos: NDArray, size: int = 7, acc: float = 1e-5, mask: bool = True, method: str = 'integrate',res_str: str = ['lum','acc'], display_fig: bool = False, **kwargs) -> list[NDArray] | NDArray:
-    dim = len(field)
-    new_pos = sel_pos.copy()
-    tmp_field = np.copy(field)                  #: field from which objects will be removed
-    lum = np.empty(shape=(2,0),dtype=float)     #: array to collect brightness values and errors
-    rej = []                                    #:
-    rej_pos = np.empty(shape=(2,0),dtype=int)   #: array to collect rejected objects
-    # applying the squared mask 
-    if mask:
-        tmp_field, lim = mask_filter(tmp_field,field0,display_fig=display_fig,**kwargs)
-    # checking previous objects first
-    for i in range(len(new_pos[0])):
-        print('Iteration',i)
-        x,y = new_pos[:,i]
-        print(f'X,Y = {x,y}')
-        xlim = (max(0,x-2),min(x+2,dim))
-        ylim = (max(0,y-2),min(y+2,dim))
-        print(xlim,ylim)
-        xcut = slice(*xlim)
-        ycut = slice(*ylim)
-        x,y = np.array(peak_pos(tmp_field[xcut,ycut])) + np.array((xlim[0],ylim[0]))
-        new_pos[:,i] = [x,y]
-        print(f'X,Y new = {x,y}')
-        if tmp_field[x,y]==0:
-            rej += [i]
-            rej_pos = np.append(rej_pos,[[x],[y]],axis=1) 
-        else:
-            a_size = new_grad_check(tmp_field,(x,y),mean_val,size=size)
-            xu, xd, yu, yd = a_size.flatten()
-            xr = slice(x-xd, x+xu+1) 
-            yr = slice(y-yd, y+yu+1)
-            obj = field[xr,yr].copy()
-            # if obj is not acceptable
-            if len(obj) <= 2: 
-                rej += [i]
-                rej_pos = np.append(rej_pos,[[x],[y]],axis=1) 
-            else:
-                # computing and storing brightness    
-                l, Dl = light_recover(obj,a_size,kernel,mode=method)
-                # l = field[x,y].copy()
-                lum = np.append(lum,[[l],[Dl]],axis=1)
-                if display_fig:
-                    fast_image(obj,title=f'Obj n.{i} - ({x},{y})',**kwargs)        
-            tmp_field[xr,yr] = 0.0
-    pos = np.copy(new_pos)
-    if len(rej) > 0:
-        # removing rejected objects
-        new_pos = np.delete(new_pos,rej,axis=1)
-    if display_fig:
-        fig, (ax1,ax2) = plt.subplots(1,2)
-        fig.suptitle('New positions for previous objects')
-        field_image(fig,ax1,field0,**kwargs)
-        field_image(fig,ax2,field,**kwargs)
-        if len(rej) > 0:
-            ax1.plot(rej_pos[1],rej_pos[0],'x',color='red')
-            ax2.plot(rej_pos[1],rej_pos[0],'.',color='red')
-        ax1.plot(sel_pos[1],sel_pos[0],'.',color='orange')
-        ax2.plot(new_pos[1],new_pos[0],'.',color='pink')
-        plt.show()
-    acc_pos = np.empty(shape=(2,0),dtype=int)      #: array to collect coordinates of stars
-    unacc_pos = np.empty(shape=(2,0),dtype=int)
-    # computing the amplification factor
-    amp_fact = np.mean(field[pos[0],pos[1]]/field0[pos[0],pos[1]])
-    print(f'Estimated Ampl Fact:\t{amp_fact*100} %')
-    if amp_fact == 0: 
-        print('rej',rej)
-        print('pos',pos)
-        raise
-    # routine
-    index = peak_pos(tmp_field)
-    peak = tmp_field[index]
-    while peak > mean_val:
-        x,y = index
-        pos = np.append(pos,[[x],[y]],axis=1)
-        a_size = new_grad_check(tmp_field,index,mean_val,size=size)
-        xu, xd, yu, yd = a_size.flatten()
-        xr = slice(x-xd, x+xu+1) 
-        yr = slice(y-yd, y+yu+1)
-        amp = peak/field0[index]
-        print(f'- Ampl Fact:\t{amp*100} %')
-        obj = field[xr,yr].copy()      
-        select = selection(obj,index,pos,size=size,mindist=0,minsize=2,sel=('size','dist'))
-        edge_cond = sum([(np.array([x,y]) == i).any() for i in [lim+1,dim-2-lim]]) and np.logical_and(a_size < 3,a_size!=0).any() if mask else True
-        if all(([[0,0],[0,0]] != a_size).any(axis=1)) and amp/amp_fact < 2 and select and edge_cond:
-            l, Dl = light_recover(obj, a_size, kernel,mode=method)
-            # l = field[x,y].copy()
-            lum = np.append(lum,[[l],[Dl]],axis=1)
-            acc_pos = np.append(pos,[[x],[y]],axis=1)
-            if display_fig:
-                fig, ax = plt.subplots(1,1)
-                ax.set_title(f'Accepted {len(lum[0])} - ({x},{y})')
-                field_image(fig,ax,obj,**kwargs)
-                fig, (ax1,ax2) = plt.subplots(1,2)
-                fig.suptitle(f'Accepted {len(lum[0])} - ({x},{y})')
-                field_image(fig,ax1,field0,**kwargs)
-                field_image(fig,ax2,field,**kwargs)
-                ax1.plot(y,x,'.b')
-                ax2.plot(y,x,'.b')                
-                if len(rej) > 0:
-                    ax1.plot(rej_pos[1],rej_pos[0],'x',color='violet')
-                    ax2.plot(rej_pos[1],rej_pos[0],'.',color='violet')
-                ax1.plot(sel_pos[1],sel_pos[0],'.',color='orange')
-                ax2.plot(new_pos[1],new_pos[0],'.',color='orange')
-        else:
-            unacc_pos = np.append(unacc_pos,[[x],[y]],axis=1)
-            if amp/amp_fact >= 2: cond = f'\namp/amp_factor = {amp/amp_fact}'
-            else: cond = f'\na_size = {a_size}'; print(f'A_SIZE cond = {([[0,0],[0,0]] == a_size).any(axis=1)}\t{a_size}')
-            if display_fig:
-                fig, ax = plt.subplots(1,1)
-                ax.set_title(f'Rejected - ({x},{y})'+cond)
-                field_image(fig,ax,field[xr,yr],**kwargs)
-                fig, (ax1,ax2) = plt.subplots(1,2)
-                fig.suptitle(f'Rejected - ({x},{y})'+cond)
-                field_image(fig,ax1,field0,**kwargs)
-                field_image(fig,ax2,field,**kwargs)
-                ax1.plot(y,x,'.r')
-                ax2.plot(y,x,'.r')
-                ax1.plot(sel_pos[1],sel_pos[0],'.',color='orange')
-                ax2.plot(new_pos[1],new_pos[0],'.',color='orange')
-                if len(rej) > 0:
-                    ax1.plot(rej_pos[1],rej_pos[0],'x',color='violet')
-                    ax2.plot(rej_pos[1],rej_pos[0],'.',color='violet')
-        if display_fig and mask:
-            ax2.axvline(lim,0,1,color='yellow',alpha=0.8)
-            ax2.axhline(lim,0,1,color='yellow',alpha=0.8)
-            ax2.axvline(dim-1-lim,0,1,color='yellow',alpha=0.8)
-            ax2.axhline(dim-1-lim,0,1,color='yellow',alpha=0.8)
-            plt.show()
-        tmp_field[xr,yr] = 0.0
-        index = peak_pos(tmp_field)
-        peak = tmp_field[index]
-    acc_pos = np.append(new_pos,acc_pos,axis=1)
-    unacc_pos = np.append(rej_pos,unacc_pos,axis=1)
-    fig, (ax1,ax2,ax3) = plt.subplots(1,3)
-    field_image(fig,ax1,field0,**kwargs)
-    field_image(fig,ax2,field,**kwargs)
-    field_image(fig,ax3,tmp_field,**kwargs)
-    ax2.plot(acc_pos[1],acc_pos[0],'.b')
-    ax3.plot(acc_pos[1],acc_pos[0],'.b')
-    ax3.plot(unacc_pos[1],unacc_pos[0],'.r')
-    if mask:
-        ax2.axvline(lim,0,1,color='yellow',alpha=0.8)
-        ax2.axhline(lim,0,1,color='yellow',alpha=0.8)
-        ax2.axvline(dim-1-lim,0,1,color='yellow',alpha=0.8)
-        ax2.axhline(dim-1-lim,0,1,color='yellow',alpha=0.8)
-        ax3.axvline(lim,0,1,color='yellow',alpha=0.8)
-        ax3.axhline(lim,0,1,color='yellow',alpha=0.8)
-        ax3.axvline(dim-1-lim,0,1,color='yellow',alpha=0.8)
-        ax3.axhline(dim-1-lim,0,1,color='yellow',alpha=0.8)
-    plt.show()
-    results = []
-    if res_str == 'all' or 'lum' in res_str:
-        results += [lum]
-    if res_str == 'all' or 'acc' in res_str:
-        results += [acc_pos]
-    if res_str == 'all' or 'rej' in res_str:
-        results += [rej_pos]
-    if res_str == 'all' or 'pos' in res_str:
-        results += [pos]
+def find_objects(field: NDArray, rec_field: NDArray, mask_size: int, thr: float, sigma: NDArray, display_fig: bool = False, **kwargs) -> list[NDArray] | NDArray:
     
-    if len(results) == 0: raise Exception('Error in `res_str`')
-    elif len(results) == 1: results = results[0]
-    return results
+    ## Initialization
+    cut = slice(mask_size, -mask_size)
+    tmp_field = rec_field.copy()[cut, cut]
+    a_pos = np.empty(shape=(2,0),dtype=int)         #: array to store coordinates of all objects
+    acc_obj = [[],[]]                               #: list to collect accepted objects 
+    acc_pos = np.empty(shape=(2,0),dtype=int)       #: array to store coordinates of `sel_obj`
+    rej_obj = [[],[]]                               #: list to collect rejected objects
+    rej_pos = np.empty(shape=(2,0),dtype=int)       #: array to store coordinates of `rej_obj`
+    lum = np.empty(shape=0,dtype=float)
+    err = sigma.std
+
+    ## Detecting Routine
+    max_pos = peak_pos(tmp_field)
+    peak = tmp_field[max_pos]
+    while peak + err > thr:
+        return
