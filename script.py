@@ -40,13 +40,11 @@ def pipeline(*args,**kwargs) -> dict[str, fld.Any]:
     # plot it
     if kwargs['results']:
         dpl.fast_image(sci_frame,'Scientific Frame',norm='log')
-
     ### RESTORING
     # compute the average dark value
     mean_dark = m_dark.mean()
     # estimate background value
     mean_bkg, sigma_bkg = rst.bkg_est(sci_frame, display_plot=False)
-
     ## Kernel Estimation
     # extract objects for the kernel recovery
     objs, errs, pos = rst.object_isolation(sci_frame, mean_bkg, sigma, size=5, sel_cond=True, corr_cond=False, display_fig=False,**kwargs)
@@ -54,47 +52,19 @@ def pipeline(*args,**kwargs) -> dict[str, fld.Any]:
     ker_sigma, ker_Dsigma = rst.kernel_estimation(objs, errs, len(sci_frame), display_plot=False,**kwargs)
 
     ## R-L
-    from astropy.convolution import Gaussian2DKernel
+    # compute the estimated kernel
     kernel = fld.Gaussian(ker_sigma)
-    # kernel = Gaussian2DKernel(ker_sigma)
     rec_field = rst.LR_deconvolution(sci_frame,kernel,sigma, mean_bkg, sigma_bkg,display_fig=True)
-
-    dim = len(rec_field)
-    cut0 = int(kernel.sigma)
-    cut1 = int(kernel.sigma * 2)
-    cut2 = int(kernel.sigma * 4)
-
-    fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(2,2)
-    dpl.field_image(fig,ax1,rec_field[-20:,:20])
-    dpl.field_image(fig,ax2,rec_field[-20:,-20:])
-    dpl.field_image(fig,ax3,rec_field[:20,:20])
-    dpl.field_image(fig,ax4,rec_field[:20,-20:])
-    ax3.axhline(cut0,0,1,color='orange')
-    ax3.axhline(cut1,0,1,color='blue')
-    ax3.axhline(cut2,0,1,color='green')
-    ax3.axvline(cut0,0,1,color='orange')
-    ax3.axvline(cut1,0,1,color='blue')
-    ax3.axvline(cut2,0,1,color='green')
-
-    fig1, ax = plt.subplots(1,1)
-    dpl.field_image(fig1,ax,rec_field)
-    ax.plot([cut0,dim-cut0,dim-cut0,cut0,cut0],[cut0,cut0,dim-cut0,dim-cut0,cut0],color='orange')
-    ax.plot([cut1,dim-cut1,dim-cut1,cut1,cut1],[cut1,cut1,dim-cut1,dim-cut1,cut1],color='blue')
-    ax.plot([cut2,dim-cut2,dim-cut2,cut2,cut2],[cut2,cut2,dim-cut2,dim-cut2,cut2],color='green')
-    plt.show()
-
-    cut = slice(cut1+1,-cut1-1)
-    cut_field = rec_field[cut,cut]
-    dpl.fast_image(cut_field)
-    fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(2,2)
-    dpl.field_image(fig,ax1,cut_field[-20:,:20])
-    dpl.field_image(fig,ax2,cut_field[-20:,-20:])
-    dpl.field_image(fig,ax3,cut_field[:20,:20])
-    dpl.field_image(fig,ax4,cut_field[:20,-20:])
-    plt.show()
-
+    from scipy.integrate import trapezoid
+    for (obj, lum) in zip(objs,S.lum[:len(objs)]):
+        r_obj = rst.LR_deconvolution(obj,kernel,sigma,mean_bkg,sigma_bkg,display_fig=True)
+        fig, (ax1,ax2) = plt.subplots(1,2)
+        fig.suptitle(f'star = {lum:.3} ; max = {r_obj.max() - mean_bkg:.3} ; int = {trapezoid(trapezoid(r_obj)) - mean_bkg:.3}\nratio = {r_obj.max() / trapezoid(trapezoid(r_obj)):.3}, ratio2 = {(r_obj.max() - mean_bkg) / (trapezoid(trapezoid(r_obj)) - mean_bkg):.3}')
+        dpl.field_image(fig,ax1,obj)
+        dpl.field_image(fig,ax2,r_obj)
+        plt.show()
     ## Light Recovery
-    # _ = rst.mask_filter(rec_field,sci_frame,True)
+
 
     ### STUFF
     results = {}
@@ -120,7 +90,7 @@ default_res = pipeline(mass_seed, pos_seed, bkg_seed, det_seed,results=True)
 
 multiple_acq = False
 if multiple_acq:
-    iter = 3
+    iter = 5
     m_res: list[dict] = []
     mass_seed = None
     pos_seed  = None
