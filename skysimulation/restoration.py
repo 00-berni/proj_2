@@ -130,9 +130,10 @@ class FuncFit():
         #     chisq = (((ydata-fit)/sigma)**2).sum()
         #     chi0 = len(ydata) - len(pop)
         #     self.res['chisq'] = (chisq, chi0)
-        chisq = out.sum_square
-        chi0 = len(ydata) - len(pop)
-        self.res['chisq'] = (chisq, chi0)
+        if sigma is not None or Dx is not None:
+            chisq = out.sum_square
+            chi0 = len(ydata) - len(pop)
+            self.res['chisq'] = (chisq, chi0)
     
     def infos(self, names: list[str] | None = None) -> None:
         """To plot information about the fit
@@ -149,8 +150,9 @@ class FuncFit():
             names = [f'par{i}' for i in range(len(pop))]
         for name, par, Dpar in zip(names,pop,Dpop):
             print(f'\t{name}: {par:.2} +- {Dpar:.2}')
-        chisq, chi0 = self.res['chisq']
-        print(f'\tred_chi = {chisq/chi0*100:.2f} +- {np.sqrt(2/chi0)*100:.2f} %')
+        if 'chisq' in self.res:
+            chisq, chi0 = self.res['chisq']
+            print(f'\tred_chi = {chisq/chi0*100:.2f} +- {np.sqrt(2/chi0)*100:.2f} %')
 
     def results(self) -> tuple[NDArray, NDArray] | tuple[None, None]:
         return self.fit_par, self.fit_err
@@ -160,7 +162,15 @@ class FuncFit():
         self.infos(names=names)
     
     def gaussian_fit(self, intial_values: Sequence[Any], names: list[str] | None = None,**kwargs) -> None:
-   
+        """_summary_
+
+        Parameters
+        ----------
+        intial_values : Sequence[Any]
+            k, mu, sigma
+        names : list[str] | None, optional
+            names, by default None
+        """
         def gauss_func(data: float | NDArray, *args) -> float | NDArray:
             k, mu, sigma = args
             z = (data - mu) / sigma
@@ -264,7 +274,7 @@ def mean_n_std(data: Sequence[Any], axis: int | None = None, weights: Sequence[A
     return mean, std
 
 
-def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, display_plot: bool = False) -> tuple[float,float]:
+def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, display_plot: bool = False) -> tuple[tuple[float,float],float]:
     """To estimate the background brightness
 
     Assuming the distribution of the background is a normal one,
@@ -313,12 +323,13 @@ def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, 
     if binning is None:
         # compute the magnitude between max and min data
         ratio = int(data.max()/data.min())
+        if ratio == 0: raise Exception("Binning is not possible")
         # set the number of bins
-        binning = ratio*10
+        binning = int(len(field) / np.log10(ratio)) *2 if ratio != 1 else int(len(field)*2)
         # print information
         print('\nBinning Results')
         print('Number of pixels:', data.shape[0])
-        print('Magnitudes:', ratio)
+        print('Magnitudes:', np.log10(ratio))
         print('Number of bins:', binning)
     
     ## Parameters Estimation
@@ -328,6 +339,7 @@ def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, 
     max_indx = cnts.argmax()
     # compute the corresponding brightness value
     mean_bkg = (bins[max_indx+1] + bins[max_indx])/2
+    Dmean_bkg = (bins[max_indx+1] - bins[max_indx])/2
     # compute the half maximum value    
     hm = cnts[max_indx]/2
     # find the value that approximates better `hm`
@@ -340,34 +352,46 @@ def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, 
     ## Peaks Check
     # compute the height at which the distribution is at a sigma from the mean   
     sigma_indx = abs(bins - (mean_bkg-sigma_bkg)).argmin()
-    sigma_height = cnts[sigma_indx]*2
+    sigma_height = (cnts[max_indx] + cnts[sigma_indx])/2
     from scipy.signal import find_peaks
     peaks, _ = find_peaks(cnts,height=sigma_height)
     # compute again the parameters in case of multiple peaks
     if len(peaks) > 1:
         # average between peaks
-        mean_bkg = np.array([(bins[pk+1]+bins[pk])/2 for pk in peaks]).mean()
+        mean_bkg, Dmean_bkg = mean_n_std(np.array([(bins[pk+1]+bins[pk])/2 for pk in peaks]))
         hm = cnts[peaks].mean()/2
         hm_indx = abs(cnts - hm).argmin()
         hwhm = abs((bins[hm_indx+1] + bins[hm_indx])/2 - mean_bkg)
         sigma_bkg = hwhm/np.sqrt(2*np.log(2))
+        
     # print the results
     print('\nBackground estimation')
-    print(f'\tmean:\t{mean_bkg}\n\tsigma:\t{sigma_bkg}\n\trelerr:\t{sigma_bkg/mean_bkg*100:.2f} %')
+    print(f'\tmean:\t{mean_bkg} +- {Dmean_bkg}\n\tsigma:\t{sigma_bkg}\n\trelerr:\t{sigma_bkg/mean_bkg*100:.2f} %')
     
     ## Plotting
     if display_plot:
         # define variables to plot the estimated distribution
-        xx = np.linspace((bins[1]+bins[0])/2,(bins[-1]+bins[-2])/2,len(data))
-        model = Gaussian(sigma_bkg, mean_bkg).value(xx-mean_bkg) *cnts.max()
+        #.. the distribution at higher values of brightness is affected by the 
+        #.. brightness distribution of the stars, then only data within 3 sigma 
+        #.. from the mean are taken 
+        l_edge = abs(bins - (mean_bkg - 3*sigma_bkg)).argmin()      #: index of the bin at 3 sigma from mean
+        l_val = (bins[l_edge + 1]+bins[l_edge])/2                   #: bin at 3 sigma from the mean
+        xx = np.linspace(l_val, 2*mean_bkg - l_val ,len(data))
+        model = Gaussian(sigma_bkg, mean_bkg)
+        k = cnts[max_indx] / model.value((bins[max_indx+1] + bins[max_indx])/2 - mean_bkg)
+        model = model.value(xx-mean_bkg) * k   
+        
         plt.figure()
+        plt.title(f'Gaussian Background Estimation\n mean = {mean_bkg:.4} +- {Dmean_bkg:.2} ; sigma = {sigma_bkg:.2}')
         plt.stairs(cnts, bins, fill=False, label='data')
         plt.axvline(mean_bkg, 0, 1, color='red', linestyle='dotted', label='estimated mean')
         plt.plot(xx,model, label='estimated gaussian')
+        plt.plot((bins[peaks+1] + bins[peaks])/2,cnts[peaks],'.r')
+        plt.axhline(sigma_height,0,1)
         plt.legend()
         plt.show()
 
-    return mean_bkg, sigma_bkg
+    return (mean_bkg, Dmean_bkg), sigma_bkg
 
 def new_moving(direction: str, field: NDArray, index: tuple[int,int], back: float, size: int = 7, debug_check: bool = False) -> list[int] | int:
     """To compute the size in one direction
@@ -463,14 +487,14 @@ def new_moving(direction: str, field: NDArray, index: tuple[int,int], back: floa
         while (xcond(xsize,xmax) and ycond(ysize,ymax)):
             # compute the step
             step = field[x + xd*xsize, y + yd*ysize]
-            if step == 0 or step < back:
+            if step == 0 or step <= back:
                 # store the value
                 if 'x' in direction and xd != 0: results  = [xsize] + results
                 if 'y' in direction and yd != 0: results += [ysize]
                 if len(results) == 1: results = results[0]
                 return results
             elif step <= hm:
-                # compute the gradient with the previuos pixel
+                # compute the gradient with the previous pixel
                 step0 = field[x + xd*(xsize-1), y + yd*(ysize-1)]
                 grad = step0 - step
                 if grad < 0:
@@ -535,49 +559,6 @@ def new_grad_check(field: NDArray, index: tuple[int,int], back: float, size: int
         #?
     # a_xysize = np.where(a_xysize > size, a_xysize-size, a_xysize)
     return a_xysize.reshape(2,2)
-
-def corr_check(obj: NDArray, numpeak: int = 3, display_plot: bool = False,**kwargs) -> bool:
-    from scipy.signal import find_peaks
-    rows = obj.flatten()
-    r_corr = autocorr(rows,**kwargs)
-    r_peak, _ = find_peaks(r_corr)
-    cols = np.stack(obj,axis=-1).flatten()
-    c_corr = autocorr(cols,**kwargs)
-    c_peak, _ = find_peaks(c_corr)
-    if len(r_peak) == 1 and len(c_peak) == 1 and display_plot:
-        app = np.append(rows,cols)
-        app_corr = autocorr(app,**kwargs)
-        app_peak, _ = find_peaks(app_corr)
-        s_corr = autocorr((rows*cols)**3,**kwargs)
-        s_peak, _ = find_peaks(s_corr)
-        plt.figure()
-        plt.subplot(1,2,1)
-        plt.plot(app_corr,'.-')
-        plt.plot(app_peak,app_corr[app_peak],'xr')
-        plt.subplot(1,2,2)
-        plt.plot(s_corr,'.-')
-        plt.plot(s_peak,s_corr[s_peak],'xr')
-    if display_plot:
-        plt.figure()
-        plt.subplot(2,2,1)
-        plt.plot(rows,'.-')
-        plt.subplot(2,2,2)
-        plt.plot(r_corr,'.-')
-        if len(r_peak) > 0:
-            plt.plot(r_peak,r_corr[r_peak],'x',color='red')
-        plt.subplot(2,2,3)
-        plt.plot(cols,'.-')
-        plt.subplot(2,2,4)
-        plt.plot(c_corr,'.-')
-        if len(c_peak) > 0:
-            plt.plot(c_peak,c_corr[c_peak],'x',color='red')
-
-        fast_image(obj)
-    if max(len(r_peak),len(c_peak)) < numpeak:
-        return False
-    else:
-        return True
-
 
 
 def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: Literal["all", "size", "dist"] = 'all', mindist: int = 5, minsize: int = 3, debug_check: bool = False) -> bool:
@@ -971,7 +952,7 @@ def new_kernel_fit(obj: NDArray, err: NDArray | None = None, initial_values: lis
         plt.show()
     return pop, Dpop
 
-def kernel_estimation(extraction: list[NDArray], errors: list[NDArray], dim: int, selected: slice = slice(None), results: bool = True, display_plot: bool = False, **kwargs) -> tuple[float, float]:
+def kernel_estimation(extraction: list[NDArray], errors: list[NDArray], bkg: tuple[float,float], selected: slice = slice(None), results: bool = True, display_plot: bool = False, **kwargs) -> tuple[float, float]:
     """To estimate the parameters of gaussian kernel
 
     Parameters
@@ -1002,6 +983,10 @@ def kernel_estimation(extraction: list[NDArray], errors: list[NDArray], dim: int
 
     ## Fit Routine
     for obj, err in zip(sel_obj, sel_err):
+        # remove the contribution of the background
+        m_bkg, Dm_bkg = bkg
+        obj -= m_bkg
+        err = np.sqrt(err**2 + Dm_bkg**2)
         # compute the fit
         pop, Dpop = new_kernel_fit(obj,err,initial_values=None,display_fig=display_plot,**kwargs)
         sigma = pop[1]
@@ -1080,7 +1065,7 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
     """
     # import the package required to integrate
     from scipy.integrate import trapezoid
-    from scipy.signal import fftconvolve
+    from scipy.signal import convolve2d
 
     ## Parameters    
     Dn = sigma.std()                        #: the variance root of the uncertainties
@@ -1089,15 +1074,15 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
     # define the two recursive functions of the algorithm
     #.. they compute the value of `I` and `S` respectively at
     #.. the iteration r 
-    Ir = lambda S: fftconvolve(S, P, 'same')
-    Sr = lambda S,Ir: S * fftconvolve(I/Ir, P, 'same')
+    Ir = lambda S: convolve2d(S, P, 'same', boundary='fill', fillvalue=mean_bkg)
+    Sr = lambda S,Ir: S * convolve2d(I/Ir, P, 'same', boundary='fill', fillvalue=mean_bkg)
     # pad the field before convolutions
     #.. the field is put in a frame filled by drawing values 
     #.. from `bkg` distribution
     pad_size = (len(P)-1) // 2              #: number of pixels to pad the field
     pad_slice = slice(pad_size,-pad_size)   #: field size cut
     I = pad_field(field, pad_size, bkg)
-
+    
     ## RL Algorithm
     r = 1               #: number of iteration
     Ir0 = Ir(I)         #: initial value for I
@@ -1139,21 +1124,92 @@ def light_recover(obj: NDArray, a_size: NDArray[np.int64] | None = None, kernel:
     L = trapezoid(trapezoid(obj))
     return L
     
-def find_objects(field: NDArray, rec_field: NDArray, mask_size: int, thr: float, sigma: NDArray, display_fig: bool = False, **kwargs) -> list[NDArray] | NDArray:
+def find_objects(field: NDArray, rec_field: NDArray, thr: float, sigma: NDArray, max_size: int, results: bool = False, display_fig: bool = False, **kwargs) -> tuple[list[NDArray], list[NDArray], NDArray] | None:
     
     ## Initialization
-    cut = slice(mask_size, -mask_size)
-    tmp_field = rec_field.copy()[cut, cut]
+    tmp_field = rec_field.copy()
+    display_field = rec_field.copy()    #: field from which only selected objects will be removed (for plotting only)
     a_pos = np.empty(shape=(2,0),dtype=int)         #: array to store coordinates of all objects
     acc_obj = [[],[]]                               #: list to collect accepted objects 
     acc_pos = np.empty(shape=(2,0),dtype=int)       #: array to store coordinates of `sel_obj`
     rej_obj = [[],[]]                               #: list to collect rejected objects
     rej_pos = np.empty(shape=(2,0),dtype=int)       #: array to store coordinates of `rej_obj`
     lum = np.empty(shape=0,dtype=float)
-    err = sigma.std
 
     ## Detecting Routine
     max_pos = peak_pos(tmp_field)
     peak = tmp_field[max_pos]
-    while peak + err > thr:
-        return
+    px_err = sigma[max_pos]
+    while peak + px_err > thr:
+        a_size = new_grad_check(tmp_field,max_pos,thr,max_size)
+        x, y = max_pos                        #: coordinates of the brightest pixel
+        xu, xd, yu, yd = a_size.flatten()   #: edges of the object
+        # compute slices for edges
+        xr = slice(x-xd, x+xu+1) 
+        yr = slice(y-yd, y+yu+1)
+        # remove the object from the field
+        tmp_field[xr,yr] = 0.0
+        a_pos = np.append(a_pos,[[x],[y]],axis=1)
+        a_pos = np.append(a_pos,[[x],[y]],axis=1)
+        if any(([[0,0],[0,0]] == a_size).all(axis=1)):  #: a single pixel is not accepted
+            # storing the object and its coordinates
+            rej_obj += [field[xr,yr].copy()]
+            rej_pos = np.append(rej_pos,[[x],[y]],axis=1)
+        else:            
+            # store the object and its std
+            obj = field[xr,yr].copy() 
+            err = sigma[xr,yr].copy()
+            # check the condition to accept an object
+            save_cond = selection(obj,max_pos,a_pos,max_size,sel='all',mindist=0)
+            if save_cond:       #: accepted object
+                # remove it from the field for displaying
+                display_field[xr,yr] = 0.0
+                # store the selected object, its std and coordinates
+                acc_obj[0] += [obj]
+                acc_obj[1] += [err]
+                acc_pos = np.append(acc_pos,[[x],[y]],axis=1)
+            else: 
+                # store the rejected object, its std and coordinates
+                rej_obj[0] += [obj]
+                rej_obj[1] += [err]
+                rej_pos = np.append(rej_pos,[[x],[y]],axis=1)
+            if results:     #: show the object
+                fig, ax = plt.subplots(1,1)
+                field_image(fig,ax,tmp_field,**kwargs)
+                if len(rej_pos[0])!= 0:
+                    ax.plot(rej_pos[1,:-1],rej_pos[0,:-1],'.r')
+                    ax.plot(rej_pos[1,-1],rej_pos[0,-1],'x',color='red')
+                if len(acc_pos[0])!=0:
+                    ax.plot(acc_pos[1,:-1],acc_pos[0,:-1],'.b')
+                    ax.plot(acc_pos[1,-1],acc_pos[0,-1],'xb')
+                fast_image(obj,**kwargs) 
+        max_pos = peak_pos(tmp_field)
+        peak = tmp_field[max_pos]
+        px_err = sigma[max_pos]
+
+    fast_image(display_field,**kwargs)
+    fast_image(tmp_field,**kwargs)    
+    if len(acc_obj[0]) > 0:
+        fig, ax = plt.subplots(1,1)
+        kwargs.pop('title',None)
+        field_image(fig,ax,display_field,**kwargs)
+        ax.plot(rej_pos[1],rej_pos[0],'.',color='red',label='rejected objects')
+        ax.legend()
+        plt.show()
+        fig, ax = plt.subplots(1,1)
+        kwargs.pop('title',None)
+        field_image(fig,ax,field,**kwargs)
+        ax.plot(rej_pos[1],rej_pos[0],'.',color='red',label='rejected objects')
+        ax.plot(acc_pos[1],acc_pos[0],'.',color='blue',label='chosen objects')
+        ax.legend()
+        plt.show()
+
+    # check routine finds at least one object
+    if len(acc_obj[0]) == 0: return None
+    
+    print(f'\nRej:\t{len(rej_obj[0])}\nExt:\t{len(acc_obj[0])}')
+    print(':: End ::')
+    # extract list of objects and their std
+    obj, err = acc_obj
+    return obj, err, acc_pos
+
