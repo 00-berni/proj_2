@@ -401,7 +401,7 @@ K = 1/(MAX_m**BETA)     #: normalization constant
 M_SEED = 15             #: seed for mass sample generation
 POS_SEED = 38
 # background values for a Gaussian distribution
-BACK_MEAN = MAX_m**BETA * 1e-4      #: mean
+BACK_MEAN = MAX_m**BETA * 5e-4      #: mean
 BACK_SIGMA = BACK_MEAN * 20e-2      #: sigma
 BACK_PARAM = ('Gaussian',(BACK_MEAN, BACK_SIGMA))
 BACK_SEED = 1000
