@@ -26,7 +26,15 @@ def plot_obj(obj0: NDArray) -> None:
     plt.show()    
 
 def pipeline(*args,**kwargs) -> dict[str, fld.Any]:
+    ### STUFF
     mass_seed, pos_seed, bkg_seed, det_seed = args
+    if 'method' in kwargs: 
+        method = kwargs['method'] if kwargs['method'] is not None else 'all'
+        kwargs = {key: kwargs[key] for key in kwargs.keys()-{'method'} }
+    else:
+        method = 'all'
+    results = {}
+    
     ### INITIALIZATION
     # generate the field
     S, (m_light, s_light), (m_dark, s_dark) = fld.field_builder(seed=(mass_seed,pos_seed), back_seed=bkg_seed, det_seed=det_seed,**kwargs)
@@ -40,73 +48,164 @@ def pipeline(*args,**kwargs) -> dict[str, fld.Any]:
     # plot it
     if kwargs['results']:
         dpl.fast_image(sci_frame,'Scientific Frame',norm='log')
-    ### RESTORING
-    # compute the average dark value
-    mean_dark = m_dark.mean()
-    # estimate background value
-    mean_bkg, sigma_bkg = rst.bkg_est(sci_frame, display_plot=False)
-    ## Kernel Estimation
-    # extract objects for the kernel recovery
-    objs, errs, pos = rst.object_isolation(sci_frame, mean_bkg, sigma, size=5, sel_cond=True, corr_cond=False, display_fig=False,**kwargs)
-    # estimate kernel
-    ker_sigma, ker_Dsigma = rst.kernel_estimation(objs, errs, len(sci_frame), display_plot=False,**kwargs)
 
-    ## R-L
-    # compute the estimated kernel
-    kernel = fld.Gaussian(ker_sigma)
-    rec_field = rst.LR_deconvolution(sci_frame,kernel,sigma, mean_bkg, sigma_bkg,display_fig=True)
-    from scipy.integrate import trapezoid
-    for (obj, lum) in zip(objs,S.lum[:len(objs)]):
-        r_obj = rst.LR_deconvolution(obj,kernel,sigma,mean_bkg,sigma_bkg,display_fig=True)
-        fig, (ax1,ax2) = plt.subplots(1,2)
-        fig.suptitle(f'star = {lum:.3} ; max = {r_obj.max() - mean_bkg:.3} ; int = {trapezoid(trapezoid(r_obj)) - mean_bkg:.3}\nratio = {r_obj.max() / trapezoid(trapezoid(r_obj)):.3}, ratio2 = {(r_obj.max() - mean_bkg) / (trapezoid(trapezoid(r_obj)) - mean_bkg):.3}')
-        dpl.field_image(fig,ax1,obj)
-        dpl.field_image(fig,ax2,r_obj)
-        plt.show()
-    ## Light Recovery
-
-
-    ### STUFF
-    results = {}
+    print('!!CHECK!!\t',len(np.where(S.lum > fld.BACK_MEAN*fld.K)[0]))
     results['frame']  = (sci_frame, sigma)        
     results['dark']   = (m_dark, s_dark)
-    results['bkg']    = (mean_bkg, sigma_bkg)
-    results['objs']   = (objs, errs, pos)
-    results['seeing'] = (ker_sigma, ker_Dsigma)
-    results['rl']     = rec_field
+
+    ### RESTORING
+    if method in ['all','rl','kernel','obj','bkg']:
+        max_size = 5
+        # compute the average dark value
+        mean_dark = m_dark.mean()
+        # estimate background value
+        m_bkg, sigma_bkg = rst.bkg_est(sci_frame, display_plot=True)
+        mean_bkg, Dmean_bkg = m_bkg
+        print('Back',fld.BACK_MEAN*fld.K,fld.BACK_SIGMA*fld.K)
+        results['bkg'] = (m_bkg, sigma_bkg)
+   
+    ## Kernel Estimation
+    if method in ['all','rl','kernel','obj']:
+        # extract objects for the kernel recovery
+        objs, errs, pos = rst.object_isolation(sci_frame, mean_bkg, sigma, size=max_size, sel_cond=True, corr_cond=False, display_fig=False,**kwargs)
+        results['objs']   = (objs, errs, pos)
+
+    if method in ['all','rl','kernel']:
+        # estimate kernel
+        ker_sigma, ker_Dsigma = rst.kernel_estimation(objs, errs, m_bkg, display_plot=False,**kwargs)
+        results['seeing'] = (ker_sigma, ker_Dsigma)
+
+    ## R-L
+    if method in ['all', 'rl']:
+        # compute the estimated kernel
+        kernel = fld.Gaussian(ker_sigma)
+        rec_field = rst.LR_deconvolution(sci_frame,kernel,sigma, mean_bkg, sigma_bkg, display_fig=True)
+        dpl.fast_image(rec_field - sci_frame - mean_bkg,'Remove before and background')
+        results['rl'] = rec_field
+
+
+    ## Light Recovery
+    if method == 'all':
+        det_stars = np.where(S.lum > mean_bkg)[0]
+        sort_pos = np.argsort(S.lum[det_stars])
+        det_pos = np.array(S.pos)[:,sort_pos]
+        dist = lambda p1, p2 : np.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2)
+        objs, errs, pos = rst.find_objects(sci_frame, rec_field, mean_bkg, sigma, max_size, display_fig=True)
+        ok_pos = np.array([ np.where(dist(det_pos[:,i], pos) < 2) for i in range(len(det_stars))])
+        if 0 not in ok_pos.shape:
+            ok_obj = np.array([ pos[:,p[0]] for p in ok_pos if 0 not in p[0].shape])
+            print(ok_obj.shape)
+            print(ok_obj)
+        fig, ax = plt.subplots(1,1)
+        dpl.field_image(fig,ax,rec_field)
+        ax.plot(pos[1],pos[0],'.',color='blue',label='chosen objects')
+        ax.plot(det_pos[1],det_pos[0],'x',color='violet',label='detectable stars')
+        if 0 not in ok_pos.shape:
+            for i in range(ok_obj.shape[-1]):
+                ax.plot(ok_obj[:,1,i],ok_obj[:,0,i],'+',color='red',label='good')
+        ax.legend()
+        plt.show()
+        print(f'OBSERVATED::\t{len(objs)}')
+        print(f'OBSERVABLE::\t{len(det_stars)}')
+        print(f'WRONG::\t{len(objs)-len(ok_obj)}')
+    # lums = np.sort(S.lum)[::-1]
+    # l0 = []
+    # l1 = []
+    # from scipy.integrate import trapezoid
+    # for (obj, err, lum) in zip(objs[:3],errs[:3],lums[:3]):
+    #     print(len(obj))
+    #     r_obj = rst.LR_deconvolution(obj,kernel,err,mean_bkg,sigma_bkg, display_fig=False)
+    #     # err = np.sqrt(err**2 + err.var())
+    #     (_,s,xmax,ymax), _ = rst.new_kernel_fit(r_obj,err=err,display_fig=False)
+    #     xdim, ydim = r_obj.shape
+    #     x_edge = slice(max(0, int(xmax - s)), min(xdim, int(xmax + s) +1))
+    #     y_edge = slice(max(0, int(ymax - s)), min(ydim, int(ymax + s) +1))
+    #     cobj = r_obj[x_edge,y_edge]
+    #     l0 += [cobj.sum()-mean_bkg]
+    #     print(f'CHECK::\t{lum}\t{cobj.sum()}\t{cobj.sum()-mean_bkg}')
+    #     s += 1
+    #     x_edge = slice(max(0, int(xmax - s)), min(xdim, int(xmax + s) +1))
+    #     y_edge = slice(max(0, int(ymax - s)), min(ydim, int(ymax + s) +1))
+    #     cobj = r_obj[x_edge,y_edge]
+    #     l1 += [cobj.sum()-mean_bkg]
+    #     # xmax, ymax = rst.peak_pos(r_obj)
+    #     # r_objmax = r_obj[xmax,ymax]
+    #     # pos = np.unravel_index(abs(r_obj - r_objmax/2).argmin(), r_obj.shape)
+    #     # w = max( abs(pos[0] - xmax), abs(pos[1] - ymax )) +1
+    #     # dpl.fast_image(r_obj - obj)
+    #     # dpl.fast_image(r_obj[x_edge,y_edge],f'({xmax},{ymax}),{pos}, {w}')
+    #     # fig, (ax1,ax2) = plt.subplots(1,2)
+    #     # rsum = r_obj[x_edge,y_edge].sum() - mean_bkg
+    #     # fig.suptitle(f'star = {lum:.3} ; r_max = {r_obj.max() - mean_bkg:.3} ; sum = {rsum:.3} +- {sigma.std():.3}\nover = {(rsum - lum)/rsum*100:.2f} %')
+    #     # dpl.field_image(fig,ax1,obj)
+    #     # dpl.field_image(fig,ax2,r_obj)
+    #     # plt.show()
+    # plt.figure()
+    # plt.bar(np.arange(3),lums[:3],0.2,align='center',color='blue',label='lux')
+    # plt.bar(np.arange(3)-0.2,l0,0.2,align='center',color='red',label='s')
+    # plt.bar(np.arange(3)+0.2,l1,0.2,align='center',color='orange',label='s+1')
+    # plt.legend()
+    # plt.show()
+
 
     return results        
 
-mass_seed = fld.M_SEED
-pos_seed  = fld.POS_SEED
-bkg_seed  = fld.BACK_SEED
-det_seed  = fld.NOISE_SEED
-# mass_seed = None
-# pos_seed  = None
-# bkg_seed  = None
-# det_seed  = None
+### MAIN ###
+if __name__ == '__main__':
+    mass_seed = fld.M_SEED
+    pos_seed  = fld.POS_SEED
+    bkg_seed  = fld.BACK_SEED
+    det_seed  = fld.NOISE_SEED
+    # mass_seed = None
+    # pos_seed  = None
+    # bkg_seed  = None
+    # det_seed  = None
+    method = 'rl'
+    default_res = pipeline(mass_seed, pos_seed, bkg_seed, det_seed, method=method, results=True)
 
-default_res = pipeline(mass_seed, pos_seed, bkg_seed, det_seed,results=True)
-
-multiple_acq = False
-if multiple_acq:
-    iter = 5
-    m_res: list[dict] = []
-    mass_seed = None
-    pos_seed  = None
-    bkg_seed  = None
-    det_seed  = None
-    for i in range(iter):
-        m_res += [pipeline(mass_seed, pos_seed, bkg_seed, det_seed, results=False)]
-    
-    seeing = np.array([ [*r['seeing']] for r in m_res])
-    m_see  = seeing[:,0].mean()
-    Dm_see = seeing[:,0].std()
-    plt.figure()
-    plt.title(f'$\\sigma = $ {m_see:.2} $\pm$ {Dm_see:.2}')
-    plt.errorbar(np.arange(iter),seeing[:,0], seeing[:,1], fmt='.', linestyle='dashed')
-    plt.axhline(m_see,0,1,color='red',linestyle='dotted')
-    plt.axhline(m_see - Dm_see,0,1,color='orange',linestyle='dotted',alpha=0.7)
-    plt.axhline(m_see + Dm_see,0,1,color='orange',linestyle='dotted',alpha=0.7)
-    plt.axhline(3,0,1,color='black')
-    plt.show()
+    multiple_acq = False
+    if multiple_acq:
+        iter = 5
+        m_res: list[dict] = []
+        mass_seed = None
+        pos_seed  = None
+        bkg_seed  = None
+        det_seed  = None
+        for i in range(iter):
+            m_res += [pipeline(mass_seed, pos_seed, bkg_seed, det_seed, method=method, results=True)]
+        
+        # background = np.array([[*r['bkg']] for r in m_res])
+        m_bkg = np.array([[*r['bkg'][0]] for r in m_res])
+        s_bkg = np.array([ r['bkg'][1] for r in m_res])
+        # m_bkg = background[:,0]
+        # s_bkg = background[:,1]
+        plt.figure()
+        plt.suptitle('Background')
+        plt.subplot(1,2,1)
+        m,s = rst.mean_n_std(m_bkg[:,0])
+        plt.title(f'mean = {m:.4} $\\pm$ {s:.2}')
+        plt.errorbar(np.arange(iter),m_bkg[:,0],m_bkg[:,1],fmt='.', linestyle='dashed')
+        plt.axhline(m,0,1,color='red',linestyle='dotted')
+        plt.axhline(m - s,0,1,color='orange',linestyle='dotted',alpha=0.7)
+        plt.axhline(m + s,0,1,color='orange',linestyle='dotted',alpha=0.7)
+        plt.axhline(fld.BACK_MEAN*fld.K,0,1,color='black')
+        plt.subplot(1,2,2)
+        m,s = rst.mean_n_std(s_bkg)
+        plt.title(f'$\\sigma = $ {m:.4} $\\pm$ {s:.2}')
+        plt.plot(np.arange(iter),s_bkg,'.--')
+        plt.axhline(m,0,1,color='red',linestyle='dotted')
+        plt.axhline(m - s,0,1,color='orange',linestyle='dotted',alpha=0.7)
+        plt.axhline(m + s,0,1,color='orange',linestyle='dotted',alpha=0.7)
+        plt.axhline(fld.BACK_SIGMA*fld.K,0,1,color='black')
+        plt.show()    
+        
+        seeing = np.array([ [*r['seeing']] for r in m_res])
+        m_see, Dm_see = rst.mean_n_std(seeing[:,0])
+        plt.figure()
+        plt.title(f'$\\sigma = $ {m_see:.4} $\\pm$ {Dm_see:.2}')
+        plt.errorbar(np.arange(iter),seeing[:,0], seeing[:,1], fmt='.', linestyle='dashed')
+        plt.axhline(m_see,0,1,color='red',linestyle='dotted')
+        plt.axhline(m_see - Dm_see,0,1,color='orange',linestyle='dotted',alpha=0.7)
+        plt.axhline(m_see + Dm_see,0,1,color='orange',linestyle='dotted',alpha=0.7)
+        plt.axhline(3,0,1,color='black')
+        plt.show()
