@@ -21,12 +21,13 @@ RESTORATION PACKAGE
     - [] Try to understand the meaning of weighted std and **find some references**
     - [] Documentation
     - [] Check the meaning of all actions
-    - [x] Add the exact uncertainties to the objects
+    - [x] Add the exact uncertainties to the objects 
     - [] Look for a use of the [-1] size check 
     - [] **Investigate better the different results for different seeds**
     - [x] ~**Understand the squared artifact due to RL**~
           > They were convolution artifacts. I solved them padding the field before the routine
     - [] **Does padding the field before routine add some addition light?**
+    - [] **Understand the width of the padding**
     - [] **Find a better way to extract objects**
 
 ***
@@ -46,14 +47,13 @@ RESTORATION PACKAGE
 """
 
 
-from typing import Callable, Sequence, Any, TypeVar, Literal
+from typing import Callable, Sequence, Any, Literal
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy.typing import NDArray,ArrayLike
+from numpy.typing import NDArray
 from scipy.signal import find_peaks
 from .display import fast_image, field_image
-from .field import Gaussian, pad_field, N, Uniform, noise, NOISE_SEED, DISTR
-
+from .stuff import Gaussian, pad_field, field_convolve, DISTR
 
 
 class FuncFit():
@@ -1065,7 +1065,6 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
     """
     # import the package required to integrate
     from scipy.integrate import trapezoid
-    from scipy.signal import convolve2d
 
     ## Parameters    
     Dn = sigma.std()                        #: the variance root of the uncertainties
@@ -1074,12 +1073,12 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
     # define the two recursive functions of the algorithm
     #.. they compute the value of `I` and `S` respectively at
     #.. the iteration r 
-    Ir = lambda S: convolve2d(S, P, 'same', boundary='fill', fillvalue=mean_bkg)
-    Sr = lambda S,Ir: S * convolve2d(I/Ir, P, 'same', boundary='fill', fillvalue=mean_bkg)
+    Ir = lambda S: field_convolve(S, P, bkg, mode='2d')
+    Sr = lambda S,Ir: S * field_convolve(I/Ir, P, bkg, mode='2d')
     # pad the field before convolutions
     #.. the field is put in a frame filled by drawing values 
     #.. from `bkg` distribution
-    pad_size = (len(P)-1) // 2              #: number of pixels to pad the field
+    pad_size  = (len(P)-1)                  #: number of pixels to pad the field
     pad_slice = slice(pad_size,-pad_size)   #: field size cut
     I = pad_field(field, pad_size, bkg)
     
@@ -1109,12 +1108,32 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
             if r > max_iter: 
                 print(f'Routine stops due to the limit in iterations: {r} reached')
                 break
+    if display_fig:
+        def sqr_mask(val: float, dim: int) -> NDArray:
+            return np.array([ [val, val], 
+                            [val, dim - val], 
+                            [dim - val, dim - val], 
+                            [dim - val, val],
+                            [val, val] ])
+        fig, ax = plt.subplots(1,1)
+        ax.set_title('Before cutting')
+        field_image(fig,ax,Sr(Sr1,Ir1))
+        s_k = kernel.sigma
+        mask0 = sqr_mask(s_k*1, len(I))
+        mask1 = sqr_mask(s_k*2, len(I))
+        mask2 = sqr_mask(s_k*3, len(I))
+        mask3 = sqr_mask(s_k*4, len(I))
+        ax.plot(mask0[:,1],mask0[:,0], color='blue')
+        ax.plot(mask1[:,1],mask1[:,0], color='red')
+        ax.plot(mask2[:,1],mask2[:,0], color='orange')
+        ax.plot(mask3[:,1],mask3[:,0], color='green')
+        plt.show()
     # store the result and remove the added frame
     rec_field = Sr(Sr1,Ir1)[pad_slice,pad_slice]
 
     ## Plotting
     if display_fig:
-        fast_image(rec_field,**kwargs)
+        fast_image(rec_field,'Recovered Field',**kwargs)
         fast_image(rec_field, norm='log',**kwargs)
     
     return rec_field
@@ -1128,7 +1147,7 @@ def find_objects(field: NDArray, rec_field: NDArray, thr: float, sigma: NDArray,
     
     ## Initialization
     tmp_field = rec_field.copy()
-    display_field = rec_field.copy()    #: field from which only selected objects will be removed (for plotting only)
+    display_field = rec_field.copy()                #: field from which only selected objects will be removed (for plotting only)
     a_pos = np.empty(shape=(2,0),dtype=int)         #: array to store coordinates of all objects
     acc_obj = [[],[]]                               #: list to collect accepted objects 
     acc_pos = np.empty(shape=(2,0),dtype=int)       #: array to store coordinates of `sel_obj`
@@ -1142,7 +1161,7 @@ def find_objects(field: NDArray, rec_field: NDArray, thr: float, sigma: NDArray,
     px_err = sigma[max_pos]
     while peak + px_err > thr:
         a_size = new_grad_check(tmp_field,max_pos,thr,max_size)
-        x, y = max_pos                        #: coordinates of the brightest pixel
+        x, y = max_pos                      #: coordinates of the brightest pixel
         xu, xd, yu, yd = a_size.flatten()   #: edges of the object
         # compute slices for edges
         xr = slice(x-xd, x+xu+1) 
