@@ -2,12 +2,10 @@ import numpy as np
 from numpy import correlate
 import matplotlib.pyplot as plt
 import skysimulation.display as dpl
+import skysimulation.stuff as stf
 import skysimulation.field as fld
 import skysimulation.restoration as rst
-from skysimulation.field import NDArray, K, MIN_m, BETA, SEEING_SIGMA
-
-def autocorr(vec: rst.Sequence, mode: str = 'same') -> rst.NDArray:
-    return correlate(vec,vec,mode)
+from skysimulation.stuff import NDArray, sqr_mask
 
 def plot_obj(obj0: NDArray) -> None:
     x,y = np.arange(obj0.shape[0]), np.arange(obj0.shape[1])
@@ -61,14 +59,14 @@ def pipeline(*args,**kwargs) -> dict[str, fld.Any]:
         # estimate background value
         m_bkg, sigma_bkg = rst.bkg_est(sci_frame, display_plot=True)
         mean_bkg, Dmean_bkg = m_bkg
-        print('Back',fld.BACK_MEAN*fld.K,fld.BACK_SIGMA*fld.K)
+        print('Back',fld.BACK_MEAN*fld.K, fld.BACK_SIGMA*fld.K)
         results['bkg'] = (m_bkg, sigma_bkg)
    
     ## Kernel Estimation
     if method in ['all','rl','kernel','obj']:
         # extract objects for the kernel recovery
         objs, errs, pos = rst.object_isolation(sci_frame, mean_bkg, sigma, size=max_size, sel_cond=True, corr_cond=False, display_fig=False,**kwargs)
-        results['objs']   = (objs, errs, pos)
+        results['objs'] = (objs, errs, pos)
 
     if method in ['all','rl','kernel']:
         # estimate kernel
@@ -78,29 +76,42 @@ def pipeline(*args,**kwargs) -> dict[str, fld.Any]:
     ## R-L
     if method in ['all', 'rl']:
         # compute the estimated kernel
-        kernel = fld.Gaussian(ker_sigma)
+        kernel = stf.Gaussian(ker_sigma)
         rec_field = rst.LR_deconvolution(sci_frame,kernel,sigma, mean_bkg, sigma_bkg, display_fig=True)
         dpl.fast_image(rec_field - sci_frame - mean_bkg,'Remove before and background')
         results['rl'] = rec_field
+        
+        fig, ax = plt.subplots(1,1)
+        dim = len(rec_field)
+        dpl.field_image(fig, ax, rec_field)
+        mask0 = sqr_mask(ker_sigma, dim)
+        ax.plot(mask0[:,0], mask0[:,1], color='blue')
+        plt.show()
 
+        art_bkg = stf.Gaussian(sigma_bkg, mean_bkg).field(rec_field.shape)
+        dpl.fast_image(rec_field - art_bkg, 'Removed background')
 
     ## Light Recovery
     if method == 'all':
         det_stars = np.where(S.lum > mean_bkg)[0]
-        sort_pos = np.argsort(S.lum[det_stars])
-        det_pos = np.array(S.pos)[:,sort_pos]
+        det_pos = np.array(S.pos)[:,det_stars]
         dist = lambda p1, p2 : np.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2)
-        objs, errs, pos = rst.find_objects(sci_frame, rec_field, mean_bkg, sigma, max_size, display_fig=True)
-        ok_pos = np.array([ np.where(dist(det_pos[:,i], pos) < 2) for i in range(len(det_stars))])
-        if 0 not in ok_pos.shape:
-            ok_obj = np.array([ pos[:,p[0]] for p in ok_pos if 0 not in p[0].shape])
+        objs, errs, pos = rst.find_objects(sci_frame, rec_field, mean_bkg, sigma, max_size, results=False, display_fig=True)
+        ok_pos = [ [*np.where(dist(det_pos[:,i], pos) < 2)] for i in range(len(det_stars)) ]
+        print('POS')
+        print(len(ok_pos))
+        print(len(ok_pos[0]))
+        print(ok_pos)
+        if len(ok_pos[0]) != 0:
+            ok_obj = np.array([ pos[:,p[0]] for p in ok_pos if 0 not in p[0].shape ])
             print(ok_obj.shape)
             print(ok_obj)
         fig, ax = plt.subplots(1,1)
+        ax.set_title('Detected Objects vs Detectable Objects')
         dpl.field_image(fig,ax,rec_field)
         ax.plot(pos[1],pos[0],'.',color='blue',label='chosen objects')
         ax.plot(det_pos[1],det_pos[0],'x',color='violet',label='detectable stars')
-        if 0 not in ok_pos.shape:
+        if len(ok_pos[0]) != 0:
             for i in range(ok_obj.shape[-1]):
                 ax.plot(ok_obj[:,1,i],ok_obj[:,0,i],'+',color='red',label='good')
         ax.legend()
@@ -160,7 +171,8 @@ if __name__ == '__main__':
     # pos_seed  = None
     # bkg_seed  = None
     # det_seed  = None
-    method = 'rl'
+    method = 'all'
+    # method = None
     default_res = pipeline(mass_seed, pos_seed, bkg_seed, det_seed, method=method, results=True)
 
     multiple_acq = False
