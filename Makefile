@@ -1,7 +1,7 @@
 # test dir
 TDIR = ./tests
 NDIR = ./notebook
-RDIR = ./../proj2_res
+RDIR = ./../proj_2_results
 
 # To install all the required packages
 requirements:
