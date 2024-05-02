@@ -29,6 +29,27 @@ RESTORATION PACKAGE
     - [] **Does padding the field before routine add some addition light?**
     - [] **Understand the width of the padding**
     - [] **Find a better way to extract objects**
+          ? > A possible idea is to do a checking list:
+              if peak/2 >= thr:
+                -> Cut the image and study the gradient 
+                -> Is the gradient ok? 
+                  -| Yes, store the length
+                  -| No
+                   .> Check the brightness of the pixels
+                   .> Is averaged px > bkg? 
+                    -| Yes, store the length
+                    -| No
+                     .> Reject the object
+              else:
+                -> Study the gradient
+                -> Cut the image
+                -> Is the length comparable with mean?
+                  -| Yes, store the length
+                  -| No
+                   .> Reject the object
+
+
+
 
 ***
     
@@ -561,7 +582,7 @@ def new_grad_check(field: NDArray, index: tuple[int,int], back: float, size: int
     return a_xysize.reshape(2,2)
 
 
-def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: Literal["all", "size", "dist"] = 'all', mindist: int = 5, minsize: int = 3, debug_check: bool = False) -> bool:
+def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: Literal["all", "size", "dist", "new"] = 'all', mindist: int = 5, minsize: int = 3, debug_check: bool = False) -> bool:
     """To check whether a selected object satisfies some required conditions
 
     Parameters
@@ -638,6 +659,41 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
                     return False
             # delete useless variables
             del x, y, xi, yi, dist, adist, pos
+    if sel == 'new':
+        cond = True
+        # xmax, ymax = peak_pos(obj)
+        # dim = max([xmax, ymax, xdim-xmax, ydim-ymax])
+        # mean_obj = np.array([[obj[xmax,ymax]],[obj[xmax,ymax]]])
+        # for i in range(1,dim):
+        #     xl = xmax - i
+        #     xr = xdim - xmax - i
+        #     yl = ymax - i
+        #     yr = ydim - ymax - i
+        #     mean_val_1 = []
+        #     if xl >= 0: mean_val_1 += [obj[xl,ymax]]
+        #     if xr >  0: mean_val_1 += [obj[xr,ymax]]
+        #     if yl >= 0: mean_val_1 += [obj[xmax,yl]]
+        #     if yr >  0: mean_val_1 += [obj[xmax,yr]]
+        #     mean_val_1 = np.mean(mean_val_1)
+        #     mean_val_2 = []
+        #     if xl >= 0 and yl >= 0: mean_val_2 += [obj[xl,yl]]
+        #     if xr >  0 and yl >= 0: mean_val_2 += [obj[xr,yl]]
+        #     if xl >= 0 and yr >  0: mean_val_2 += [obj[xl,yr]]
+        #     if xr >  0 and yr >  0: mean_val_2 += [obj[xr,yr]]
+        #     mean_val_2 = np.mean(mean_val_2)
+        #     mean_obj = np.append(mean_obj, [[mean_val_1], [mean_val_2]], axis=1)
+        # grad1 = np.diff(mean_obj[0])
+        # grad2 = np.diff(mean_obj[1])
+        # plt.figure()
+        # plt.subplot(2,1,1)
+        # plt.plot(mean_obj[0],'.--')
+        # plt.plot(grad1,'+--')
+        # plt.subplot(2,1,2)
+        # plt.plot(mean_obj[1],'.--')
+        # plt.plot(grad2,'+--')
+        # fast_image(obj)
+        # if len(np.where(grad1)[0]>0) != 0 and len(np.where(grad2)[0]>0) != 0:
+        #     return False 
     # check the value assigned to `sel`
     if not cond: raise Exception(f'ErrorValue: `sel`={sel} is not allowed')
     return True    
@@ -1142,6 +1198,31 @@ def light_recover(obj: NDArray, a_size: NDArray[np.int64] | None = None, kernel:
     from scipy.integrate import trapezoid
     L = trapezoid(trapezoid(obj))
     return L
+
+def object_check(obj: NDArray, index: tuple[int,int], sigma: int | None, acc: list[NDArray], rej: list[NDArray]) -> tuple[list[NDArray], list[NDArray]]:
+
+    return acc, rej
+
+def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size: int = 7, min_dist: int = 0, display_fig: bool = False, **kwargs):
+    tmp_field = field.copy()
+    sigma = []
+    rej_obj = []
+    acc_obj = []
+
+    xmax, ymax = peak_pos(tmp_field)
+    peak = tmp_field[xmax, ymax]
+    while peak > thr:
+        if peak/2 >= thr:
+            xsize, ysize = new_grad_check(field, (xmax, ymax), thr, size=max_size)
+            x = slice(xmax - xsize[0], xmax + xsize[1])
+            y = slice(ymax - ysize[0], ymax + ysize[1])
+            tmp_field[x,y] = 0.0
+            obj = field[x,y].copy()
+            acc_obj, rej_obj = object_check(obj, (xmax, ymax), sigma, acc_obj, rej_obj)
+
+        
+
+    return
     
 def find_objects(field: NDArray, rec_field: NDArray, thr: float, sigma: NDArray, max_size: int, results: bool = False, display_fig: bool = False, **kwargs) -> tuple[list[NDArray], list[NDArray], NDArray] | None:
     
@@ -1179,7 +1260,7 @@ def find_objects(field: NDArray, rec_field: NDArray, thr: float, sigma: NDArray,
             obj = field[xr,yr].copy() 
             err = sigma[xr,yr].copy()
             # check the condition to accept an object
-            save_cond = selection(obj,max_pos,a_pos,max_size,sel='all',mindist=0)
+            save_cond = selection(obj,max_pos,a_pos,max_size,sel='all',mindist=0) and selection(obj,max_pos,a_pos,max_size,sel='new')
             if save_cond:       #: accepted object
                 # remove it from the field for displaying
                 display_field[xr,yr] = 0.0
@@ -1205,7 +1286,7 @@ def find_objects(field: NDArray, rec_field: NDArray, thr: float, sigma: NDArray,
         max_pos = peak_pos(tmp_field)
         peak = tmp_field[max_pos]
         px_err = sigma[max_pos]
-
+        if peak/2 < thr: break
     fast_image(display_field,**kwargs)
     fast_image(tmp_field,**kwargs)    
     if len(acc_obj[0]) > 0:
