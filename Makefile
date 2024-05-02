@@ -11,7 +11,7 @@ script:
 	python3.10 ./script.py > $(RDIR)/script_results.txt
 # test:
 test:
-	python3.10 ./test_rl.py > $(RDIR)/test_results.txt
+	python3.10 ./test.py > $(RDIR)/test_results.txt
 # test:
 test-corr:
 	python3.10 ./test_corr.py > $(RDIR)/test-corr_results.txt
