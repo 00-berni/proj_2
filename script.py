@@ -24,6 +24,18 @@ def plot_obj(obj0: NDArray) -> None:
     plt.show()    
 
 def pipeline(*args,**kwargs) -> dict[str, fld.Any]:
+    """_summary_
+
+    Returns
+    -------
+    results : dict[str, Any]
+        - `results['frame']  =  (sci_frame: NDArray, sigma: NDArray)`
+        - `results['dark']   =  (m_dark: NDArray, s_dark: NDArray)`
+        - `results['bkg']    =  (m_bkg: float, sigma_bkg: float)`
+        - `results['obj']    =  (objs: list[NDArray], errs: list[NDArray], pos: NDArray)`
+        - `results['seeing'] =  (ker_sigma: float, ker_Dsigma: float)`
+        - `results['rl']     =  rec_field: NDArray`
+    """
     ### STUFF
     mass_seed, pos_seed, bkg_seed, det_seed = args
     if 'method' in kwargs: 
@@ -68,6 +80,7 @@ def pipeline(*args,**kwargs) -> dict[str, fld.Any]:
         objs, errs, pos = rst.object_isolation(sci_frame, mean_bkg, sigma, size=max_size, sel_cond=True, corr_cond=False, display_fig=False,**kwargs)
         results['objs'] = (objs, errs, pos)
 
+
     if method in ['all','rl','kernel']:
         # estimate kernel
         ker_sigma, ker_Dsigma = rst.kernel_estimation(objs, errs, m_bkg, display_plot=False,**kwargs)
@@ -93,32 +106,33 @@ def pipeline(*args,**kwargs) -> dict[str, fld.Any]:
 
     ## Light Recovery
     if method == 'all':
-        det_stars = np.where(S.lum > mean_bkg)[0]
-        det_pos = np.array(S.pos)[:,det_stars]
-        dist = lambda p1, p2 : np.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2)
-        objs, errs, pos = rst.find_objects(sci_frame, rec_field, mean_bkg, sigma, max_size, results=False, display_fig=True)
-        ok_pos = [ [*np.where(dist(det_pos[:,i], pos) < 2)] for i in range(len(det_stars)) ]
-        print('POS')
-        print(len(ok_pos))
-        print(len(ok_pos[0]))
-        print(ok_pos)
-        if len(ok_pos[0]) != 0:
-            ok_obj = np.array([ pos[:,p[0]] for p in ok_pos if 0 not in p[0].shape ])
-            print(ok_obj.shape)
-            print(ok_obj)
-        fig, ax = plt.subplots(1,1)
-        ax.set_title('Detected Objects vs Detectable Objects')
-        dpl.field_image(fig,ax,rec_field)
-        ax.plot(pos[1],pos[0],'.',color='blue',label='chosen objects')
-        ax.plot(det_pos[1],det_pos[0],'x',color='violet',label='detectable stars')
-        if len(ok_pos[0]) != 0:
-            for i in range(ok_obj.shape[-1]):
-                ax.plot(ok_obj[:,1,i],ok_obj[:,0,i],'+',color='red',label='good')
-        ax.legend()
-        plt.show()
-        print(f'OBSERVATED::\t{len(objs)}')
-        print(f'OBSERVABLE::\t{len(det_stars)}')
-        print(f'WRONG::\t{len(objs)-len(ok_obj)}')
+        _ = rst.find_objects(sci_frame,rec_field, mean_bkg, sigma, max_size)
+        # det_stars = np.where(S.lum > mean_bkg)[0]
+        # det_pos = np.array(S.pos)[:,det_stars]
+        # dist = lambda p1, p2 : np.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2)
+        # objs, errs, pos = rst.find_objects(sci_frame, rec_field, mean_bkg, sigma, max_size, results=False, display_fig=True)
+        # ok_pos = [ [*np.where(dist(det_pos[:,i], pos) < 2)] for i in range(len(det_stars)) ]
+        # print('POS')
+        # print(len(ok_pos))
+        # print(len(ok_pos[0]))
+        # print(ok_pos)
+        # if len(ok_pos[0]) != 0:
+        #     ok_obj = np.array([ pos[:,p[0]] for p in ok_pos if 0 not in p[0].shape ])
+        #     print(ok_obj.shape)
+        #     print(ok_obj)
+        # fig, ax = plt.subplots(1,1)
+        # ax.set_title('Detected Objects vs Detectable Objects')
+        # dpl.field_image(fig,ax,rec_field)
+        # ax.plot(pos[1],pos[0],'.',color='blue',label='chosen objects')
+        # ax.plot(det_pos[1],det_pos[0],'x',color='violet',label='detectable stars')
+        # if len(ok_pos[0]) != 0:
+        #     for i in range(ok_obj.shape[-1]):
+        #         ax.plot(ok_obj[:,1,i],ok_obj[:,0,i],'+',color='red',label='good')
+        # ax.legend()
+        # plt.show()
+        # print(f'OBSERVATED::\t{len(objs)}')
+        # print(f'OBSERVABLE::\t{len(det_stars)}')
+        # print(f'WRONG::\t{len(objs)-len(ok_obj)}')
     # lums = np.sort(S.lum)[::-1]
     # l0 = []
     # l1 = []
@@ -171,8 +185,8 @@ if __name__ == '__main__':
     # pos_seed  = None
     # bkg_seed  = None
     # det_seed  = None
-    method = 'all'
-    # method = None
+    # method = 'rl'
+    method = None
     default_res = pipeline(mass_seed, pos_seed, bkg_seed, det_seed, method=method, results=True)
 
     multiple_acq = False
