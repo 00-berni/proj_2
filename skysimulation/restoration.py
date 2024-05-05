@@ -43,7 +43,7 @@ RESTORATION PACKAGE
               else:
                 -> Study the gradient
                 -> Cut the image
-                -> Is the length comparable with mean?
+                -> Is the length comparable with mean sigma?
                   -| Yes, store the length
                   -| No
                    .> Reject the object
@@ -263,6 +263,24 @@ def peak_pos(field: NDArray) -> int | tuple[int,int]:
         return field.argmax()
     else:
         return np.unravel_index(field.argmax(),field.shape)
+
+def minimum_pos(field: NDArray) -> int | tuple[int,int]:
+    """Finding the coordinate/s of the minimum
+
+    Parameters
+    ----------
+    field : NDArray
+        the frame
+
+    Returns
+    -------
+    int | tuple[int,int]
+        position index(es) of the minimum
+    """
+    if len(field.shape) == 1:
+        return field.argmin()
+    else:
+        return np.unravel_index(field.argmin(),field.shape)
 
 
 def mean_n_std(data: Sequence[Any], axis: int | None = None, weights: Sequence[Any] | None = None) -> tuple[float, float]:
@@ -904,7 +922,7 @@ def new_kernel_fit(obj: NDArray, err: NDArray | None = None, initial_values: lis
     err : NDArray | None, default None
         the STD of the object 
     initial_values : list[int] | None, default None
-        values to initialize the fit process
+        values to initialize the fit process, `[k0, sigma0, x_mu, y_mu]`
     display_fig : bool, default False
         parameter to display the result of the fitting 
         procedure
@@ -912,7 +930,7 @@ def new_kernel_fit(obj: NDArray, err: NDArray | None = None, initial_values: lis
     Returns
     -------
     pop : NDArray
-        parameters from best fit
+        parameters from best fit, `[k, sigma, x_mu, y_mu]`
     Dpop : NDArray
         uncertainties on `pop`
     """
@@ -954,11 +972,11 @@ def new_kernel_fit(obj: NDArray, err: NDArray | None = None, initial_values: lis
     y = np.arange(ydim) 
     y,x = np.meshgrid(y,x)      
     if initial_values is None:  #: default values to initialize the fit
-        k0 = obj.max()      #: normalization constant
+        k0 = obj[xmax,ymax]     #: normalization constant
         # compute the initial value for sigma from HWHM
-        hm = obj[xmax,ymax]/2   #: half maximum
+        hm = k0/2   #: half maximum
         # find coordinates of the best estimation of `hm`
-        hm_x, hm_y = np.unravel_index(abs(obj-hm).argmin(), obj.shape)
+        hm_x, hm_y = minimum_pos(abs(obj-hm))        #np.unravel_index(abs(obj-hm).argmin(), obj.shape)
         # compute hwhm
         hwhm = np.sqrt((hm_x - xmax)**2 + (hm_y - ymax)**2)
         # compute sigma from it
@@ -1199,9 +1217,78 @@ def light_recover(obj: NDArray, a_size: NDArray[np.int64] | None = None, kernel:
     L = trapezoid(trapezoid(obj))
     return L
 
-def object_check(obj: NDArray, index: tuple[int,int], sigma: int | None, acc: list[NDArray], rej: list[NDArray]) -> tuple[list[NDArray], list[NDArray]]:
+def cutting(obj: NDArray, centre: tuple[int,int]) -> tuple[NDArray, NDArray]:
+    xdim, ydim = obj.shape
+    x0, y0 = centre
+    hm = obj[x0, y0]/2
+    hm_pos = max(minimum_pos(abs(obj-hm)))
+    hwhm = abs(hm_pos-min(x0,y0))
+    if hwhm == 1:
+        raise
+    cut = lambda centre, dim : slice(max(centre-hwhm,0), min(centre+hwhm +1 , dim))
+    cut_obj = obj[cut(x0,xdim), cut(y0,ydim)].copy()
+    print('\nhwhm',abs(hm_pos-min(x0,y0)))
+    print('hm_pos', hm_pos)
+    print('sigma',abs(hm_pos-min(x0,y0))/ (2*np.log(2)))
+    print('dim : ', xdim, ydim)
+    print('max : ', x0, y0)
+    print('x : ', max(x0-hwhm,0), min(x0+hwhm+1, xdim))
+    print('y : ', max(y0-hwhm,0), min(y0+hwhm+1, ydim))
+    xmax, ymax = peak_pos(obj)
+    cxmax, cymax = peak_pos(cut_obj)
+    shift = np.array([xmax - cxmax, ymax - cymax])
+    return cut_obj, shift
 
-    return acc, rej
+
+def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequence[int] | None, acc: list[NDArray], rej: list[NDArray], mode: Literal["all", "grad", "pxl"] = 'all') -> tuple[list[NDArray], list[NDArray]]:
+    xmax, ymax = peak_pos(obj)
+    max_val = obj[xmax, ymax]
+    xdim, ydim = obj.shape
+    if mode == 'all':
+        ## Cut 
+        cut_obj, shift = cutting(obj, (xmax, ymax))
+        # fit
+        pop, _ = new_kernel_fit(cut_obj-thr,display_fig=True)
+        est_sigma = pop[1]
+        if est_sigma <= 0:
+            raise
+        centre = np.rint(pop[-2:]).astype(int) + shift #peak_pos(cut_obj)
+        cut_obj, shift = cutting(obj, centre)
+        x0, y0 = centre - shift
+        val0 = cut_obj[x0, y0]
+        ## Gradient
+        xdim, ydim = cut_obj.shape
+        print('cut_dim : ', xdim, ydim)
+        grad1 = [[],[]]
+        grad2 = [[],[]]
+        mean_obj = [[],[]]
+        # compute pixel position
+        step = lambda i, centre, dim : (dim-1) - centre - i
+        # collect pixels along both horizontal and vertical directions
+        mean_obj[0] += [ [cut_obj[x,y0] for x in [step(i,-x0,1), step(i,x0,xdim)] if x >= 0] + [cut_obj[x0,y] for y in [step(i,-y0,1), step(i,y0,ydim)] if y >= 0]  for i in range(1,max(xdim,ydim)) ]
+        # collect pixels along diagonal direction
+        mean_obj[1] += [ [cut_obj[x,y] for x in [step(i,-x0,0), step(i,x0,xdim)] for y in [step(i,-y0,0), step(i,y0,ydim)] if x >= 0 and y >= 0] for i in range(1,max(xdim,ydim)) ]
+        fig, ax = plt.subplots(2,1)
+        title = ''
+        for i in range(2):
+            mean_obj[i] = np.array([np.mean(val) for val in mean_obj[i] if len(val) != 0])
+            mean_obj[i] = [val0] + mean_obj[i]
+            grad1[i] = np.diff(mean_obj[i])
+            grad2[i] = np.diff(grad1[i])
+            ax[i].plot(mean_obj[i],'.--b')
+            ax[i].plot(grad1[i],'x--r')
+            ax[i].axhline(0,0,1,color='black')
+            title = title + i*'\n' + f'mean{i+1} = {np.mean(mean_obj[i][1:]):.2}, grad1_{i+1} = {np.mean(grad1[i]):.2}, grad2_{i+1} = {np.mean(grad2[i]):.2}'
+        fig.suptitle(title)
+        fig, (ax1,ax2) = plt.subplots(1,2)
+        field_image(fig,ax1,obj)
+        field_image(fig,ax2,cut_obj)
+        ax1.plot(y0+shift[1],x0+shift[0],'.')
+        ax2.plot(y0,x0,'.')
+        plt.show()
+
+    # return acc, rej
+    return np.mean(grad1[0]), np.mean(grad1[1])
 
 def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size: int = 7, min_dist: int = 0, display_fig: bool = False, **kwargs):
     tmp_field = field.copy()
