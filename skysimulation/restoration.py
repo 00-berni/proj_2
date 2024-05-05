@@ -1237,25 +1237,29 @@ def cutting(obj: NDArray, centre: tuple[int,int]) -> tuple[NDArray, NDArray]:
     xmax, ymax = peak_pos(obj)
     cxmax, cymax = peak_pos(cut_obj)
     shift = np.array([xmax - cxmax, ymax - cymax])
+    print('shift',shift)
     return cut_obj, shift
 
 
 def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequence[int] | None, acc: list[NDArray], rej: list[NDArray], mode: Literal["all", "grad", "pxl"] = 'all') -> tuple[list[NDArray], list[NDArray]]:
     xmax, ymax = peak_pos(obj)
-    max_val = obj[xmax, ymax]
     xdim, ydim = obj.shape
     if mode == 'all':
         ## Cut 
         cut_obj, shift = cutting(obj, (xmax, ymax))
         # fit
-        pop, _ = new_kernel_fit(cut_obj-thr,display_fig=True)
+        pop, _ = new_kernel_fit(cut_obj-thr,display_fig=False)
         est_sigma = pop[1]
-        if est_sigma <= 0:
+        if est_sigma <= 0:  #: negative sigma is unacceptable
             raise
-        centre = np.rint(pop[-2:]).astype(int) + shift #peak_pos(cut_obj)
-        cut_obj, shift = cutting(obj, centre)
-        x0, y0 = centre - shift
-        val0 = cut_obj[x0, y0]
+        if 0 <= pop[-2] < cut_obj.shape[0] and 0 <= pop[-1] < cut_obj.shape[1]:
+            centre = np.rint(pop[-2:]).astype(int) + shift #peak_pos(cut_obj)
+            cut_obj, shift = cutting(obj, centre)
+            x0, y0 = centre - shift
+            val0 = cut_obj[x0, y0]
+        else:
+            x0, y0 = np.array([xmax, ymax]) - shift
+            val0 = cut_obj[x0,y0]
         ## Gradient
         xdim, ydim = cut_obj.shape
         print('cut_dim : ', xdim, ydim)
@@ -1266,14 +1270,20 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         step = lambda i, centre, dim : (dim-1) - centre - i
         # collect pixels along both horizontal and vertical directions
         mean_obj[0] += [ [cut_obj[x,y0] for x in [step(i,-x0,1), step(i,x0,xdim)] if x >= 0] + [cut_obj[x0,y] for y in [step(i,-y0,1), step(i,y0,ydim)] if y >= 0]  for i in range(1,max(xdim,ydim)) ]
+        print('MEAN',mean_obj)
         # collect pixels along diagonal direction
         mean_obj[1] += [ [cut_obj[x,y] for x in [step(i,-x0,0), step(i,x0,xdim)] for y in [step(i,-y0,0), step(i,y0,ydim)] if x >= 0 and y >= 0] for i in range(1,max(xdim,ydim)) ]
         fig, ax = plt.subplots(2,1)
         title = ''
         for i in range(2):
+            # average over pixels at same distance
             mean_obj[i] = np.array([np.mean(val) for val in mean_obj[i] if len(val) != 0])
-            mean_obj[i] = [val0] + mean_obj[i]
+            # append the centre pixel
+            mean_obj[i] = np.append([val0],mean_obj[i])
+            print(f'MEAN_{i}',mean_obj[i])
+            # compute the first derivative
             grad1[i] = np.diff(mean_obj[i])
+            # compute the second derivative
             grad2[i] = np.diff(grad1[i])
             ax[i].plot(mean_obj[i],'.--b')
             ax[i].plot(grad1[i],'x--r')
@@ -1286,9 +1296,20 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         ax1.plot(y0+shift[1],x0+shift[0],'.')
         ax2.plot(y0,x0,'.')
         plt.show()
-
-    # return acc, rej
-    return np.mean(grad1[0]), np.mean(grad1[1])
+        # check positive values of the derivative
+        g_pos = np.where(grad1[0] >= 0)[0]
+        if len(g_pos) == 0:
+            print('GOOD')
+            return np.mean(grad1[0]), np.mean(grad1[1])
+        elif len(g_pos) == 1 and g_pos[0] == len(grad1)-1:
+            print('CUT GOOD')
+            cut_obj = cut_obj[1:-1,1:-1]
+            fast_image(cut_obj)
+            return np.mean(grad1[0]), np.mean(grad1[1])
+        else:
+            print('NO GOOD')
+            ## S/N
+            return np.mean(grad1[0]), np.mean(grad1[1])
 
 def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size: int = 7, min_dist: int = 0, display_fig: bool = False, **kwargs):
     tmp_field = field.copy()
