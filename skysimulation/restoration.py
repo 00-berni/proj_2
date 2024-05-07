@@ -68,13 +68,14 @@ RESTORATION PACKAGE
 """
 
 
-from typing import Callable, Sequence, Any, Literal
+from typing import Callable, Sequence, Literal, Any
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.typing import NDArray
 from scipy.signal import find_peaks
 from .display import fast_image, field_image
-from .stuff import Gaussian, pad_field, field_convolve, DISTR
+from .stuff import Gaussian, DISTR
+from .stuff import pad_field, field_convolve, mean_n_std, peak_pos, minimum_pos
 
 
 class FuncFit():
@@ -242,75 +243,8 @@ class Histogram():
         else:
             self.cnts, self.bins, self.yerr = self.errhist(err,**kwargs)
 
-def autocorr(arr: NDArray, **kwargs) -> float | NDArray:
-    from scipy.signal import correlate
-    return correlate(arr,arr,**kwargs)
-
-def peak_pos(field: NDArray) -> int | tuple[int,int]:
-    """Finding the coordinate/s of the maximum
-
-    Parameters
-    ----------
-    field : NDArray
-        the frame
-
-    Returns
-    -------
-    int | tuple[int,int]
-        position index(es) of the maximum
-    """
-    if len(field.shape) == 1:
-        return field.argmax()
-    else:
-        return np.unravel_index(field.argmax(),field.shape)
-
-def minimum_pos(field: NDArray) -> int | tuple[int,int]:
-    """Finding the coordinate/s of the minimum
-
-    Parameters
-    ----------
-    field : NDArray
-        the frame
-
-    Returns
-    -------
-    int | tuple[int,int]
-        position index(es) of the minimum
-    """
-    if len(field.shape) == 1:
-        return field.argmin()
-    else:
-        return np.unravel_index(field.argmin(),field.shape)
 
 
-def mean_n_std(data: Sequence[Any], axis: int | None = None, weights: Sequence[Any] | None = None) -> tuple[float, float]:
-    """To compute the mean and standard deviation from it
-
-    Parameters
-    ----------
-    data : Sequence[Any]
-        values of the sample
-    axis : int | None, default None
-        axis over which averaging
-    weights : Sequence[Any] | None, default None
-        array of weights associated with data
-
-    Returns
-    -------
-    mean : float
-        the mean of the data
-    std : float
-        the STD from the mean
-    """
-    dim = len(data)     #: size of the sample
-    # compute the mean
-    mean = np.average(data,axis=axis,weights=weights)
-    # compute the STD from it
-    if weights is None:
-        std = np.sqrt( ((data-mean)**2).sum(axis=axis) / (dim*(dim-1)) )
-    else:
-        std = np.sqrt(np.average((data-mean)**2, weights=weights) / (dim-1) * dim)
-    return mean, std
 
 
 def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, display_plot: bool = False) -> tuple[tuple[float,float],float]:
@@ -832,7 +766,8 @@ def object_isolation(field: NDArray, thr: float, sigma: NDArray, size: int = 5, 
         a_pos = np.append(a_pos,[[x],[y]],axis=1)
         if any(([[0,0],[0,0]] == a_size).all(axis=1)):  #: a single pixel is not accepted
             # storing the object and its coordinates
-            rej_obj += [field[xr,yr].copy()]
+            rej_obj[0] += [field[xr,yr].copy()]
+            rej_obj[1] += [sigma[xr,yr].copy()]
             rej_pos = np.append(rej_pos,[[x],[y]],axis=1)
             if debug_check:
                 print(f'Rejected obj: ({x},{y})')
@@ -1241,7 +1176,7 @@ def cutting(obj: NDArray, centre: tuple[int,int]) -> tuple[NDArray, NDArray]:
     return cut_obj, shift
 
 
-def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequence[int] | None, acc: list[NDArray], rej: list[NDArray], mode: Literal["all", "grad", "pxl"] = 'all') -> tuple[list[NDArray], list[NDArray]]:
+def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequence[int] | None, mode: Literal["all", "grad", "pxl"] = 'all') -> tuple[NDArray, tuple[int, int]] | None:
     xmax, ymax = peak_pos(obj)
     xdim, ydim = obj.shape
     if mode == 'all':
@@ -1250,16 +1185,17 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         # fit
         pop, _ = new_kernel_fit(cut_obj-thr,display_fig=False)
         est_sigma = pop[1]
-        if est_sigma <= 0:  #: negative sigma is unacceptable
-            raise
+        # negative sigma is unacceptable
+        if est_sigma <= 0:  return None
         if 0 <= pop[-2] < cut_obj.shape[0] and 0 <= pop[-1] < cut_obj.shape[1]:
-            centre = np.rint(pop[-2:]).astype(int) + shift #peak_pos(cut_obj)
+            centre = np.rint(pop[-2:]).astype(int) + shift 
             cut_obj, shift = cutting(obj, centre)
             x0, y0 = centre - shift
             val0 = cut_obj[x0, y0]
         else:
             x0, y0 = np.array([xmax, ymax]) - shift
             val0 = cut_obj[x0,y0]
+        
         ## Gradient
         xdim, ydim = cut_obj.shape
         print('cut_dim : ', xdim, ydim)
@@ -1296,20 +1232,44 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         ax1.plot(y0+shift[1],x0+shift[0],'.')
         ax2.plot(y0,x0,'.')
         plt.show()
-        # check positive values of the derivative
-        g_pos = np.where(grad1[0] >= 0)[0]
+        # check positive values of the first derivative
+        mean_width = min((len(mean_obj[0])-1)//2, 3)
+        g_pos = np.where(grad1[0][:mean_width+1] >= 0)[0]
         if len(g_pos) == 0:
+            x0, y0 = np.array([x0, y0]) + shift
+            g_pos = np.where(grad1[0][mean_width:] >= 0)[0]
+            if len(g_pos) != 0:
+                xdim, ydim = obj.shape
+                mean_width = g_pos[0]
+                print('Quite')
+                xsize = slice(max(0, x0-mean_width),  min(xdim, x0+mean_width+1))
+                ysize = slice(max(0, y0-mean_width),  min(xdim, y0+mean_width+1))
+                obj = obj[xsize, ysize]
+                fast_image(cut_obj)
             print('GOOD')
-            return np.mean(grad1[0]), np.mean(grad1[1])
-        elif len(g_pos) == 1 and g_pos[0] == len(grad1)-1:
-            print('CUT GOOD')
-            cut_obj = cut_obj[1:-1,1:-1]
-            fast_image(cut_obj)
-            return np.mean(grad1[0]), np.mean(grad1[1])
+            x, y = index
+            index = (x0 + (x-xmax), y0 + (y-ymax))
+            return obj, index
         else:
-            print('NO GOOD')
             ## S/N
-            return np.mean(grad1[0]), np.mean(grad1[1])
+            hwhm = max(xdim-x0,ydim-y0,x0,y0)
+            ratio = min(mean_obj[0][1:mean_width+1])/thr
+            print('S/N',ratio*100,'%')
+            if ratio >= 10:
+                # per riconoscenza all'impostore che siede al suo posto
+                print('Quite Quite Good')
+                x0, y0 = np.array([x0, y0]) + shift
+                xdim, ydim = obj.shape
+                xsize = slice(max(0, x0-mean_width),  min(xdim, x0+mean_width+1))
+                ysize = slice(max(0, y0-mean_width),  min(xdim, y0+mean_width+1))
+                obj = obj[xsize, ysize]
+                fast_image(obj, 'Cutted obj')
+                x, y = index
+                index = (x0 + (x-xmax), y0 + (y-ymax))
+                return obj, index
+            else:
+                print('NO GOOD')
+                return None
 
 def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size: int = 7, min_dist: int = 0, display_fig: bool = False, **kwargs):
     tmp_field = field.copy()
