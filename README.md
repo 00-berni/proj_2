@@ -6,6 +6,7 @@
     - [**Task**](#toc1_1_)
     - [**Quick commands**](#toc1_2_)
     - [**Project directory overview**](#toc1_3_)
+    - [**Notation of comments**](#toc1_4_)
 - [**Project tree**](#toc2_)
     - [**skysimulation**](#toc2_1_)
     - [**Makefile**](#toc2_2_)
@@ -46,11 +47,11 @@ In addition to the package (that is the aim of the exercise), the project direct
 - a compilable file to do some operation quickly (see commands section or makefile section)
 - a directory for tests (see the test section)
 
-### Comments notation
+### <a id='toc1_4_'></a>[Notation of comments](#toc0_)
 
 - `#:` is used for definitions
 - `#` is used to comment instructions
-- `#>` is used to explain an instruction in more lines than one
+- `#..` is used to explain an instruction in more lines than one
 - `##` is used for the title of a paragraph
 - `###` is used for the title of a section
 
