@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Sequence, Any
 import numpy as np
 from numpy.typing import NDArray
 
@@ -148,7 +148,7 @@ class Poisson():
         rng = np.random.default_rng(seed = seed)
         return self.k * rng.poisson(self.lam,size=shape)
         
-DISTR = Gaussian | Uniform | Poisson
+DISTR = Gaussian | Uniform | Poisson    #: variable to collect distributions type
 
 def from_parms_to_distr(params: tuple[str, float] | tuple[str, tuple], infos: bool = False) -> Gaussian | Uniform:
     """To get from input parameter the chosen distribution
@@ -253,3 +253,72 @@ def field_convolve(field: NDArray, kernel: NDArray, bkg: DISTR, norm_cost: float
     else: raise Exception(f'Error in convolution mode!\n`{mode}` is no accepted')
     # cut and remove the frame
     return conv_field[pad_slice,pad_slice]
+
+def mean_n_std(data: Sequence[Any], axis: int | None = None, weights: Sequence[Any] | None = None) -> tuple[float, float]:
+    """To compute the mean and standard deviation from it
+
+    Parameters
+    ----------
+    data : Sequence[Any]
+        values of the sample
+    axis : int | None, default None
+        axis over which averaging
+    weights : Sequence[Any] | None, default None
+        array of weights associated with data
+
+    Returns
+    -------
+    mean : float
+        the mean of the data
+    std : float
+        the STD from the mean
+    """
+    dim = len(data)     #: size of the sample
+    # compute the mean
+    mean = np.average(data,axis=axis,weights=weights)
+    # compute the STD from it
+    if weights is None:
+        std = np.sqrt( ((data-mean)**2).sum(axis=axis) / (dim*(dim-1)) )
+    else:
+        std = np.sqrt(np.average((data-mean)**2, weights=weights) / (dim-1) * dim)
+    return mean, std
+
+def autocorr(arr: NDArray, **kwargs) -> float | NDArray:
+    from scipy.signal import correlate
+    return correlate(arr,arr,**kwargs)
+
+def peak_pos(field: NDArray) -> int | tuple[int,int]:
+    """Finding the coordinate/s of the maximum
+
+    Parameters
+    ----------
+    field : NDArray
+        the frame
+
+    Returns
+    -------
+    int | tuple[int,int]
+        position index(es) of the maximum
+    """
+    if len(field.shape) == 1:
+        return field.argmax()
+    else:
+        return np.unravel_index(field.argmax(),field.shape)
+
+def minimum_pos(field: NDArray) -> int | tuple[int,int]:
+    """Finding the coordinate/s of the minimum
+
+    Parameters
+    ----------
+    field : NDArray
+        the frame
+
+    Returns
+    -------
+    int | tuple[int,int]
+        position index(es) of the minimum
+    """
+    if len(field.shape) == 1:
+        return field.argmin()
+    else:
+        return np.unravel_index(field.argmin(),field.shape)
