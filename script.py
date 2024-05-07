@@ -32,7 +32,7 @@ def pipeline(*args,**kwargs) -> dict[str, fld.Any]:
         - `results['frame']  =  (sci_frame: NDArray, sigma: NDArray)`
         - `results['dark']   =  (m_dark: NDArray, s_dark: NDArray)`
         - `results['bkg']    =  (m_bkg: float, sigma_bkg: float)`
-        - `results['obj']    =  (objs: list[NDArray], errs: list[NDArray], pos: NDArray)`
+        - `results['objs']   =  (objs: list[NDArray], errs: list[NDArray], pos: NDArray)`
         - `results['seeing'] =  (ker_sigma: float, ker_Dsigma: float)`
         - `results['rl']     =  rec_field: NDArray`
     """
@@ -185,9 +185,11 @@ if __name__ == '__main__':
     # pos_seed  = None
     # bkg_seed  = None
     # det_seed  = None
-    # method = 'rl'
-    method = None
+    method = 'obj'
+    # method = None
     default_res = pipeline(mass_seed, pos_seed, bkg_seed, det_seed, method=method, results=True)
+    objs = default_res['objs'][0]
+    mean_bkg = default_res['bkg'][0][0]
 
     multiple_acq = False
     if multiple_acq:
