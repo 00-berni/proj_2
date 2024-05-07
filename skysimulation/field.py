@@ -30,7 +30,8 @@ import matplotlib.pyplot as plt
 from scipy.signal import fftconvolve
 from scipy.ndimage import gaussian_filter
 from .display import fast_image, field_image
-from .stuff import Gaussian, DISTR, field_convolve, from_parms_to_distr 
+from .stuff import Gaussian, DISTR 
+from .stuff import field_convolve, from_parms_to_distr, mean_n_std
 
 ### CLASS DEFINITIONS
 class Star():
@@ -431,7 +432,51 @@ def add_effects(F: NDArray, background: DISTR, back_seed: int | None, atm_param:
     return F_bsd
 
 
-def field_builder(acq_num: int = 3, dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, back_param: tuple[str, float | tuple] = BACK_PARAM, back_seed: int | None = BACK_SEED, det_param: tuple[str, float | tuple] = NOISE_PARAM, det_seed: int | None = NOISE_SEED, overlap: bool = False, seed: tuple[int,int] = (M_SEED, POS_SEED), iteration: int = 3, results: bool = True, display_fig: bool = False, **kwargs) -> list[Star | NDArray] | list[Star | NDArray | list[NDArray]]:
+def field_builder(acq_num: int = 3, dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, back_param: tuple[str, float | tuple] = BACK_PARAM, back_seed: int | None = BACK_SEED, det_param: tuple[str, float | tuple] = NOISE_PARAM, det_seed: int | None = NOISE_SEED, overlap: bool = False, seed: tuple[int,int] = (M_SEED, POS_SEED), iteration: int = 3, results: bool = True, display_fig: bool = False, **kwargs) -> tuple[Star, list[NDArray], list[NDArray]]:
+    """To generate the acquired picture
+
+    Parameters
+    ----------
+    acq_num : int, optional
+        _description_, by default 3
+    dim : int, optional
+        _description_, by default N
+    stnum : int, optional
+        _description_, by default M
+    masses : tuple[float,float], optional
+        _description_, by default (MIN_m,MAX_m)
+    star_param : tuple[float,float], optional
+        _description_, by default (ALPHA,BETA)
+    atm_param : tuple[str,float  |  tuple], optional
+        _description_, by default ATM_PARAM
+    back_param : tuple[str, float  |  tuple], optional
+        _description_, by default BACK_PARAM
+    back_seed : int | None, optional
+        _description_, by default BACK_SEED
+    det_param : tuple[str, float  |  tuple], optional
+        _description_, by default NOISE_PARAM
+    det_seed : int | None, optional
+        _description_, by default NOISE_SEED
+    overlap : bool, optional
+        _description_, by default False
+    seed : tuple[int,int], optional
+        _description_, by default (M_SEED, POS_SEED)
+    iteration : int, optional
+        _description_, by default 3
+    results : bool, optional
+        _description_, by default True
+    display_fig : bool, optional
+        _description_, by default False
+
+    Returns
+    -------
+    S : Star
+        class to collect stars info
+    [master_light, std_light] : [NDArray, NDArray]
+        matricies of mean and STD from it of light
+    [master_dark, std_dark] : [NDArray, NDArray]
+        matricies of mean and STD from it of dark
+    """
     SEP = '-'*10 + '\n'
     print(SEP+f'Initialization of the field\nDimension:\t{dim} x {dim}\nNumber of stars:\t{stnum}')
     # creating the starting field
@@ -457,7 +502,6 @@ def field_builder(acq_num: int = 3, dim: int = N, stnum: int = M, masses: tuple[
         del seeds_gen
     lights = [ add_effects(F.copy(), background, back_seed[i], atm_param, det_noise, det_seed[i], i, display_fig=display_fig, **kwargs) for i in range(acq_num)]
 
-    from .restoration import mean_n_std
     master_light, std_light = mean_n_std(lights, axis=0)
 
     if results:
