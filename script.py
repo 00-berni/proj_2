@@ -185,11 +185,13 @@ if __name__ == '__main__':
     # pos_seed  = None
     # bkg_seed  = None
     # det_seed  = None
-    method = 'obj'
+    method = 'bkg'
     # method = None
     default_res = pipeline(mass_seed, pos_seed, bkg_seed, det_seed, method=method, results=True)
-    objs = default_res['objs'][0]
+    field = default_res['frame'][0]
     mean_bkg = default_res['bkg'][0][0]
+    _ = rst.searching(field,mean_bkg,None)
+
 
     multiple_acq = False
     if multiple_acq:
