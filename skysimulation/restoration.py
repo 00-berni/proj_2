@@ -1158,17 +1158,16 @@ def cutting(obj: NDArray, centre: tuple[int,int]) -> tuple[NDArray, NDArray]:
     hm = obj[x0, y0]/2
     hm_pos = max(minimum_pos(abs(obj-hm)))
     hwhm = abs(hm_pos-min(x0,y0))
-    if hwhm == 1:
-        raise
+    if hwhm == 1:   return None, None
     cut = lambda centre, dim : slice(max(centre-hwhm,0), min(centre+hwhm +1 , dim))
     cut_obj = obj[cut(x0,xdim), cut(y0,ydim)].copy()
-    print('\nhwhm',abs(hm_pos-min(x0,y0)))
-    print('hm_pos', hm_pos)
-    print('sigma',abs(hm_pos-min(x0,y0))/ (2*np.log(2)))
-    print('dim : ', xdim, ydim)
-    print('max : ', x0, y0)
-    print('x : ', max(x0-hwhm,0), min(x0+hwhm+1, xdim))
-    print('y : ', max(y0-hwhm,0), min(y0+hwhm+1, ydim))
+    print('\n\thwhm',abs(hm_pos-min(x0,y0)))
+    print('\thm_pos', hm_pos)
+    print('\tsigma',abs(hm_pos-min(x0,y0))/ (2*np.log(2)))
+    print('\tdim : ', xdim, ydim)
+    print('\tmax : ', x0, y0)
+    print('\tx : ', max(x0-hwhm,0), min(x0+hwhm+1, xdim))
+    print('\ty : ', max(y0-hwhm,0), min(y0+hwhm+1, ydim))
     xmax, ymax = peak_pos(obj)
     cxmax, cymax = peak_pos(cut_obj)
     shift = np.array([xmax - cxmax, ymax - cymax])
@@ -1176,20 +1175,24 @@ def cutting(obj: NDArray, centre: tuple[int,int]) -> tuple[NDArray, NDArray]:
     return cut_obj, shift
 
 
-def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequence[int] | None, mode: Literal["all", "grad", "pxl"] = 'all') -> tuple[NDArray, tuple[int, int]] | None:
+def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequence[int] | None, mode: Literal["all", "grad", "pxl"] = 'all') -> tuple[NDArray, tuple[int, int], tuple[tuple[int, int], tuple[int, int]]] | None:
     xmax, ymax = peak_pos(obj)
     xdim, ydim = obj.shape
     if mode == 'all':
         ## Cut 
+        print('\n\tFirst cut')
         cut_obj, shift = cutting(obj, (xmax, ymax))
+        if cut_obj is None: return None
         # fit
-        pop, _ = new_kernel_fit(cut_obj-thr,display_fig=False)
+        pop, _ = new_kernel_fit(cut_obj-thr, display_fig=False)
         est_sigma = pop[1]
         # negative sigma is unacceptable
         if est_sigma <= 0:  return None
         if 0 <= pop[-2] < cut_obj.shape[0] and 0 <= pop[-1] < cut_obj.shape[1]:
+            print('\n\tSecond cut')
             centre = np.rint(pop[-2:]).astype(int) + shift 
             cut_obj, shift = cutting(obj, centre)
+            if cut_obj is None: return None
             x0, y0 = centre - shift
             val0 = cut_obj[x0, y0]
         else:
@@ -1203,12 +1206,12 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         grad2 = [[],[]]
         mean_obj = [[],[]]
         # compute pixel position
-        step = lambda i, centre, dim : (dim-1) - centre - i
+        step = lambda i, centre: centre + i
         # collect pixels along both horizontal and vertical directions
-        mean_obj[0] += [ [cut_obj[x,y0] for x in [step(i,-x0,1), step(i,x0,xdim)] if x >= 0] + [cut_obj[x0,y] for y in [step(i,-y0,1), step(i,y0,ydim)] if y >= 0]  for i in range(1,max(xdim,ydim)) ]
+        mean_obj[0] += [ [cut_obj[x,y0] for x in [step(i,x0), step(-i,x0)] if 0 <= x < xdim] + [cut_obj[x0,y] for y in [step(i,y0), step(-i,y0)] if 0 <= y < ydim]  for i in range(1,max(xdim,ydim)) ]
         print('MEAN',mean_obj)
         # collect pixels along diagonal direction
-        mean_obj[1] += [ [cut_obj[x,y] for x in [step(i,-x0,0), step(i,x0,xdim)] for y in [step(i,-y0,0), step(i,y0,ydim)] if x >= 0 and y >= 0] for i in range(1,max(xdim,ydim)) ]
+        mean_obj[1] += [ [cut_obj[x,y] for x in [step(i,x0), step(-i,x0)] for y in [step(i,y0), step(-i,y0)] if 0 <= x < xdim and 0 <= y < ydim] for i in range(1,max(xdim,ydim)) ]
         fig, ax = plt.subplots(2,1)
         title = ''
         for i in range(2):
@@ -1242,55 +1245,96 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
                 xdim, ydim = obj.shape
                 mean_width = g_pos[0]
                 print('Quite')
-                xsize = slice(max(0, x0-mean_width),  min(xdim, x0+mean_width+1))
-                ysize = slice(max(0, y0-mean_width),  min(xdim, y0+mean_width+1))
-                obj = obj[xsize, ysize]
-                fast_image(cut_obj)
+                xsize = ( max(0, x0-mean_width),  min(xdim, x0+mean_width+1))
+                ysize = ( max(0, y0-mean_width),  min(xdim, y0+mean_width+1))
+                obj = obj[slice(*xsize), slice(*ysize)]
+                fast_image(cut_obj,'cutted')
+            else: 
+                xsize = (x0, xdim)
+                ysize = (y0, ydim)
             print('GOOD')
             x, y = index
             index = (x0 + (x-xmax), y0 + (y-ymax))
-            return obj, index
+            return obj, index, (xsize, ysize)
         else:
             ## S/N
-            hwhm = max(xdim-x0,ydim-y0,x0,y0)
             ratio = min(mean_obj[0][1:mean_width+1])/thr
             print('S/N',ratio*100,'%')
             if ratio >= 10:
-                # per riconoscenza all'impostore che siede al suo posto
                 print('Quite Quite Good')
                 x0, y0 = np.array([x0, y0]) + shift
                 xdim, ydim = obj.shape
-                xsize = slice(max(0, x0-mean_width),  min(xdim, x0+mean_width+1))
-                ysize = slice(max(0, y0-mean_width),  min(xdim, y0+mean_width+1))
-                obj = obj[xsize, ysize]
+                xsize = ( max(0, x0-mean_width),  min(xdim, x0+mean_width+1) )
+                ysize = ( max(0, y0-mean_width),  min(xdim, y0+mean_width+1) )
+                obj = obj[slice(*xsize), slice(*ysize)]
                 fast_image(obj, 'Cutted obj')
                 x, y = index
                 index = (x0 + (x-xmax), y0 + (y-ymax))
-                return obj, index
+                return obj, index, (xsize, ysize)
             else:
                 print('NO GOOD')
                 return None
-
-def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size: int = 7, min_dist: int = 0, display_fig: bool = False, **kwargs):
+            
+def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size: int = 7, min_dist: int = 0, bright_cut: bool =  True, display_fig: bool = False, **kwargs) -> None | tuple[list[NDArray], NDArray]:
+    def info_print(cnt: int, index: tuple, peak: float) -> None:
+        x0 , y0 = index
+        print(f'Step {cnt}')
+        print(f'\tcoor : ({x0}, {y0})')
+        print(f'\tpeak : {peak}')
     tmp_field = field.copy()
+    display_field = field.copy()
     sigma = []
-    rej_obj = []
+    arr_pos = np.empty((2,0),dtype=int)
     acc_obj = []
+    acc_pos = np.empty((2,0),dtype=int)
+    rej_obj = []
+    rej_pos = np.empty((2,0),dtype=int)
 
     xmax, ymax = peak_pos(tmp_field)
     peak = tmp_field[xmax, ymax]
-    while peak > thr:
-        if peak/2 >= thr:
-            xsize, ysize = new_grad_check(field, (xmax, ymax), thr, size=max_size)
+    stop_val = thr
+    cnt = 1
+    print('\n- - - SEARCHING START - - -')
+    print(f'Stop_val : {stop_val}')
+    info_print(cnt,(xmax, ymax), peak)
+    while peak > stop_val:
+        if peak/2 >= thr or bright_cut:
+            xsize, ysize = new_grad_check(tmp_field, (xmax, ymax), thr, size=max_size)
             x = slice(xmax - xsize[0], xmax + xsize[1])
             y = slice(ymax - ysize[0], ymax + ysize[1])
-            tmp_field[x,y] = 0.0
             obj = field[x,y].copy()
-            acc_obj, rej_obj = object_check(obj, (xmax, ymax), sigma, acc_obj, rej_obj)
-
-        
-
-    return
+            print(f'\tshape : {obj.shape}')
+            check = object_check(obj, (xmax, ymax), thr, sigma)
+            if check is None:
+                x0, y0 = xmax, ymax
+                rej_obj += [obj]
+                rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
+            else:
+                obj, (x0, y0), (xsize, ysize) = check
+                x = slice(x0 - xsize[0], x0 + xsize[1])
+                y = slice(y0 - ysize[0], y0 + ysize[1])
+                if selection(obj,(x0, y0), arr_pos, max_size,  mindist=min_dist, sel='all'):
+                    acc_obj += [obj]
+                    acc_pos = np.append(acc_pos, [[x0], [y0]], axis=1)
+                    display_field[x,y] = 0.0
+                else:
+                    rej_obj += [obj]
+                    rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
+            arr_pos = np.append(arr_pos, [[x0], [y0]], axis=1)
+        else:
+            if bright_cut:                
+                tmp_field[xmax,ymax] = 0.0
+                obj = field[xmax,ymax]
+                rej_obj += [obj]
+                rej_pos = np.append(rej_pos, [[xmax], [ymax]], axis=1)
+                arr_pos = np.append(arr_pos, [[xmax], [ymax]], axis=1)
+        tmp_field[x,y] = 0.0
+        xmax, ymax = peak_pos(tmp_field)
+        peak = tmp_field[xmax, ymax]   
+        cnt += 1
+        info_print(cnt,(xmax, ymax), peak)
+    if len(acc_obj) == 0: return None
+    return acc_obj, acc_pos
     
 def find_objects(field: NDArray, rec_field: NDArray, thr: float, sigma: NDArray, max_size: int, results: bool = False, display_fig: bool = False, **kwargs) -> tuple[list[NDArray], list[NDArray], NDArray] | None:
     
