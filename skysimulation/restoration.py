@@ -1212,6 +1212,21 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         print('MEAN',mean_obj)
         # collect pixels along diagonal direction
         mean_obj[1] += [ [cut_obj[x,y] for x in [step(i,x0), step(-i,x0)] for y in [step(i,y0), step(-i,y0)] if 0 <= x < xdim and 0 <= y < ydim] for i in range(1,max(xdim,ydim)) ]
+        px1 = np.arange(1,len(mean_obj[0])+1)
+        px2 = np.arange(1,len(mean_obj[1])+1)
+        pos_px = np.argsort(np.append(px1,px2*np.sqrt(2)))
+        px = np.append(px1,px2*-1)[pos_px]
+        print(px)
+        mm_obj = np.array([mean_obj[0][p-1] if p > 0 else mean_obj[1][-p-1] for p in px], dtype=object)
+        mean_pos = [i for i in range(len(mm_obj)) if len(mm_obj[i]) != 0]
+        mm_obj = np.array([np.mean(val) for val in mm_obj[mean_pos]])
+        mm_obj = np.append([val0],mm_obj)
+        px = np.where(px[mean_pos] < 0, px[mean_pos]*-np.sqrt(2), px[mean_pos])
+        px = np.append([0],px)
+        print(px)
+        print('SHAPE',mm_obj.shape,px.shape)
+        fig0, ax0 = plt.subplots(1,1)
+        ax0.plot(px,mm_obj)
         fig, ax = plt.subplots(2,1)
         title = ''
         for i in range(2):
@@ -1220,14 +1235,22 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             # append the centre pixel
             mean_obj[i] = np.append([val0],mean_obj[i])
             print(f'MEAN_{i}',mean_obj[i])
-            # compute the first derivative
-            grad1[i] = np.diff(mean_obj[i])
-            # compute the second derivative
-            grad2[i] = np.diff(grad1[i])
+            if len(mean_obj[i]) > 1:
+                # compute the first derivative
+                grad1[i] = np.diff(mean_obj[i])
+                ax[i].plot(grad1[i],'x--r')
+                if len(grad1[i]) > 1:
+                    # compute the second derivative
+                    grad2[i] = np.diff(grad1[i])
+                    ax[i].plot(grad2[i],'+--g')
+            pp = np.array([ np.where(mm_obj == m)[0][0] for m in mean_obj[i] if len(np.where(mm_obj == m)[0]) != 0 ])
+            color = 'red' if i == 0 else 'green' 
+            ax0.plot(px[pp],mm_obj[pp],marker='.',linestyle='--',color=color,label=f'obj {i}')
+
             ax[i].plot(mean_obj[i],'.--b')
-            ax[i].plot(grad1[i],'x--r')
             ax[i].axhline(0,0,1,color='black')
             title = title + i*'\n' + f'mean{i+1} = {np.mean(mean_obj[i][1:]):.2}, grad1_{i+1} = {np.mean(grad1[i]):.2}, grad2_{i+1} = {np.mean(grad2[i]):.2}'
+        ax0.legend()
         fig.suptitle(title)
         fig, (ax1,ax2) = plt.subplots(1,2)
         field_image(fig,ax1,obj)
@@ -1304,22 +1327,27 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
             y = slice(ymax - ysize[0], ymax + ysize[1])
             obj = field[x,y].copy()
             print(f'\tshape : {obj.shape}')
-            check = object_check(obj, (xmax, ymax), thr, sigma)
-            if check is None:
+            if 0 in obj.shape: 
                 x0, y0 = xmax, ymax
                 rej_obj += [obj]
                 rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
             else:
-                obj, (x0, y0), (xsize, ysize) = check
-                x = slice(x0 - xsize[0], x0 + xsize[1])
-                y = slice(y0 - ysize[0], y0 + ysize[1])
-                if selection(obj,(x0, y0), arr_pos, max_size,  mindist=min_dist, sel='all'):
-                    acc_obj += [obj]
-                    acc_pos = np.append(acc_pos, [[x0], [y0]], axis=1)
-                    display_field[x,y] = 0.0
-                else:
+                check = object_check(obj, (xmax, ymax), thr, sigma)
+                if check is None:
+                    x0, y0 = xmax, ymax
                     rej_obj += [obj]
                     rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
+                else:
+                    obj, (x0, y0), (xsize, ysize) = check
+                    x = slice(x0 - xsize[0], x0 + xsize[1])
+                    y = slice(y0 - ysize[0], y0 + ysize[1])
+                    if selection(obj,(x0, y0), arr_pos, max_size,  mindist=min_dist, sel='all'):
+                        acc_obj += [obj]
+                        acc_pos = np.append(acc_pos, [[x0], [y0]], axis=1)
+                        display_field[x,y] = 0.0
+                    else:
+                        rej_obj += [obj]
+                        rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
             arr_pos = np.append(arr_pos, [[x0], [y0]], axis=1)
         else:
             if bright_cut:                
@@ -1333,7 +1361,19 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
         peak = tmp_field[xmax, ymax]   
         cnt += 1
         info_print(cnt,(xmax, ymax), peak)
-    if len(acc_obj) == 0: return None
+    fig, ax = plt.subplots(1,1)
+    field_image(fig,ax,display_field)
+    if 0 not in acc_pos:
+        ax.plot(acc_pos[1],acc_pos[0],'.b')
+    if 0 not in rej_pos:
+        ax.plot(rej_pos[1],rej_pos[0],'.r')
+    plt.show()
+    fig, ax = plt.subplots(1,1)
+    field_image(fig,ax,field)
+    if 0 not in acc_pos:
+        ax.plot(acc_pos[1],acc_pos[0],'.b')
+    plt.show()
+    if 0 in acc_pos.shape: return None
     return acc_obj, acc_pos
     
 def find_objects(field: NDArray, rec_field: NDArray, thr: float, sigma: NDArray, max_size: int, results: bool = False, display_fig: bool = False, **kwargs) -> tuple[list[NDArray], list[NDArray], NDArray] | None:
