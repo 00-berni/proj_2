@@ -1152,55 +1152,101 @@ def light_recover(obj: NDArray, a_size: NDArray[np.int64] | None = None, kernel:
     L = trapezoid(trapezoid(obj))
     return L
 
-def cutting(obj: NDArray, centre: tuple[int,int]) -> tuple[NDArray, NDArray]:
-    xdim, ydim = obj.shape
-    x0, y0 = centre
-    hm = obj[x0, y0]/2
+def cutting(obj: NDArray, centre: Sequence[int]) -> tuple[NDArray, NDArray] | tuple[None, None]:
+    WRONG_RESULT = None, None   #: the returned value for rejected objects
+    xdim, ydim = obj.shape      #: sizes
+    x0, y0 = centre             #: center coordinates
+    hm = obj[x0, y0]/2          #: half maximum
+    # compute the best approximation of hwhm
     hm_pos = max(minimum_pos(abs(obj-hm)))
-    hwhm = abs(hm_pos-min(x0,y0))
-    if hwhm == 1:   return None, None
+    hwhm = np.rint((abs(hm_pos-x0) + abs(hm_pos-y0))/2).astype(int)
+    if hwhm == 1:   #: check the size
+        print('! HWHM nO')
+        fast_image(obj,'! HWHM small')
+        return WRONG_RESULT
+    # select only the pixels inside hwhm
     cut = lambda centre, dim : slice(max(centre-hwhm,0), min(centre+hwhm +1 , dim))
     cut_obj = obj[cut(x0,xdim), cut(y0,ydim)].copy()
-    print('\n\thwhm',abs(hm_pos-min(x0,y0)))
+    if 1 in cut_obj.shape or 2 in cut_obj.shape:    #: check size
+        fast_image(cut_obj,'! Sizes')
+        print('! No shape')
+        return WRONG_RESULT
+    # xdim, ydim = cut_obj.shape
+    print('\n\thwhm',hwhm)
     print('\thm_pos', hm_pos)
-    print('\tsigma',abs(hm_pos-min(x0,y0))/ (2*np.log(2)))
+    print('\tsigma',hwhm / (2*np.log(2)))
     print('\tdim : ', xdim, ydim)
-    print('\tmax : ', x0, y0)
+    print('\tcen : ', x0, y0)
     print('\tx : ', max(x0-hwhm,0), min(x0+hwhm+1, xdim))
     print('\ty : ', max(y0-hwhm,0), min(y0+hwhm+1, ydim))
+    # compute the shift to trasform the coordinates
     xmax, ymax = peak_pos(obj)
     cxmax, cymax = peak_pos(cut_obj)
     shift = np.array([xmax - cxmax, ymax - cymax])
     print('shift',shift)
     return cut_obj, shift
 
+def average_trend(obj: NDArray, centre: tuple[int, int]) -> tuple[NDArray, NDArray]:
+    xdim, ydim = obj.shape
+    val0 = obj[centre]
+    x0, y0 = centre
+    mean_obj = [[],[]]
+    # compute pixel position
+    step = lambda i, centre: centre + i
+    # collect pixels along both horizontal and vertical directions
+    mean_obj[0] += [ [obj[x,y0] for x in [step(i,x0), step(-i,x0)] if 0 <= x < xdim] + [obj[x0,y] for y in [step(i,y0), step(-i,y0)] if 0 <= y < ydim]  for i in range(1,max(xdim,ydim)) ]
+    print('MEAN',mean_obj)
+    # collect pixels along diagonal direction
+    mean_obj[1] += [ [obj[x,y] for x in [step(i,x0), step(-i,x0)] for y in [step(i,y0), step(-i,y0)] if 0 <= x < xdim and 0 <= y < ydim] for i in range(1,max(xdim,ydim)) ]
+    px1 = np.arange(1,len(mean_obj[0])+1)
+    px2 = np.arange(1,len(mean_obj[1])+1)
+    pos_px = np.argsort(np.append(px1,px2*np.sqrt(2)))
+    px = np.append(px1,px2*-1)[pos_px]
+    print(px)
+    mm_obj = np.array([mean_obj[0][p-1] if p > 0 else mean_obj[1][-p-1] for p in px], dtype=object)
+    mean_pos = [i for i in range(len(mm_obj)) if len(mm_obj[i]) != 0]
+    mm_obj = np.array([np.mean(val) for val in mm_obj[mean_pos]])
+    mm_obj = np.append([val0],mm_obj)
+    px = np.where(px[mean_pos] < 0, px[mean_pos]*-np.sqrt(2), px[mean_pos])
+    px = np.append([0],px)
+    return px, mm_obj
 
 def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequence[int] | None, mode: Literal["all", "grad", "pxl"] = 'all') -> tuple[NDArray, tuple[int, int], tuple[tuple[int, int], tuple[int, int]]] | None:
-    xmax, ymax = peak_pos(obj)
-    xdim, ydim = obj.shape
+    xmax, ymax = peak_pos(obj)      #: max value coordinates
+    xdim, ydim = obj.shape          #: sizes
     if mode == 'all':
         ## Cut 
         print('\n\tFirst cut')
-        cut_obj, shift = cutting(obj, (xmax, ymax))
-        if cut_obj is None: return None
-        # fit
+        # set the center
+        centre = np.array([xmax, ymax])
+        # select the pixels of interest from `obj`
+        cut_obj, shift = cutting(obj, centre)
+        if cut_obj is None:     #: check
+            return None
+        # fit with a gaussian in order to find the centroid
         pop, _ = new_kernel_fit(cut_obj-thr, display_fig=False)
+        # check sigma
         est_sigma = pop[1]
-        # negative sigma is unacceptable
-        if est_sigma <= 0:  return None
+        if est_sigma <= 0:  #: negative sigma is unacceptable
+            print('BAD SIGMA')
+            fast_image(cut_obj)
+            return None
+        # check the centroid position
         if 0 <= pop[-2] < cut_obj.shape[0] and 0 <= pop[-1] < cut_obj.shape[1]:
             print('\n\tSecond cut')
+            # compute center coordinates in the frame of `obj`
             centre = np.rint(pop[-2:]).astype(int) + shift 
+            # select the pixels of interest from `obj`
             cut_obj, shift = cutting(obj, centre)
-            if cut_obj is None: return None
-            x0, y0 = centre - shift
-            val0 = cut_obj[x0, y0]
-        else:
-            x0, y0 = np.array([xmax, ymax]) - shift
-            val0 = cut_obj[x0,y0]
+            if cut_obj is None:     #: check
+                return None
+        # change coordinates reference
+        x0, y0 = centre - shift
+        # compute the value of the centroid
+        val0 = cut_obj[x0, y0]
         
         ## Gradient
-        xdim, ydim = cut_obj.shape
+        xdim, ydim = cut_obj.shape          #: sizes of the selected portion
         print('cut_dim : ', xdim, ydim)
         grad1 = [[],[]]
         grad2 = [[],[]]
@@ -1226,7 +1272,8 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         print(px)
         print('SHAPE',mm_obj.shape,px.shape)
         fig0, ax0 = plt.subplots(1,1)
-        ax0.plot(px,mm_obj)
+        ax0.plot(px,mm_obj,'v-')
+        ax0.plot((px[1:]+px[:-1])/2,np.diff(mm_obj),'^--',color='orange',label='gradient')
         fig, ax = plt.subplots(2,1)
         title = ''
         for i in range(2):
@@ -1245,12 +1292,12 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
                     ax[i].plot(grad2[i],'+--g')
             pp = np.array([ np.where(mm_obj == m)[0][0] for m in mean_obj[i] if len(np.where(mm_obj == m)[0]) != 0 ])
             color = 'red' if i == 0 else 'green' 
-            ax0.plot(px[pp],mm_obj[pp],marker='.',linestyle='--',color=color,label=f'obj {i}')
+            ax0.plot(px[pp],mm_obj[pp],marker='.',linestyle='--',color=color,label=f'obj {i}', alpha=0.5)
 
             ax[i].plot(mean_obj[i],'.--b')
             ax[i].axhline(0,0,1,color='black')
             title = title + i*'\n' + f'mean{i+1} = {np.mean(mean_obj[i][1:]):.2}, grad1_{i+1} = {np.mean(grad1[i]):.2}, grad2_{i+1} = {np.mean(grad2[i]):.2}'
-        ax0.legend()
+        #ax0.legend()
         fig.suptitle(title)
         fig, (ax1,ax2) = plt.subplots(1,2)
         field_image(fig,ax1,obj)
@@ -1283,7 +1330,8 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             ## S/N
             ratio = min(mean_obj[0][1:mean_width+1])/thr
             print('S/N',ratio*100,'%')
-            if ratio >= 10:
+            plt.show()
+            if ratio >= 5:
                 print('Quite Quite Good')
                 x0, y0 = np.array([x0, y0]) + shift
                 xdim, ydim = obj.shape
@@ -1295,6 +1343,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
                 index = (x0 + (x-xmax), y0 + (y-ymax))
                 return obj, index, (xsize, ysize)
             else:
+                print('RATIO',val0/thr*100,'%')
                 print('NO GOOD')
                 return None
             
@@ -1332,6 +1381,9 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                 rej_obj += [obj]
                 rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
             else:
+                fig0, ax0 = plt.subplots(1,1)
+                field_image(fig0,ax0,display_field)
+                ax0.plot(ymax,xmax,'.')
                 check = object_check(obj, (xmax, ymax), thr, sigma)
                 if check is None:
                     x0, y0 = xmax, ymax
@@ -1356,6 +1408,7 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                 rej_obj += [obj]
                 rej_pos = np.append(rej_pos, [[xmax], [ymax]], axis=1)
                 arr_pos = np.append(arr_pos, [[xmax], [ymax]], axis=1)
+            else: break
         tmp_field[x,y] = 0.0
         xmax, ymax = peak_pos(tmp_field)
         peak = tmp_field[xmax, ymax]   
@@ -1376,92 +1429,3 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
     if 0 in acc_pos.shape: return None
     return acc_obj, acc_pos
     
-def find_objects(field: NDArray, rec_field: NDArray, thr: float, sigma: NDArray, max_size: int, results: bool = False, display_fig: bool = False, **kwargs) -> tuple[list[NDArray], list[NDArray], NDArray] | None:
-    
-    ## Initialization
-    tmp_field = rec_field.copy()
-    display_field = rec_field.copy()                #: field from which only selected objects will be removed (for plotting only)
-    a_pos = np.empty(shape=(2,0),dtype=int)         #: array to store coordinates of all objects
-    acc_obj = [[],[]]                               #: list to collect accepted objects 
-    acc_pos = np.empty(shape=(2,0),dtype=int)       #: array to store coordinates of `sel_obj`
-    rej_obj = [[],[]]                               #: list to collect rejected objects
-    rej_pos = np.empty(shape=(2,0),dtype=int)       #: array to store coordinates of `rej_obj`
-    lum = np.empty(shape=0,dtype=float)
-
-    ## Detecting Routine
-    max_pos = peak_pos(tmp_field)
-    peak = tmp_field[max_pos]
-    px_err = sigma[max_pos]
-    while peak + px_err > thr:
-        a_size = new_grad_check(tmp_field,max_pos,thr,max_size)
-        x, y = max_pos                      #: coordinates of the brightest pixel
-        xu, xd, yu, yd = a_size.flatten()   #: edges of the object
-        # compute slices for edges
-        xr = slice(x-xd, x+xu+1) 
-        yr = slice(y-yd, y+yu+1)
-        # remove the object from the field
-        tmp_field[xr,yr] = 0.0
-        a_pos = np.append(a_pos,[[x],[y]],axis=1)
-        a_pos = np.append(a_pos,[[x],[y]],axis=1)
-        if any(([[0,0],[0,0]] == a_size).all(axis=1)):  #: a single pixel is not accepted
-            # storing the object and its coordinates
-            rej_obj += [field[xr,yr].copy()]
-            rej_pos = np.append(rej_pos,[[x],[y]],axis=1)
-        else:            
-            # store the object and its std
-            obj = field[xr,yr].copy() 
-            err = sigma[xr,yr].copy()
-            # check the condition to accept an object
-            save_cond = selection(obj,max_pos,a_pos,max_size,sel='all',mindist=0) and selection(obj,max_pos,a_pos,max_size,sel='new')
-            if save_cond:       #: accepted object
-                # remove it from the field for displaying
-                display_field[xr,yr] = 0.0
-                # store the selected object, its std and coordinates
-                acc_obj[0] += [obj]
-                acc_obj[1] += [err]
-                acc_pos = np.append(acc_pos,[[x],[y]],axis=1)
-            else: 
-                # store the rejected object, its std and coordinates
-                rej_obj[0] += [obj]
-                rej_obj[1] += [err]
-                rej_pos = np.append(rej_pos,[[x],[y]],axis=1)
-            if results:     #: show the object
-                fig, ax = plt.subplots(1,1)
-                field_image(fig,ax,tmp_field,**kwargs)
-                if len(rej_pos[0])!= 0:
-                    ax.plot(rej_pos[1,:-1],rej_pos[0,:-1],'.r')
-                    ax.plot(rej_pos[1,-1],rej_pos[0,-1],'x',color='red')
-                if len(acc_pos[0])!=0:
-                    ax.plot(acc_pos[1,:-1],acc_pos[0,:-1],'.b')
-                    ax.plot(acc_pos[1,-1],acc_pos[0,-1],'xb')
-                fast_image(obj,**kwargs) 
-        max_pos = peak_pos(tmp_field)
-        peak = tmp_field[max_pos]
-        px_err = sigma[max_pos]
-        if peak/2 < thr: break
-    fast_image(display_field,**kwargs)
-    fast_image(tmp_field,**kwargs)    
-    if len(acc_obj[0]) > 0:
-        fig, ax = plt.subplots(1,1)
-        kwargs.pop('title',None)
-        field_image(fig,ax,display_field,**kwargs)
-        ax.plot(rej_pos[1],rej_pos[0],'.',color='red',label='rejected objects')
-        ax.legend()
-        plt.show()
-        fig, ax = plt.subplots(1,1)
-        kwargs.pop('title',None)
-        field_image(fig,ax,field,**kwargs)
-        ax.plot(rej_pos[1],rej_pos[0],'.',color='red',label='rejected objects')
-        ax.plot(acc_pos[1],acc_pos[0],'.',color='blue',label='chosen objects')
-        ax.legend()
-        plt.show()
-
-    # check routine finds at least one object
-    if len(acc_obj[0]) == 0: return None
-    
-    print(f'\nRej:\t{len(rej_obj[0])}\nExt:\t{len(acc_obj[0])}')
-    print(':: End ::')
-    # extract list of objects and their std
-    obj, err = acc_obj
-    return obj, err, acc_pos
-
