@@ -1211,10 +1211,71 @@ def average_trend(obj: NDArray, centre: tuple[int, int]) -> tuple[NDArray, NDArr
     px = np.append([0],px)
     return px, mm_obj
 
-def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequence[int] | None, mode: Literal["all", "grad", "pxl"] = 'all') -> tuple[NDArray, tuple[int, int], tuple[tuple[int, int], tuple[int, int]]] | None:
+        # grad1 = [[],[]]
+        # grad2 = [[],[]]
+        # mean_obj = [[],[]]
+        # # compute pixel position
+        # step = lambda i, centre: centre + i
+        # # collect pixels along both horizontal and vertical directions
+        # mean_obj[0] += [ [cut_obj[x,y0] for x in [step(i,x0), step(-i,x0)] if 0 <= x < xdim] + [cut_obj[x0,y] for y in [step(i,y0), step(-i,y0)] if 0 <= y < ydim]  for i in range(1,max(xdim,ydim)) ]
+        # print('MEAN',mean_obj)
+        # # collect pixels along diagonal direction
+        # mean_obj[1] += [ [cut_obj[x,y] for x in [step(i,x0), step(-i,x0)] for y in [step(i,y0), step(-i,y0)] if 0 <= x < xdim and 0 <= y < ydim] for i in range(1,max(xdim,ydim)) ]
+        # px1 = np.arange(1,len(mean_obj[0])+1)
+        # px2 = np.arange(1,len(mean_obj[1])+1)
+        # pos_px = np.argsort(np.append(px1,px2*np.sqrt(2)))
+        # px = np.append(px1,px2*-1)[pos_px]
+        # print(px)
+        # mm_obj = np.array([mean_obj[0][p-1] if p > 0 else mean_obj[1][-p-1] for p in px], dtype=object)
+        # mean_pos = [i for i in range(len(mm_obj)) if len(mm_obj[i]) != 0]
+        # mm_obj = np.array([np.mean(val) for val in mm_obj[mean_pos]])
+        # mm_obj = np.append([val0],mm_obj)
+        # px = np.where(px[mean_pos] < 0, px[mean_pos]*-np.sqrt(2), px[mean_pos])
+        # px = np.append([0],px)
+        # print(px)
+        # print('SHAPE',mm_obj.shape,px.shape)
+        # fig0, ax0 = plt.subplots(1,1)
+        # ax0.plot(px,mm_obj,'v-')
+        # ax0.plot((px[1:]+px[:-1])/2,np.diff(mm_obj),'^--',color='orange',label='gradient')
+        # ax0.axhline(0,0,1,color='black',alpha=0.5)
+        # fig, ax = plt.subplots(2,1)
+        # title = ''
+        # for i in range(2):
+        #     # average over pixels at same distance
+        #     mean_obj[i] = np.array([np.mean(val) for val in mean_obj[i] if len(val) != 0])
+        #     # append the centre pixel
+        #     mean_obj[i] = np.append([val0],mean_obj[i])
+        #     print(f'MEAN_{i}',mean_obj[i])
+        #     if len(mean_obj[i]) > 1:
+        #         # compute the first derivative
+        #         grad1[i] = np.diff(mean_obj[i])
+        #         ax[i].plot(grad1[i],'x--r')
+        #         if len(grad1[i]) > 1:
+        #             # compute the second derivative
+        #             grad2[i] = np.diff(grad1[i])
+        #             ax[i].plot(grad2[i],'+--g')
+        #     pp = np.array([ np.where(mm_obj == m)[0][0] for m in mean_obj[i] if len(np.where(mm_obj == m)[0]) != 0 ])
+        #     color = 'red' if i == 0 else 'green' 
+        #     ax0.plot(px[pp],mm_obj[pp],marker='.',linestyle='--',color=color,label=f'obj {i}', alpha=0.5)
+
+        #     ax[i].plot(mean_obj[i],'.--b')
+        #     ax[i].axhline(0,0,1,color='black')
+        #     title = title + i*'\n' + f'mean{i+1} = {np.mean(mean_obj[i][1:]):.2}, grad1_{i+1} = {np.mean(grad1[i]):.2}, grad2_{i+1} = {np.mean(grad2[i]):.2}'
+        # #ax0.legend()
+        # fig.suptitle(title)
+        # fig, (ax1,ax2) = plt.subplots(1,2)
+        # field_image(fig,ax1,obj)
+        # field_image(fig,ax2,cut_obj)
+        # ax1.plot(y0+shift[1],x0+shift[0],'.')
+        # ax2.plot(y0,x0,'.')
+        # plt.show()
+
+
+def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequence[int] | None, mode: Literal["bright", "low"] = 'bright') -> tuple[NDArray, tuple[int, int], tuple[tuple[int, int], tuple[int, int]]] | None:
+    SIZE = 5
     xmax, ymax = peak_pos(obj)      #: max value coordinates
     xdim, ydim = obj.shape          #: sizes
-    if mode == 'all':
+    if mode == 'bright':
         ## Cut 
         print('\n\tFirst cut')
         # set the center
@@ -1244,110 +1305,111 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         x0, y0 = centre - shift
         # compute the value of the centroid
         val0 = cut_obj[x0, y0]
-        
-        ## Gradient
         xdim, ydim = cut_obj.shape          #: sizes of the selected portion
-        print('cut_dim : ', xdim, ydim)
-        grad1 = [[],[]]
-        grad2 = [[],[]]
-        mean_obj = [[],[]]
-        # compute pixel position
-        step = lambda i, centre: centre + i
-        # collect pixels along both horizontal and vertical directions
-        mean_obj[0] += [ [cut_obj[x,y0] for x in [step(i,x0), step(-i,x0)] if 0 <= x < xdim] + [cut_obj[x0,y] for y in [step(i,y0), step(-i,y0)] if 0 <= y < ydim]  for i in range(1,max(xdim,ydim)) ]
-        print('MEAN',mean_obj)
-        # collect pixels along diagonal direction
-        mean_obj[1] += [ [cut_obj[x,y] for x in [step(i,x0), step(-i,x0)] for y in [step(i,y0), step(-i,y0)] if 0 <= x < xdim and 0 <= y < ydim] for i in range(1,max(xdim,ydim)) ]
-        px1 = np.arange(1,len(mean_obj[0])+1)
-        px2 = np.arange(1,len(mean_obj[1])+1)
-        pos_px = np.argsort(np.append(px1,px2*np.sqrt(2)))
-        px = np.append(px1,px2*-1)[pos_px]
-        print(px)
-        mm_obj = np.array([mean_obj[0][p-1] if p > 0 else mean_obj[1][-p-1] for p in px], dtype=object)
-        mean_pos = [i for i in range(len(mm_obj)) if len(mm_obj[i]) != 0]
-        mm_obj = np.array([np.mean(val) for val in mm_obj[mean_pos]])
-        mm_obj = np.append([val0],mm_obj)
-        px = np.where(px[mean_pos] < 0, px[mean_pos]*-np.sqrt(2), px[mean_pos])
-        px = np.append([0],px)
-        print(px)
-        print('SHAPE',mm_obj.shape,px.shape)
-        fig0, ax0 = plt.subplots(1,1)
-        ax0.plot(px,mm_obj,'v-')
-        ax0.plot((px[1:]+px[:-1])/2,np.diff(mm_obj),'^--',color='orange',label='gradient')
-        fig, ax = plt.subplots(2,1)
-        title = ''
-        for i in range(2):
-            # average over pixels at same distance
-            mean_obj[i] = np.array([np.mean(val) for val in mean_obj[i] if len(val) != 0])
-            # append the centre pixel
-            mean_obj[i] = np.append([val0],mean_obj[i])
-            print(f'MEAN_{i}',mean_obj[i])
-            if len(mean_obj[i]) > 1:
-                # compute the first derivative
-                grad1[i] = np.diff(mean_obj[i])
-                ax[i].plot(grad1[i],'x--r')
-                if len(grad1[i]) > 1:
-                    # compute the second derivative
-                    grad2[i] = np.diff(grad1[i])
-                    ax[i].plot(grad2[i],'+--g')
-            pp = np.array([ np.where(mm_obj == m)[0][0] for m in mean_obj[i] if len(np.where(mm_obj == m)[0]) != 0 ])
-            color = 'red' if i == 0 else 'green' 
-            ax0.plot(px[pp],mm_obj[pp],marker='.',linestyle='--',color=color,label=f'obj {i}', alpha=0.5)
+        hwhm = (max(abs(xdim-x0),x0) + max(abs(ydim-y0),y0))/2
+        sigma += [hwhm]
 
-            ax[i].plot(mean_obj[i],'.--b')
-            ax[i].axhline(0,0,1,color='black')
-            title = title + i*'\n' + f'mean{i+1} = {np.mean(mean_obj[i][1:]):.2}, grad1_{i+1} = {np.mean(grad1[i]):.2}, grad2_{i+1} = {np.mean(grad2[i]):.2}'
-        #ax0.legend()
-        fig.suptitle(title)
-        fig, (ax1,ax2) = plt.subplots(1,2)
-        field_image(fig,ax1,obj)
-        field_image(fig,ax2,cut_obj)
-        ax1.plot(y0+shift[1],x0+shift[0],'.')
-        ax2.plot(y0,x0,'.')
+        ## Gradient
+        print('cut_dim : ', xdim, ydim)
+        # compute the mean trend
+        px, mean_obj = average_trend(cut_obj, (x0,y0))
+        # compute the first derivative
+        grad1 = np.diff(mean_obj) 
+        # check the derivative sign around the centre
+        mean_width = np.rint(min(hwhm//2, 3)).astype(int)
+        g_pos = np.where(grad1[:mean_width+1] >= 0)[0]
+        fig0,ax0 = plt.subplots(1,1)
+        ax0.plot(px,mean_obj,'.--',color='blue')
+        m_px = (px[:-1] + px[1:])/2
+        ax0.plot(m_px, grad1, 'v--', color='orange')
+        ax0.plot((m_px[:-1]+m_px[1:])/2, np.diff(grad1), '^--', color='green')
+        ax0.axhline(0,0,1,color='black')
         plt.show()
-        # check positive values of the first derivative
-        mean_width = min((len(mean_obj[0])-1)//2, 3)
-        g_pos = np.where(grad1[0][:mean_width+1] >= 0)[0]
         if len(g_pos) == 0:
+            # convert coordinates to the initial frame
             x0, y0 = np.array([x0, y0]) + shift
-            g_pos = np.where(grad1[0][mean_width:] >= 0)[0]
-            if len(g_pos) != 0:
-                xdim, ydim = obj.shape
+            # check the derivative sign out from the bulk
+            g_pos = np.where(grad1[mean_width:] >= 0)[0]
+            if len(g_pos) != 0:     #: cut the object
+                xdim, ydim = obj.shape  #: initial sizes
+                # cut at the first positive value of the derivative
                 mean_width = g_pos[0]
                 print('Quite')
+                # compute the size of the object from the centre
                 xsize = ( max(0, x0-mean_width),  min(xdim, x0+mean_width+1))
                 ysize = ( max(0, y0-mean_width),  min(xdim, y0+mean_width+1))
+                # cut the object
                 obj = obj[slice(*xsize), slice(*ysize)]
-                fast_image(cut_obj,'cutted')
+                fast_image(obj,'cutted')
             else: 
-                xsize = (x0, xdim)
-                ysize = (y0, ydim)
+                # compute the size of the object from the centre
+                xsize = (x0, xdim-x0)
+                ysize = (y0, ydim-y0)
             print('GOOD')
-            x, y = index
-            index = (x0 + (x-xmax), y0 + (y-ymax))
-            return obj, index, (xsize, ysize)
         else:
             ## S/N
-            ratio = min(mean_obj[0][1:mean_width+1])/thr
+            # compute the ratio between pixels around the centre and mean background
+            ratio = min(mean_obj[1:mean_width+1])/thr
             print('S/N',ratio*100,'%')
             plt.show()
-            if ratio >= 5:
+            if ratio >= 0.5:
                 print('Quite Quite Good')
+                # convert coordinates to the initial frame
                 x0, y0 = np.array([x0, y0]) + shift
-                xdim, ydim = obj.shape
-                xsize = ( max(0, x0-mean_width),  min(xdim, x0+mean_width+1) )
-                ysize = ( max(0, y0-mean_width),  min(xdim, y0+mean_width+1) )
+                xdim, ydim = obj.shape  #: initial sizes
+                # cut at the first positive value of the derivative
+                mean_width = g_pos[0]
+                print('Quite')
+                # compute the size of the object from the centre
+                xsize = ( max(0, x0-mean_width),  min(xdim, x0+mean_width+1))
+                ysize = ( max(0, y0-mean_width),  min(xdim, y0+mean_width+1))
+                # cut the object
                 obj = obj[slice(*xsize), slice(*ysize)]
-                fast_image(obj, 'Cutted obj')
-                x, y = index
-                index = (x0 + (x-xmax), y0 + (y-ymax))
-                return obj, index, (xsize, ysize)
+                fast_image(obj,'cutted S/N')
             else:
                 print('RATIO',val0/thr*100,'%')
                 print('NO GOOD')
                 return None
+        # compute the coordinates of the centre on the board
+        #. the changing of coordinates is obtained from the
+        #. maximum coordinates
+        x, y = index
+        index = (x0 + (x-xmax), y0 + (y-ymax))
+        return obj, index, (xsize, ysize)
+
+    elif mode == 'low':
+        print('LOW')
+        hwhm = np.rint(np.mean(sigma)).astype(int) if len(sigma) != 0 else SIZE
+        cut = lambda centre, dim : slice(max(0, centre-hwhm), min(dim, centre + hwhm + 1))
+        x0, y0 = (xmax,ymax)
+        cut_obj = obj[cut(x0, xdim), cut(y0, ydim)].copy()
+        fast_image(cut_obj)
+        # fit with a gaussian in order to find the centroid
+        pop, _ = new_kernel_fit(cut_obj-thr, display_fig=False)
+        # check sigma
+        est_sigma = pop[1]
+        if est_sigma <= 0:  #: negative sigma is unacceptable
+            print('BAD SIGMA')
+            fast_image(cut_obj)
+            return None
+        # check the centroid position
+        if 0 <= pop[-2] < cut_obj.shape[0] and 0 <= pop[-1] < cut_obj.shape[1]:
+            x0, y0 = pop[-2:]
+            cut_obj = obj[cut(x0, xdim), cut(y0, ydim)].copy()
+
+        px, mean_obj = average_trend(cut_obj, (x0,y0))
+        fig0,ax0 = plt.subplots(1,1)
+        ax0.plot(px,mean_obj,'.--',color='blue')
+        m_px = (px[:-1] + px[1:])/2
+        ax0.plot(m_px, grad1, 'v--', color='orange')
+        ax0.plot((m_px[:-1]+m_px[1:])/2, np.diff(grad1), '^--', color='green')
+        ax0.axhline(0,0,1,color='black')
+        plt.show()
+                
+
+
             
-def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size: int = 7, min_dist: int = 0, bright_cut: bool =  True, display_fig: bool = False, **kwargs) -> None | tuple[list[NDArray], NDArray]:
+def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size: int = 7, min_dist: int = 0, bright_cut: bool =  False, display_fig: bool = False, **kwargs) -> None | tuple[list[NDArray], NDArray]:
     def info_print(cnt: int, index: tuple, peak: float) -> None:
         x0 , y0 = index
         print(f'Step {cnt}')
@@ -1370,7 +1432,7 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
     print(f'Stop_val : {stop_val}')
     info_print(cnt,(xmax, ymax), peak)
     while peak > stop_val:
-        if peak/2 >= thr or bright_cut:
+        if peak/2 >= thr:
             xsize, ysize = new_grad_check(tmp_field, (xmax, ymax), thr, size=max_size)
             x = slice(xmax - xsize[0], xmax + xsize[1])
             y = slice(ymax - ysize[0], ymax + ysize[1])
@@ -1408,7 +1470,16 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                 rej_obj += [obj]
                 rej_pos = np.append(rej_pos, [[xmax], [ymax]], axis=1)
                 arr_pos = np.append(arr_pos, [[xmax], [ymax]], axis=1)
-            else: break
+            else:
+                fig0, ax0 = plt.subplots(1,1)
+                field_image(fig0,ax0,display_field)
+                ax0.plot(ymax,xmax,'.')
+                check = object_check(obj, (xmax, ymax), thr, sigma, mode='low')
+                if check is None:
+                    x0, y0 = xmax, ymax
+                    rej_obj += [obj]
+                    rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
+
         tmp_field[x,y] = 0.0
         xmax, ymax = peak_pos(tmp_field)
         peak = tmp_field[xmax, ymax]   
