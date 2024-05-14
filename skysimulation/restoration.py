@@ -1318,7 +1318,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         # check the derivative sign around the centre
         mean_width = np.rint(min(hwhm//2, 3)).astype(int)
         g_pos = np.where(grad1[:mean_width+1] >= 0)[0]
-        fig0,ax0 = plt.subplots(1,1)
+        fig0, ax0 = plt.subplots(1,1)
         ax0.plot(px,mean_obj,'.--',color='blue')
         m_px = (px[:-1] + px[1:])/2
         ax0.plot(m_px, grad1, 'v--', color='orange')
@@ -1343,8 +1343,8 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
                 fast_image(obj,'cutted')
             else: 
                 # compute the size of the object from the centre
-                xsize = (x0, xdim-x0)
-                ysize = (y0, ydim-y0)
+                xsize = (x0, xdim-1)
+                ysize = (y0, ydim-1)
             print('GOOD')
         else:
             ## S/N
@@ -1370,12 +1370,6 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
                 print('RATIO',val0/thr*100,'%')
                 print('NO GOOD')
                 return None
-        # compute the coordinates of the centre on the board
-        #. the changing of coordinates is obtained from the
-        #. maximum coordinates
-        x, y = index
-        index = (x0 + (x-xmax), y0 + (y-ymax))
-        return obj, index, (xsize, ysize)
 
     elif mode == 'low':
         print('LOW')
@@ -1383,6 +1377,12 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         cut = lambda centre, dim : slice(max(0, centre-hwhm), min(dim, centre + hwhm + 1))
         x0, y0 = (xmax,ymax)
         cut_obj = obj[cut(x0, xdim), cut(y0, ydim)].copy()
+        print('\n\thwhm',hwhm)
+        print('\tsigma',hwhm / (2*np.log(2)))
+        print('\tdim : ', xdim, ydim)
+        print('\tcen : ', x0, y0)
+        print('\tx : ', max(x0-hwhm,0), min(x0+hwhm+1, xdim))
+        print('\ty : ', max(y0-hwhm,0), min(y0+hwhm+1, ydim))
         fast_image(cut_obj)
         # fit with a gaussian in order to find the centroid
         pop, _ = new_kernel_fit(cut_obj-thr, display_fig=False)
@@ -1396,7 +1396,8 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         if 0 <= pop[-2] < cut_obj.shape[0] and 0 <= pop[-1] < cut_obj.shape[1]:
             x0, y0 = pop[-2:]
             cut_obj = obj[cut(x0, xdim), cut(y0, ydim)].copy()
-
+        val0 = cut_obj[x0,y0]
+        xdim, ydim = cut_obj.shape
         px, mean_obj = average_trend(cut_obj, (x0,y0))
         fig0,ax0 = plt.subplots(1,1)
         ax0.plot(px,mean_obj,'.--',color='blue')
@@ -1405,6 +1406,29 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         ax0.plot((m_px[:-1]+m_px[1:])/2, np.diff(grad1), '^--', color='green')
         ax0.axhline(0,0,1,color='black')
         plt.show()
+        ratio = mean_obj[1:]/thr
+        if ratio >= 0.5:
+            grad1 = np.diff(mean_obj)
+            g_pos = np.where(grad1 >= 0)[0]
+            if len(g_pos) == 0:
+                obj = cut_obj
+                # compute the size of the object from the centre
+                xsize = (x0, xdim-1)
+                ysize = (y0, ydim-1)
+            else:
+                print('gradient')
+                print('NO GOOD')
+                return None                
+        else:
+            print('RATIO',val0/thr*100,'%')
+            print('NO GOOD')
+            return None
+    # compute the coordinates of the centre on the board
+    #. the changing of coordinates is obtained from the
+    #. maximum coordinates
+    x, y = index
+    index = (x0 + (x-xmax), y0 + (y-ymax))
+    return obj, index, (xsize, ysize)
                 
 
 
@@ -1437,6 +1461,7 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
             x = slice(xmax - xsize[0], xmax + xsize[1])
             y = slice(ymax - ysize[0], ymax + ysize[1])
             obj = field[x,y].copy()
+            fast_image(obj)
             print(f'\tshape : {obj.shape}')
             if 0 in obj.shape: 
                 x0, y0 = xmax, ymax
@@ -1453,8 +1478,14 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                     rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
                 else:
                     obj, (x0, y0), (xsize, ysize) = check
+                    print('xsize',xsize)
+                    print('ysize',ysize)
                     x = slice(x0 - xsize[0], x0 + xsize[1])
                     y = slice(y0 - ysize[0], y0 + ysize[1])
+                    figg, axx = plt.subplots(1,2)
+                    field_image(figg,axx[0],obj)
+                    field_image(figg,axx[1],display_field[x,y])
+                    plt.show()
                     if selection(obj,(x0, y0), arr_pos, max_size,  mindist=min_dist, sel='all'):
                         acc_obj += [obj]
                         acc_pos = np.append(acc_pos, [[x0], [y0]], axis=1)
