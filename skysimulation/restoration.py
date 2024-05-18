@@ -1290,7 +1290,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         est_sigma = pop[1]
         if est_sigma <= 0:  #: negative sigma is unacceptable
             print('BAD SIGMA')
-            fast_image(cut_obj)
+            fast_image(cut_obj,'Bad Sigma')
             return None
         # check the centroid position
         if 0 <= pop[-2] < cut_obj.shape[0] and 0 <= pop[-1] < cut_obj.shape[1]:
@@ -1319,6 +1319,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         mean_width = np.rint(min(hwhm//2, 3)).astype(int)
         g_pos = np.where(grad1[:mean_width+1] >= 0)[0]
         fig0, ax0 = plt.subplots(1,1)
+        ax0.set_title('Mean obj')
         ax0.plot(px,mean_obj,'.--',color='blue')
         m_px = (px[:-1] + px[1:])/2
         ax0.plot(m_px, grad1, 'v--', color='orange')
@@ -1341,10 +1342,6 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
                 # cut the object
                 obj = obj[slice(*xsize), slice(*ysize)]
                 fast_image(obj,'cutted')
-            else: 
-                # compute the size of the object from the centre
-                xsize = (x0, xdim-1)
-                ysize = (y0, ydim-1)
             print('GOOD')
         else:
             ## S/N
@@ -1372,18 +1369,24 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
                 return None
 
     elif mode == 'low':
+        fast_image(obj,'LOW before cutting')
         print('LOW')
         hwhm = np.rint(np.mean(sigma)).astype(int) if len(sigma) != 0 else SIZE
         cut = lambda centre, dim : slice(max(0, centre-hwhm), min(dim, centre + hwhm + 1))
-        x0, y0 = (xmax,ymax)
+        centre = np.array([xmax, ymax])
+        x0, y0 = centre
+        print(max(0, x0-hwhm), min(xdim, x0 + hwhm + 1))
+        print(max(0, y0-hwhm), min(ydim, y0 + hwhm + 1))
         cut_obj = obj[cut(x0, xdim), cut(y0, ydim)].copy()
-        print('\n\thwhm',hwhm)
-        print('\tsigma',hwhm / (2*np.log(2)))
+        fast_image(cut_obj,'cut_obj')
+        cxmax, cymax = peak_pos(cut_obj)
+        shift = np.array([xmax - cxmax, ymax - cymax])
+        print('\n\thwhm', hwhm)
+        print('\tsigma', hwhm / (2*np.log(2)))
         print('\tdim : ', xdim, ydim)
         print('\tcen : ', x0, y0)
         print('\tx : ', max(x0-hwhm,0), min(x0+hwhm+1, xdim))
         print('\ty : ', max(y0-hwhm,0), min(y0+hwhm+1, ydim))
-        fast_image(cut_obj)
         # fit with a gaussian in order to find the centroid
         pop, _ = new_kernel_fit(cut_obj-thr, display_fig=False)
         # check sigma
@@ -1394,27 +1397,36 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             return None
         # check the centroid position
         if 0 <= pop[-2] < cut_obj.shape[0] and 0 <= pop[-1] < cut_obj.shape[1]:
-            x0, y0 = pop[-2:]
+            centre = np.rint(pop[-2:]).astype(int) + shift
+            x0, y0 = centre
+            print(max(0, x0-hwhm), min(xdim, x0 + hwhm + 1))
+            print(max(0, y0-hwhm), min(ydim, y0 + hwhm + 1))
             cut_obj = obj[cut(x0, xdim), cut(y0, ydim)].copy()
+            fast_image(cut_obj,'Fit cut_obj')
+            cxmax, cymax = peak_pos(cut_obj)
+            shift = np.array([xmax - cxmax, ymax - cymax])
+        fig, ax = plt.subplots(1,1)
+        field_image(fig, ax, cut_obj)
+        plt.show()
+        # change coordinates reference
+        x0, y0 = centre - shift
         val0 = cut_obj[x0,y0]
         xdim, ydim = cut_obj.shape
         px, mean_obj = average_trend(cut_obj, (x0,y0))
+        grad1 = np.diff(mean_obj)
         fig0,ax0 = plt.subplots(1,1)
+        ax0.set_title('Low: mean obj')
         ax0.plot(px,mean_obj,'.--',color='blue')
         m_px = (px[:-1] + px[1:])/2
         ax0.plot(m_px, grad1, 'v--', color='orange')
         ax0.plot((m_px[:-1]+m_px[1:])/2, np.diff(grad1), '^--', color='green')
         ax0.axhline(0,0,1,color='black')
         plt.show()
-        ratio = mean_obj[1:]/thr
+        ratio = min(mean_obj[1:])/thr
         if ratio >= 0.5:
-            grad1 = np.diff(mean_obj)
             g_pos = np.where(grad1 >= 0)[0]
-            if len(g_pos) == 0:
+            if np.mean(grad1) < 0:#len(g_pos) == 0:
                 obj = cut_obj
-                # compute the size of the object from the centre
-                xsize = (x0, xdim-1)
-                ysize = (y0, ydim-1)
             else:
                 print('gradient')
                 print('NO GOOD')
@@ -1423,11 +1435,14 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             print('RATIO',val0/thr*100,'%')
             print('NO GOOD')
             return None
-    # compute the coordinates of the centre on the board
+    # compute the coordinates of the centre and the edges on the board
     #. the changing of coordinates is obtained from the
     #. maximum coordinates
+    xdim, ydim = obj.shape
     x, y = index
     index = (x0 + (x-xmax), y0 + (y-ymax))
+    xsize = (x-xmax, xdim + (x-xmax))
+    ysize = (y-ymax, ydim + (y-ymax))
     return obj, index, (xsize, ysize)
                 
 
@@ -1436,7 +1451,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
 def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size: int = 7, min_dist: int = 0, bright_cut: bool =  False, display_fig: bool = False, **kwargs) -> None | tuple[list[NDArray], NDArray]:
     def info_print(cnt: int, index: tuple, peak: float) -> None:
         x0 , y0 = index
-        print(f'Step {cnt}')
+        print(f'- - - -\nStep {cnt}')
         print(f'\tcoor : ({x0}, {y0})')
         print(f'\tpeak : {peak}')
     tmp_field = field.copy()
@@ -1447,71 +1462,93 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
     acc_pos = np.empty((2,0),dtype=int)
     rej_obj = []
     rej_pos = np.empty((2,0),dtype=int)
-
-    xmax, ymax = peak_pos(tmp_field)
-    peak = tmp_field[xmax, ymax]
-    stop_val = thr
+    
+    # first step
+    xmax, ymax = peak_pos(tmp_field)    #: coordinates of the maximum
+    peak = tmp_field[xmax, ymax]        #: maximum value
+    stop_val = thr                      #: threashold
     cnt = 1
     print('\n- - - SEARCHING START - - -')
     print(f'Stop_val : {stop_val}')
     info_print(cnt,(xmax, ymax), peak)
     while peak > stop_val:
+        # compute an estimation of the size of the object
+        xsize, ysize = new_grad_check(tmp_field, (xmax, ymax), thr, size=max_size)
+        # compute slices
+        x = slice(xmax - xsize[0], xmax + xsize[1])
+        y = slice(ymax - ysize[0], ymax + ysize[1])
+        # define the object
+        obj = field[x,y].copy()
+        # remove small object
+        if obj.shape[0] <= 3 or obj.shape[1] <= 3: 
+                x0, y0 = xmax, ymax
+                rej_obj += [obj]
+                rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
+        
         if peak/2 >= thr:
-            xsize, ysize = new_grad_check(tmp_field, (xmax, ymax), thr, size=max_size)
-            x = slice(xmax - xsize[0], xmax + xsize[1])
-            y = slice(ymax - ysize[0], ymax + ysize[1])
-            obj = field[x,y].copy()
-            fast_image(obj)
-            print(f'\tshape : {obj.shape}')
-            if 0 in obj.shape: 
+            fast_image(obj,'Object before check')
+            print(f'\tshape : {obj.shape}')            
+            fig0, ax0 = plt.subplots(1,1)
+            field_image(fig0,ax0,display_field)
+            ax0.plot(ymax,xmax,'.')
+            # check if object is acceptable
+            check = object_check(obj, (xmax, ymax), thr, sigma)
+            if check is None:
                 x0, y0 = xmax, ymax
                 rej_obj += [obj]
                 rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
             else:
-                fig0, ax0 = plt.subplots(1,1)
-                field_image(fig0,ax0,display_field)
-                ax0.plot(ymax,xmax,'.')
-                check = object_check(obj, (xmax, ymax), thr, sigma)
-                if check is None:
-                    x0, y0 = xmax, ymax
-                    rej_obj += [obj]
-                    rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
+                obj, (x0, y0), (xsize, ysize) = check
+                print('xsize',xsize)
+                print('ysize',ysize)
+                # compute slices
+                x = slice(*xsize)
+                y = slice(*ysize)
+                figg, axx = plt.subplots(1,2)
+                field_image(figg,axx[0],obj)
+                field_image(figg,axx[1],display_field[x,y])
+                plt.show()
+                # check 
+                if selection(obj,(x0, y0), arr_pos, max_size,  mindist=min_dist, sel='all'):
+                    acc_obj += [obj]
+                    acc_pos = np.append(acc_pos, [[x0], [y0]], axis=1)
+                    display_field[x,y] = 0.0
                 else:
-                    obj, (x0, y0), (xsize, ysize) = check
-                    print('xsize',xsize)
-                    print('ysize',ysize)
-                    x = slice(x0 - xsize[0], x0 + xsize[1])
-                    y = slice(y0 - ysize[0], y0 + ysize[1])
-                    figg, axx = plt.subplots(1,2)
-                    field_image(figg,axx[0],obj)
-                    field_image(figg,axx[1],display_field[x,y])
-                    plt.show()
-                    if selection(obj,(x0, y0), arr_pos, max_size,  mindist=min_dist, sel='all'):
-                        acc_obj += [obj]
-                        acc_pos = np.append(acc_pos, [[x0], [y0]], axis=1)
-                        display_field[x,y] = 0.0
-                    else:
-                        rej_obj += [obj]
-                        rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
-            arr_pos = np.append(arr_pos, [[x0], [y0]], axis=1)
-        else:
-            if bright_cut:                
-                tmp_field[xmax,ymax] = 0.0
-                obj = field[xmax,ymax]
-                rej_obj += [obj]
-                rej_pos = np.append(rej_pos, [[xmax], [ymax]], axis=1)
-                arr_pos = np.append(arr_pos, [[xmax], [ymax]], axis=1)
-            else:
-                fig0, ax0 = plt.subplots(1,1)
-                field_image(fig0,ax0,display_field)
-                ax0.plot(ymax,xmax,'.')
-                check = object_check(obj, (xmax, ymax), thr, sigma, mode='low')
-                if check is None:
-                    x0, y0 = xmax, ymax
                     rej_obj += [obj]
                     rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
-
+        else:
+            fig0, ax0 = plt.subplots(1,1)
+            field_image(fig0,ax0,display_field)
+            ax0.plot(ymax,xmax,'.')
+            # check if object is acceptable
+            check = object_check(obj, (xmax, ymax), thr, sigma, mode='low')
+            if check is None:
+                x0, y0 = xmax, ymax
+                rej_obj += [obj]
+                rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
+            else:
+                obj, (x0, y0), (xsize, ysize) = check
+                print('xsize',xsize)
+                print('ysize',ysize)
+                # compute slices
+                x = slice(*xsize)
+                y = slice(*ysize)
+                figg, axx = plt.subplots(1,2)
+                field_image(figg,axx[0],obj)
+                field_image(figg,axx[1],display_field[x,y])
+                plt.show()
+                if selection(obj,(x0, y0), arr_pos, max_size,  mindist=min_dist, sel='all'):
+                    acc_obj += [obj]
+                    acc_pos = np.append(acc_pos, [[x0], [y0]], axis=1)
+                    display_field[x,y] = 0.0
+                else:
+                    rej_obj += [obj]
+                    rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
+        # collect coordinates of the centre
+        arr_pos = np.append(arr_pos, [[x0], [y0]], axis=1)
+        # update the field
         tmp_field[x,y] = 0.0
+        # compute the next step
         xmax, ymax = peak_pos(tmp_field)
         peak = tmp_field[xmax, ymax]   
         cnt += 1
