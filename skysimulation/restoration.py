@@ -530,8 +530,25 @@ def new_grad_check(field: NDArray, index: tuple[int,int], back: float, size: int
         if debug_check:
             print('A_XF',type(a_xysize),a_xysize)
         #?
+    xsize, ysize = a_xysize.reshape(2,2)
+    # compute slices
+    # x = slice(index[0] - xsize[0], index[0] + xsize[1])
+    # y = slice(index[1] - ysize[0], index[1] + ysize[1])
+    # obj = field[x,y].copy()
+    # emp_pos = np.where(obj == 0)
+    # if len(emp_pos[0]) != 0:
+    #     print('Empty',len(emp_pos))
+    #     print(emp_pos)
+    #     xpos, ypos = emp_pos
+    #     xmax, ymax = peak_pos(obj)
+    #     xpos -= xmax
+    #     ypos -= ymax
+    #     if len(np.where(xpos < 0)[0]) != 0: xsize[0] = (-xpos[xpos < 0]).min()
+    #     if len(np.where(xpos > 0)[0]) != 0: xsize[1] = xpos[xpos > 0].min()
+    #     if len(np.where(ypos < 0)[0]) != 0: ysize[0] = (-ypos[ypos < 0]).min()
+    #     if len(np.where(ypos > 0)[0]) != 0: ysize[1] = ypos[ypos > 0].min()
     # a_xysize = np.where(a_xysize > size, a_xysize-size, a_xysize)
-    return a_xysize.reshape(2,2)
+    return xsize, ysize
 
 
 def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: Literal["all", "size", "dist", "new"] = 'all', mindist: int = 5, minsize: int = 3, debug_check: bool = False) -> bool:
@@ -1271,10 +1288,21 @@ def average_trend(obj: NDArray, centre: tuple[int, int]) -> tuple[NDArray, NDArr
         # plt.show()
 
 
-def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequence[int] | None, mode: Literal["bright", "low"] = 'bright') -> tuple[NDArray, tuple[int, int], tuple[tuple[int, int], tuple[int, int]]] | None:
+def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequence[int] | None, mode: Literal["bright", "low"] = 'bright', maxpos: tuple[int,int] | None = None) -> tuple[NDArray, tuple[int, int], tuple[tuple[int, int], tuple[int, int]]] | None:
     SIZE = 5
     xmax, ymax = peak_pos(obj)      #: max value coordinates
     xdim, ydim = obj.shape          #: sizes
+    if maxpos is not None:
+        xxmax, yymax = maxpos
+        if xxmax != xmax or yymax != ymax:
+            print('real:', xxmax, yymax)
+            print('used:', xmax, ymax)
+            fig, ax = plt.subplots(1,1)
+            field_image(fig,ax,obj)
+            ax.plot(ymax,xmax,'.b')
+            ax.plot(yymax,xxmax,'.r')
+            plt.show()
+            raise
     if mode == 'bright':
         ## Cut 
         print('\n\tFirst cut')
@@ -1440,18 +1468,18 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
     #. maximum coordinates
     xdim, ydim = obj.shape
     x, y = index
+    xmax, ymax = peak_pos(obj)
     index = (x0 + (x-xmax), y0 + (y-ymax))
     xsize = (x-xmax, xdim + (x-xmax))
     ysize = (y-ymax, ydim + (y-ymax))
     return obj, index, (xsize, ysize)
                 
 
-
             
 def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size: int = 7, min_dist: int = 0, bright_cut: bool =  False, display_fig: bool = False, **kwargs) -> None | tuple[list[NDArray], NDArray]:
     def info_print(cnt: int, index: tuple, peak: float) -> None:
         x0 , y0 = index
-        print(f'- - - -\nStep {cnt}')
+        print(f'\n- - - -\nStep {cnt}')
         print(f'\tcoor : ({x0}, {y0})')
         print(f'\tpeak : {peak}')
     tmp_field = field.copy()
@@ -1479,71 +1507,168 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
         y = slice(ymax - ysize[0], ymax + ysize[1])
         # define the object
         obj = field[x,y].copy()
+        fast_image(obj,'Object')
         # remove small object
         if obj.shape[0] <= 3 or obj.shape[1] <= 3: 
                 x0, y0 = xmax, ymax
                 rej_obj += [obj]
                 rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
-        
-        if peak/2 >= thr:
-            fast_image(obj,'Object before check')
-            print(f'\tshape : {obj.shape}')            
-            fig0, ax0 = plt.subplots(1,1)
-            field_image(fig0,ax0,display_field)
-            ax0.plot(ymax,xmax,'.')
-            # check if object is acceptable
-            check = object_check(obj, (xmax, ymax), thr, sigma)
-            if check is None:
-                x0, y0 = xmax, ymax
-                rej_obj += [obj]
-                rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
-            else:
-                obj, (x0, y0), (xsize, ysize) = check
-                print('xsize',xsize)
-                print('ysize',ysize)
-                # compute slices
-                x = slice(*xsize)
-                y = slice(*ysize)
-                figg, axx = plt.subplots(1,2)
-                field_image(figg,axx[0],obj)
-                field_image(figg,axx[1],display_field[x,y])
+                fig0, ax0 = plt.subplots(1,1)
+                ax0.set_title('Rejected')
+                field_image(fig0,ax0,display_field)
+                if len(acc_pos[0]) != 0:
+                    ax0.plot(acc_pos[1],acc_pos[0],'.b')
+                ax0.plot(rej_pos[1],rej_pos[0],'.r')
+                ax0.plot(y0,x0,'xr')
                 plt.show()
-                # check 
-                if selection(obj,(x0, y0), arr_pos, max_size,  mindist=min_dist, sel='all'):
-                    acc_obj += [obj]
-                    acc_pos = np.append(acc_pos, [[x0], [y0]], axis=1)
-                    display_field[x,y] = 0.0
-                else:
-                    rej_obj += [obj]
-                    rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
         else:
-            fig0, ax0 = plt.subplots(1,1)
-            field_image(fig0,ax0,display_field)
-            ax0.plot(ymax,xmax,'.')
-            # check if object is acceptable
-            check = object_check(obj, (xmax, ymax), thr, sigma, mode='low')
-            if check is None:
+            cxmax, cymax = peak_pos(obj)
+            print('          c s')
+            print('x compare',cxmax,xsize[0])
+            print('y compare',cymax,ysize[0])
+            remove_cond = False
+            while cxmax != xsize[0] or cymax != ysize[0]:
+                fast_image(obj,'Have to reduce')
+                row = min(cxmax, obj.shape[0]-cxmax)
+                col = min(cymax, obj.shape[1]-cymax)
+                if row <= col:
+                    print('row')
+                    xsize = np.array([xsize[0]-cxmax-1, xsize[1]]) if cxmax <= xsize[0] else np.array([xsize[0], cxmax-xsize[0]])
+                    print(xsize)
+                else:
+                    print('col')
+                    ysize = np.array([ysize[0]-cymax-1, ysize[1]]) if cymax <= ysize[0] else np.array([ysize[0], cymax-ysize[0]])
+                    print(ysize)
+                print('x compare',cxmax,xsize[0])
+                print('y compare',cymax,ysize[0])
+                if (xsize < 2).all() or (ysize < 2).all():
+                    remove_cond = True
+                    break
+                # compute slices
+                x = slice(xmax - xsize[0], xmax + xsize[1])
+                y = slice(ymax - ysize[0], ymax + ysize[1])
+                # define the object
+                obj = field[x,y].copy()
+                cxmax, cymax = peak_pos(obj)
+            if remove_cond:            
                 x0, y0 = xmax, ymax
                 rej_obj += [obj]
                 rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
-            else:
-                obj, (x0, y0), (xsize, ysize) = check
-                print('xsize',xsize)
-                print('ysize',ysize)
-                # compute slices
-                x = slice(*xsize)
-                y = slice(*ysize)
-                figg, axx = plt.subplots(1,2)
-                field_image(figg,axx[0],obj)
-                field_image(figg,axx[1],display_field[x,y])
+                fig0, ax0 = plt.subplots(1,1)
+                ax0.set_title('Rejected')
+                field_image(fig0,ax0,display_field)
+                if len(acc_pos[0]) != 0:
+                    ax0.plot(acc_pos[1],acc_pos[0],'.b')
+                ax0.plot(rej_pos[1],rej_pos[0],'.r')
+                ax0.plot(y0,x0,'xr')
                 plt.show()
-                if selection(obj,(x0, y0), arr_pos, max_size,  mindist=min_dist, sel='all'):
-                    acc_obj += [obj]
-                    acc_pos = np.append(acc_pos, [[x0], [y0]], axis=1)
-                    display_field[x,y] = 0.0
-                else:
+            elif peak/2 >= thr:       #: bright objects
+                fast_image(obj,'Object before check')
+                print(f'\tshape : {obj.shape}')            
+                fig0, ax0 = plt.subplots(1,1)
+                field_image(fig0,ax0,display_field)
+                ax0.plot(ymax,xmax,'.')
+                # check if object is acceptable
+                check = object_check(obj, (xmax, ymax), thr, sigma)
+                if check is None:
+                    x0, y0 = xmax, ymax
                     rej_obj += [obj]
                     rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
+                    fig0, ax0 = plt.subplots(1,1)
+                    ax0.set_title('Rejected')
+                    field_image(fig0,ax0,display_field)
+                    if len(acc_pos[0]) != 0:
+                        ax0.plot(acc_pos[1],acc_pos[0],'.b')
+                    ax0.plot(rej_pos[1],rej_pos[0],'.r')
+                    ax0.plot(y0,x0,'xr')
+                    plt.show()
+                else:
+                    obj, (x0, y0), (xsize, ysize) = check
+                    print('xsize',xsize)
+                    print('ysize',ysize)
+                    # compute slices
+                    x = slice(*xsize)
+                    y = slice(*ysize)
+                    figg, axx = plt.subplots(1,2)
+                    field_image(figg,axx[0],obj)
+                    field_image(figg,axx[1],display_field[x,y])
+                    plt.show()
+                    # check 
+                    if selection(obj,(x0, y0), arr_pos, max_size,  mindist=min_dist, sel='all'):
+                        acc_obj += [obj]
+                        acc_pos = np.append(acc_pos, [[x0], [y0]], axis=1)
+                        display_field[x,y] = 0.0
+                        fig0, ax0 = plt.subplots(1,1)
+                        ax0.set_title('Accepted')
+                        field_image(fig0,ax0,display_field)
+                        if len(rej_pos[0]) != 0:
+                            ax0.plot(rej_pos[1],rej_pos[0],'.r')
+                        ax0.plot(acc_pos[1],acc_pos[0],'.b')
+                        ax0.plot(y0,x0,'xb')
+                        plt.show()
+                    else:
+                        rej_obj += [obj]
+                        rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
+                        fig0, ax0 = plt.subplots(1,1)
+                        ax0.set_title('Rejected')
+                        field_image(fig0,ax0,display_field)
+                        if len(acc_pos[0]) != 0:
+                            ax0.plot(acc_pos[1],acc_pos[0],'.b')
+                        ax0.plot(rej_pos[1],rej_pos[0],'.r')
+                        ax0.plot(y0,x0,'xr')
+                        plt.show()
+            else:       #: faint objects
+                fig0, ax0 = plt.subplots(1,1)
+                field_image(fig0,ax0,display_field)
+                ax0.plot(ymax,xmax,'.')
+                # check whether the object is acceptable
+                check = object_check(obj, (xmax, ymax), thr, sigma, mode='low',maxpos=(xsize[0],ysize[0]))
+                if check is None:
+                    x0, y0 = xmax, ymax
+                    rej_obj += [obj]
+                    rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
+                    fig0, ax0 = plt.subplots(1,1)
+                    ax0.set_title('Rejected')
+                    field_image(fig0,ax0,display_field)
+                    if len(acc_pos[0]) != 0:
+                        ax0.plot(acc_pos[1],acc_pos[0],'.b')
+                    ax0.plot(rej_pos[1],rej_pos[0],'.r')
+                    ax0.plot(y0,x0,'xr')
+                    plt.show()
+                else:
+                    obj, (x0, y0), (xsize, ysize) = check
+                    print('xsize',xsize)
+                    print('ysize',ysize)
+                    # compute slices
+                    x = slice(*xsize)
+                    y = slice(*ysize)
+                    figg, axx = plt.subplots(1,2)
+                    field_image(figg,axx[0],obj)
+                    field_image(figg,axx[1],display_field[x,y])
+                    plt.show()
+                    if selection(obj,(x0, y0), arr_pos, max_size,  mindist=min_dist, sel='all'):
+                        acc_obj += [obj]
+                        acc_pos = np.append(acc_pos, [[x0], [y0]], axis=1)
+                        display_field[x,y] = 0.0
+                        fig0, ax0 = plt.subplots(1,1)
+                        ax0.set_title('Accepted')
+                        field_image(fig0,ax0,display_field)
+                        if len(rej_pos[0]) != 0:
+                            ax0.plot(rej_pos[1],rej_pos[0],'.r')
+                        ax0.plot(acc_pos[1],acc_pos[0],'.b')
+                        ax0.plot(y0,x0,'xb')
+                        plt.show()
+                    else:
+                        rej_obj += [obj]
+                        rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
+                        fig0, ax0 = plt.subplots(1,1)
+                        ax0.set_title('Rejected')
+                        field_image(fig0,ax0,display_field)
+                        if len(acc_pos[0]) != 0:
+                            ax0.plot(acc_pos[1],acc_pos[0],'.b')
+                        ax0.plot(rej_pos[1],rej_pos[0],'.r')
+                        ax0.plot(y0,x0,'xr')
+                        plt.show()
         # collect coordinates of the centre
         arr_pos = np.append(arr_pos, [[x0], [y0]], axis=1)
         # update the field
@@ -1553,8 +1678,13 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
         peak = tmp_field[xmax, ymax]   
         cnt += 1
         info_print(cnt,(xmax, ymax), peak)
+        fast_image(tmp_field,'tmp_field')
     fig, ax = plt.subplots(1,1)
     field_image(fig,ax,display_field)
+    if len(acc_pos[0]) != 0:
+        ax.plot(acc_obj[1],acc_obj[0],'.b')
+    if len(rej_pos[0]) != 0:
+        ax.plot(rej_obj[1],rej_obj[0],'.r')
     if 0 not in acc_pos:
         ax.plot(acc_pos[1],acc_pos[0],'.b')
     if 0 not in rej_pos:
