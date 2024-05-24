@@ -60,6 +60,7 @@ def pipeline(*args,**kwargs) -> dict[str, fld.Any]:
         dpl.fast_image(sci_frame,'Scientific Frame',norm='log')
 
     print('!!CHECK!!\t',len(np.where(S.lum > fld.BACK_MEAN*fld.K)[0]))
+    results['stars']  = S
     results['frame']  = (sci_frame, sigma)        
     results['dark']   = (m_dark, s_dark)
 
@@ -188,10 +189,13 @@ if __name__ == '__main__':
     method = 'bkg'
     # method = None
     default_res = pipeline(mass_seed, pos_seed, bkg_seed, det_seed, method=method, results=True)
+    star = default_res['stars']
+    lum = star.lum
     field = default_res['frame'][0]
     mean_bkg = default_res['bkg'][0][0]
-    _ = rst.searching(field,mean_bkg,None)
-
+    lum = lum[lum > mean_bkg]
+    objs, pos = rst.searching(field,mean_bkg,None)
+    print(f'\n\n------\n\nFOUND:\t{len(objs)}\nOBSER:\t{len(lum)}')
 
     multiple_acq = False
     if multiple_acq:
