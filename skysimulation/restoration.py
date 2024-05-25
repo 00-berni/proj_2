@@ -1177,21 +1177,53 @@ def light_recover(obj: NDArray, a_size: NDArray[np.int64] | None = None, kernel:
     return L
 
 def cutting(obj: NDArray, centre: Sequence[int], debug_plots: bool = False) -> tuple[NDArray, NDArray] | tuple[None, None]:
+    """To select only pixels whithin the HWHM
+
+    Parameters
+    ----------
+    obj : NDArray
+        selected object
+    centre : Sequence[int]
+        coordinates of the centre
+    debug_plots : bool, default False
+        parameter to check the goodness of the algorithm
+
+    Returns
+    -------
+    cut_obj : NDArray | None
+        reshaped object
+        Function returns `None` values whether the selected pixels
+        are "few", that is the size (along either x or y direction)
+        is less than 2 pixels
+    shift : NDArray | None
+        change in pixel coordinates 
+        Given (x,y) the coordinates of 1 pixel in the
+        `obj` matrix, then (x0,y0) the ones in the `cut_obj` 
+        matrix are: 
+        ```
+            x0 = x - shift[0]
+            y0 = y - shift[1]
+        ```
+        Function returns `None` values whether the selected pixels
+        are "few", that is the size (along either x or y direction)
+        is less than 2 pixels
+    """
     WRONG_RESULT = None, None   #: the returned value for rejected objects
-    xdim, ydim = obj.shape      #: sizes
-    x0, y0 = centre             #: center coordinates
+    xdim, ydim = obj.shape      #: sizes of the object matrix
+    x0, y0 = centre             #: centre coordinates
     hm = obj[x0, y0]/2          #: half maximum
-    # compute the best approximation of hwhm
+    # find the value which best approximate the hm
     hm_pos = max(minimum_pos(abs(obj-hm)))
+    # compute the best approximation of the HWHM
     hwhm = np.rint((abs(hm_pos-x0) + abs(hm_pos-y0))/2).astype(int)
-    if hwhm == 1:   #: check the size
+    if hwhm <= 1:   #: check the size
         print('! HWHM nO')
         #?
         if debug_plots:        fast_image(obj,'! HWHM small')
         #?
         return WRONG_RESULT
     # select only the pixels inside hwhm
-    cut = lambda centre, dim : slice(max(centre-hwhm,0), min(centre+hwhm +1 , dim))
+    cut = lambda centre, dim : slice(max(centre-hwhm,0), min(centre+hwhm +1 , dim))     #: function to compute the slices
     cut_obj = obj[cut(x0,xdim), cut(y0,ydim)].copy()
     if 1 in cut_obj.shape or 2 in cut_obj.shape:    #: check size
         #?
@@ -1199,7 +1231,6 @@ def cutting(obj: NDArray, centre: Sequence[int], debug_plots: bool = False) -> t
         #?
         print('! No shape')
         return WRONG_RESULT
-    # xdim, ydim = cut_obj.shape
     print('\n\thwhm',hwhm)
     print('\thm_pos', hm_pos)
     print('\tsigma',hwhm / (2*np.log(2)))
@@ -1215,6 +1246,26 @@ def cutting(obj: NDArray, centre: Sequence[int], debug_plots: bool = False) -> t
     return cut_obj, shift
 
 def average_trend(obj: NDArray, centre: tuple[int, int]) -> tuple[NDArray, NDArray]:
+    """To compute the averaged trend of the light value from the centre pixel
+
+    The function averages over the values of pixels at the same 
+    distance from the centre, looking along horizontal, vertical
+    and diagonal directions
+
+    Parameters
+    ----------
+    obj : NDArray
+        selected object
+    centre : tuple[int, int]
+        coordinates of the centre
+
+    Returns
+    -------
+    px : NDArray
+        distances from the centre 
+    mm_obj : NDArray
+        mean trend of the light value from the centre
+    """
     xdim, ydim = obj.shape
     val0 = obj[centre]
     x0, y0 = centre
@@ -1239,66 +1290,6 @@ def average_trend(obj: NDArray, centre: tuple[int, int]) -> tuple[NDArray, NDArr
     px = np.append([0],px)
     return px, mm_obj
 
-        # grad1 = [[],[]]
-        # grad2 = [[],[]]
-        # mean_obj = [[],[]]
-        # # compute pixel position
-        # step = lambda i, centre: centre + i
-        # # collect pixels along both horizontal and vertical directions
-        # mean_obj[0] += [ [cut_obj[x,y0] for x in [step(i,x0), step(-i,x0)] if 0 <= x < xdim] + [cut_obj[x0,y] for y in [step(i,y0), step(-i,y0)] if 0 <= y < ydim]  for i in range(1,max(xdim,ydim)) ]
-        # print('MEAN',mean_obj)
-        # # collect pixels along diagonal direction
-        # mean_obj[1] += [ [cut_obj[x,y] for x in [step(i,x0), step(-i,x0)] for y in [step(i,y0), step(-i,y0)] if 0 <= x < xdim and 0 <= y < ydim] for i in range(1,max(xdim,ydim)) ]
-        # px1 = np.arange(1,len(mean_obj[0])+1)
-        # px2 = np.arange(1,len(mean_obj[1])+1)
-        # pos_px = np.argsort(np.append(px1,px2*np.sqrt(2)))
-        # px = np.append(px1,px2*-1)[pos_px]
-        # print(px)
-        # mm_obj = np.array([mean_obj[0][p-1] if p > 0 else mean_obj[1][-p-1] for p in px], dtype=object)
-        # mean_pos = [i for i in range(len(mm_obj)) if len(mm_obj[i]) != 0]
-        # mm_obj = np.array([np.mean(val) for val in mm_obj[mean_pos]])
-        # mm_obj = np.append([val0],mm_obj)
-        # px = np.where(px[mean_pos] < 0, px[mean_pos]*-np.sqrt(2), px[mean_pos])
-        # px = np.append([0],px)
-        # print(px)
-        # print('SHAPE',mm_obj.shape,px.shape)
-        # fig0, ax0 = plt.subplots(1,1)
-        # ax0.plot(px,mm_obj,'v-')
-        # ax0.plot((px[1:]+px[:-1])/2,np.diff(mm_obj),'^--',color='orange',label='gradient')
-        # ax0.axhline(0,0,1,color='black',alpha=0.5)
-        # fig, ax = plt.subplots(2,1)
-        # title = ''
-        # for i in range(2):
-        #     # average over pixels at same distance
-        #     mean_obj[i] = np.array([np.mean(val) for val in mean_obj[i] if len(val) != 0])
-        #     # append the centre pixel
-        #     mean_obj[i] = np.append([val0],mean_obj[i])
-        #     print(f'MEAN_{i}',mean_obj[i])
-        #     if len(mean_obj[i]) > 1:
-        #         # compute the first derivative
-        #         grad1[i] = np.diff(mean_obj[i])
-        #         ax[i].plot(grad1[i],'x--r')
-        #         if len(grad1[i]) > 1:
-        #             # compute the second derivative
-        #             grad2[i] = np.diff(grad1[i])
-        #             ax[i].plot(grad2[i],'+--g')
-        #     pp = np.array([ np.where(mm_obj == m)[0][0] for m in mean_obj[i] if len(np.where(mm_obj == m)[0]) != 0 ])
-        #     color = 'red' if i == 0 else 'green' 
-        #     ax0.plot(px[pp],mm_obj[pp],marker='.',linestyle='--',color=color,label=f'obj {i}', alpha=0.5)
-
-        #     ax[i].plot(mean_obj[i],'.--b')
-        #     ax[i].axhline(0,0,1,color='black')
-        #     title = title + i*'\n' + f'mean{i+1} = {np.mean(mean_obj[i][1:]):.2}, grad1_{i+1} = {np.mean(grad1[i]):.2}, grad2_{i+1} = {np.mean(grad2[i]):.2}'
-        # #ax0.legend()
-        # fig.suptitle(title)
-        # fig, (ax1,ax2) = plt.subplots(1,2)
-        # field_image(fig,ax1,obj)
-        # field_image(fig,ax2,cut_obj)
-        # ax1.plot(y0+shift[1],x0+shift[0],'.')
-        # ax2.plot(y0,x0,'.')
-        # plt.show()
-
-
 def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequence[int] | None, mode: Literal["bright", "low"] = 'bright', maxpos: tuple[int,int] | None = None, debug_plots: bool = False) -> tuple[NDArray, tuple[int, int], tuple[tuple[int, int], tuple[int, int]]] | None:
     SIZE = 5
     xmax, ymax = peak_pos(obj)      #: max value coordinates
@@ -1320,7 +1311,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
     if mode == 'bright':
         ## Cut 
         print('\n\tFirst cut')
-        # set the center
+        # set the centre
         centre = np.array([xmax, ymax])
         # select the pixels of interest from `obj`
         cut_obj, shift = cutting(obj, centre, debug_plots=debug_plots)
@@ -1340,7 +1331,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         # check the centroid position
         if 0 <= coord[0] < cut_obj.shape[0] and 0 <= coord[1] < cut_obj.shape[1]:
             print('\n\tSecond cut')
-            # compute center coordinates in the frame of `obj`
+            # compute centre coordinates in the frame of `obj`
             centre = coord + shift
             # select the pixels of interest from `obj`
             cut_obj, shift = cutting(obj, centre, debug_plots=debug_plots)
@@ -1521,7 +1512,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
                 
 
             
-def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size: int = 7, min_dist: int = 0, bright_cut: bool =  False, debug_plots: bool = False, display_fig: bool = False, **kwargs) -> None | tuple[list[NDArray], NDArray]:
+def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size: int = 7, min_dist: int = 0, debug_plots: bool = False, display_fig: bool = False, **kwargs) -> None | tuple[list[NDArray], NDArray]:
     def info_print(cnt: int, index: tuple, peak: float) -> None:
         x0 , y0 = index
         print(f'\n- - - -\nStep {cnt}')
