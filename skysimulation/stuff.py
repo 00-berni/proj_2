@@ -180,6 +180,11 @@ def from_parms_to_distr(params: tuple[str, float] | tuple[str, tuple], infos: bo
         distr.info()
     return distr
 
+def distance(p1: tuple[int,int], p2: tuple[int,int]) -> float:
+    x1, y1 = p1 
+    x2, y2 = p2
+    return np.sqrt((x1-x2)**2 + (y1-y2)**2)
+
 def pad_field(field: NDArray, pad_size: int, bkg: DISTR, norm_cost: float = 1) -> NDArray:
     """To generate a frame of background values around the field
 
