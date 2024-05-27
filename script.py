@@ -78,13 +78,13 @@ def pipeline(*args,**kwargs) -> dict[str, fld.Any]:
     ## Kernel Estimation
     if method in ['all','rl','kernel','obj']:
         # extract objects for the kernel recovery
-        objs, errs, pos = rst.object_isolation(sci_frame, mean_bkg, sigma, size=max_size, sel_cond=True, corr_cond=False, display_fig=False,**kwargs)
+        objs, errs, pos = rst.searching(sci_frame, mean_bkg, sigma, max_size=max_size, min_dist=2, display_fig=False,**kwargs)
         results['objs'] = (objs, errs, pos)
 
 
     if method in ['all','rl','kernel']:
         # estimate kernel
-        ker_sigma, ker_Dsigma = rst.kernel_estimation(objs, errs, m_bkg, display_plot=False,**kwargs)
+        ker_sigma, ker_Dsigma = rst.kernel_estimation(objs[:6], errs[:6], m_bkg, display_plot=True,**kwargs)
         results['seeing'] = (ker_sigma, ker_Dsigma)
 
     ## R-L
@@ -107,7 +107,7 @@ def pipeline(*args,**kwargs) -> dict[str, fld.Any]:
 
     ## Light Recovery
     if method == 'all':
-        _ = rst.find_objects(sci_frame,rec_field, mean_bkg, sigma, max_size)
+        _ = rst.searching(rec_field, mean_bkg, None, max_size=max_size, display_fig=False, **kwargs)
         # det_stars = np.where(S.lum > mean_bkg)[0]
         # det_pos = np.array(S.pos)[:,det_stars]
         # dist = lambda p1, p2 : np.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2)
@@ -186,16 +186,14 @@ if __name__ == '__main__':
     # pos_seed  = None
     # bkg_seed  = None
     # det_seed  = None
-    method = 'bkg'
+    method = 'all'
     # method = None
     default_res = pipeline(mass_seed, pos_seed, bkg_seed, det_seed, method=method, results=True)
     star = default_res['stars']
     lum = star.lum
-    field = default_res['frame'][0]
-    mean_bkg = default_res['bkg'][0][0]
-    lum = lum[lum > mean_bkg]
-    objs, pos = rst.searching(field,mean_bkg,None)
+    objs = default_res['objs'][0]
     print(f'\n\n------\n\nFOUND:\t{len(objs)}\nOBSER:\t{len(lum)}')
+    
 
     multiple_acq = False
     if multiple_acq:
