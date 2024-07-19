@@ -84,7 +84,7 @@ def pipeline(*args,**kwargs) -> dict[str, fld.Any]:
 
     if method in ['all','rl','kernel']:
         # estimate kernel
-        ker_sigma, ker_Dsigma = rst.kernel_estimation(objs[:6], errs[:6], m_bkg, display_plot=True,**kwargs)
+        ker_sigma, ker_Dsigma = rst.kernel_estimation(objs[:6], errs[:6], m_bkg, display_plot=False,**kwargs)
         results['seeing'] = (ker_sigma, ker_Dsigma)
 
     ## R-L
@@ -107,7 +107,7 @@ def pipeline(*args,**kwargs) -> dict[str, fld.Any]:
 
     ## Light Recovery
     if method == 'all':
-        _ = rst.searching(rec_field, mean_bkg, None, max_size=max_size, display_fig=False, **kwargs)
+        _ = rst.searching(rec_field, mean_bkg, None, max_size=max_size, debug_plots=True, **kwargs)
         # det_stars = np.where(S.lum > mean_bkg)[0]
         # det_pos = np.array(S.pos)[:,det_stars]
         # dist = lambda p1, p2 : np.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2)
@@ -186,13 +186,32 @@ if __name__ == '__main__':
     # pos_seed  = None
     # bkg_seed  = None
     # det_seed  = None
-    method = 'all'
+    method = 'rl'
     # method = None
     default_res = pipeline(mass_seed, pos_seed, bkg_seed, det_seed, method=method, results=True)
+    mean_bkg = default_res['bkg'][0][0]
+    field, sigma = default_res['frame']    
     star = default_res['stars']
     lum = star.lum
     objs = default_res['objs'][0]
-    print(f'\n\n------\n\nFOUND:\t{len(objs)}\nOBSER:\t{len(lum)}')
+    pos = default_res['objs'][-1]
+    rec_field = default_res['rl']
+    objs, err, pos = rst.searching(rec_field, mean_bkg*105e-100, sigma, max_size=5, cntrl=None, cntrl_sel='bright', debug_plots=False)
+
+
+    maxvalues = np.array([ field[x,y] for x, y in zip(*pos)])
+    # from scipy.integrate import trapezoid
+    # maxvalues = np.array([ trapezoid(trapezoid(obj)) for obj in objs])
+    plt.figure()
+    binnn = lambda arr : 10**(np.linspace(np.log10(arr).min(),np.log10(arr).max(),10))
+    plt.hist(maxvalues,binnn(maxvalues), histtype='step',color='red',label='Max Val')
+    plt.hist(lum,binnn(lum), histtype='step', label='Lum',color='blue')
+    plt.xscale('log')
+    plt.axvline(np.mean(maxvalues),0,1,linestyle='dashed',color='red')
+    plt.axvline(np.mean(lum),0,1,linestyle='dashed',color='blue')
+    plt.legend()
+    plt.show()
+    print(f'\n\n------\n\nFOUND:\t{len(objs)}\nOBSER:\t{len(lum[lum>mean_bkg])}')
     
 
     multiple_acq = False
