@@ -47,7 +47,7 @@ RESTORATION PACKAGE
                   -| Yes, store the length
                   -| No
                    .> Reject the object
-
+    !!- [] **Capire come mai un oggetto viene tagliato fino a farlo scomparire**
 
 
 
@@ -1123,10 +1123,11 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
     Ir1 = Ir(Sr1)
     # estimate the error
     diff = abs(trapezoid(trapezoid(Ir1-Ir0)))
+    chisq = ((I-Ir1)**2).sum()/(len(I)**2-1)
     # print
     print('Dn', Dn)
-    print(f'{r:03d}: - diff {diff}')
-    while diff > Dn:
+    print(f'{r:03d}: - diff {diff}\tchisq {chisq}')
+    while diff >= Dn:
         r += 1
         # store the previous values
         Sr0 = Sr1
@@ -1136,7 +1137,8 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
         Ir1 = Ir(Sr1)
         # estimate the error
         diff = abs(trapezoid(trapezoid(Ir1-Ir0)))
-        print(f'{r:03d}: - diff {diff}')
+        chisq = ((I-Ir1)**2).sum()/(len(I)**2-1)
+        print(f'{r:03d}: - diff {diff}\tchisq {chisq}')
         if max_iter is not None:    #: limit in iterations 
             if r > max_iter: 
                 print(f'Routine stops due to the limit in iterations: {r} reached')
@@ -1211,13 +1213,16 @@ def cutting(obj: NDArray, centre: Sequence[int], err: NDArray | None = None, deb
     WRONG_RESULT = None, None, None   #: the returned value for rejected objects
     xdim, ydim = obj.shape      #: sizes of the object matrix
     x0, y0 = centre             #: centre coordinates
-    hm = obj[x0, y0]/2          #: half maximum
+    val0 = obj[x0,y0]
+    hm = val0/2          #: half maximum
+
     # find the value which best approximate the hm
-    hm_pos = max(minimum_pos(abs(obj-hm)))
+    hm_pos = max(minimum_pos(np.abs(np.where(obj != val0,obj,0)-hm)))
     # compute the best approximation of the HWHM
     hwhm = np.rint((abs(hm_pos-x0) + abs(hm_pos-y0))/2).astype(int)
-    if hwhm <= 1:   #: check the size
+    if hwhm < 1:   #: check the size
         print('! HWHM nO')
+        print(hwhm)
         #?
         if debug_plots:        fast_image(obj,'! HWHM small')
         #?
@@ -1307,6 +1312,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
     tuple[NDArray, tuple[int, int], tuple[tuple[int, int], tuple[int, int]]] | None
         _description_
     """
+
     SIZE = 5    #:
     xmax, ymax = peak_pos(obj)      #: max value coordinates
     xdim, ydim = obj.shape          #: sizes
@@ -1326,7 +1332,16 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             #?
             raise
     #?
+    val0 = obj[xmax,ymax]
+    hm = val0/2          #: half maximum
+
+    # find the value which best approximate the hm
+    hm_pos = max(minimum_pos(np.abs(np.where(obj != val0,obj,0)-hm)))
+    # compute the best approximation of the HWHM
+    hwhm = np.rint((abs(hm_pos-xmax) + abs(hm_pos-ymax))/2).astype(int)
+    if hwhm <= 1: mode = 'low'
     
+
     ### Bright object 
     if mode == 'bright':
         ## Cut 
@@ -1526,6 +1541,9 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             print('RATIO',val0/thr*100,'%')
             print('NO GOOD')
             return None
+    if 0 in obj.shape:
+        print('position',index)
+        raise Exception('Nononononono')
     # compute the coordinates of the centre and the edges on the board
     #. the changing of coordinates is obtained from the
     #. maximum coordinates
@@ -1539,7 +1557,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
                 
 
             
-def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size: int = 7, min_dist: int = 0, debug_plots: bool = False, display_fig: bool = False, **kwargs) -> None | tuple[list[NDArray], list[NDArray] | None, NDArray]:
+def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size: int = 7, min_dist: int = 0, debug_plots: bool = False, cntrl: int | None = None, cntrl_sel: str | None = None, display_fig: bool = False, **kwargs) -> None | tuple[list[NDArray], list[NDArray] | None, NDArray]:
     def info_print(cnt: int, index: tuple, peak: float) -> None:
         x0 , y0 = index
         print(f'\n- - - -\nStep {cnt}')
@@ -1572,6 +1590,14 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
         # define the object
         obj = field[x,y].copy()
         err = errs[x,y].copy() if errs is not None else None
+
+        if 0 in obj.shape: 
+            fast_image(obj)
+            fig, ax = plt.subplots(1,1)
+            field_image(fig,ax,field)
+            ax.plot(ymax,xmax,'.')
+            plt.show()
+
         #?
         if debug_plots: fast_image(obj,'Object')
         #?
@@ -1581,6 +1607,7 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                 print('xsize',xsize)
                 print('ysize',ysize)
                 print('diff',ymax-ysize)
+                print('Shape no Good')
                 x0, y0 = xmax, ymax
                 rej_obj += [obj]
                 rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
@@ -1596,6 +1623,7 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                     plt.show()
                 #?
         else:
+            if cntrl_sel is not None and cntrl_sel == 'low': debug_plots = False
             cxmax, cymax = peak_pos(obj)
             print('          c s')
             print('x compare',cxmax,xsize)
@@ -1638,8 +1666,8 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                     remove_cond = True
                     break
                 cxmax, cymax = peak_pos(obj)
-            debug_plots = False
             if remove_cond:            
+                print('New Shape is too small')
                 x0, y0 = xmax, ymax
                 rej_obj += [obj]
                 rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
@@ -1668,6 +1696,7 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                 # check if object is acceptable
                 check = object_check(obj, (xmax, ymax), thr, sigma, err=err, debug_plots=debug_plots)
                 if check is None:
+                    print('Check is not good 1')
                     x0, y0 = xmax, ymax
                     rej_obj += [obj]
                     rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
@@ -1714,6 +1743,7 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                             plt.show()
                         #?
                     else:
+                        print('No for selection')
                         rej_obj += [obj]
                         rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
                         #?
@@ -1728,6 +1758,7 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                             plt.show()
                         #?
             else:       #: faint objects
+                if cntrl_sel is not None and cntrl_sel == 'low': debug_plots = True
                 #?
                 if debug_plots:
                     fig0, ax0 = plt.subplots(1,1)
@@ -1737,6 +1768,7 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                 # check whether the object is acceptable
                 check = object_check(obj, (xmax, ymax), thr, sigma, mode='low', err=err, maxpos=(xsize[0],ysize[0]), debug_plots=debug_plots)
                 if check is None:
+                    print('Check is not good 2')
                     x0, y0 = xmax, ymax
                     rej_obj += [obj]
                     rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
@@ -1782,6 +1814,7 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                             plt.show()
                         #?
                     else:
+                        print('No good for selection low obj')
                         rej_obj += [obj]
                         rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
                         #?
@@ -1819,6 +1852,9 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
         #?
         if debug_plots: fast_image(tmp_field,'tmp_field')
         #?
+        if cntrl is not None:
+            if cnt == cntrl:
+                raise Exception('Stop for control')
     fig, ax = plt.subplots(1,1)
     field_image(fig,ax,display_field)
     if len(acc_pos[0]) != 0:
