@@ -1116,7 +1116,34 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
     I = pad_field(field, pad_size, bkg)
     
     ## RL Algorithm
+    import time
+    # def rl_step(Sl,Il,iter):
+    #     Il += [field_convolve(Sl[-1],P,bkg,mode='2d')]
+    #     Sl += [Sl[-1] * field_convolve(I/Il[-1],P,bkg,mode='2d')]
+    #     if len(Il) > 1:
+    #         diff = abs(trapezoid(trapezoid(Il[-1]-Il[-2])))
+    #         chisq = ((I-I[-1])**2).sum()/(len(I)**2-1)
+    #         print(f'{iter:04d}: - diff {diff:.3e}\tchisq {chisq:.3e}',end='\r')
+
+    # start_time = time.time()
+    # Sl = [I]
+    # Il = []
+    # _ = [rl_step(Sl,Il,r) for r in range(3000)]
+    # print(f'\nTime: {time.time()-start_time} s')
+    # print('\n',len(Sl))
+    # plt.figure()
+    # plt.subplot(1,4,1)
+    # plt.imshow(Sl[0][pad_slice,pad_slice])
+    # plt.subplot(1,4,2)
+    # plt.imshow(Sl[999][pad_slice,pad_slice])
+    # plt.subplot(1,4,3)
+    # plt.imshow(Sl[1999][pad_slice,pad_slice])
+    # plt.subplot(1,4,4)
+    # plt.imshow(Sl[-1][pad_slice,pad_slice])
+    # plt.show()
+
     r = 1               #: number of iteration
+    start_time = time.time()
     Ir0 = Ir(I)         #: initial value for I
     # compute the first step
     Sr1 = Sr(I,Ir0)
@@ -1126,8 +1153,11 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
     chisq = ((I-Ir1)**2).sum()/(len(I)**2-1)
     # print
     print('Dn', Dn)
-    print(f'{r:03d}: - diff {diff}\tchisq {chisq}')
-    while diff >= Dn:
+    print(f'{r:04d}: - diff {diff:.3e}\tchisq {chisq:.3e}',end='\r')
+    while r<3000: #diff >= Dn:
+        if len(np.where(Ir1<=0)[0]):
+            print(Ir1[Ir1<=0])
+            exit()
         r += 1
         # store the previous values
         Sr0 = Sr1
@@ -1138,11 +1168,13 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
         # estimate the error
         diff = abs(trapezoid(trapezoid(Ir1-Ir0)))
         chisq = ((I-Ir1)**2).sum()/(len(I)**2-1)
-        print(f'{r:03d}: - diff {diff}\tchisq {chisq}')
+        print(f'{r:04d}: - diff {diff:.3e}\tchisq {chisq:.3e}',end='\r')
         if max_iter is not None:    #: limit in iterations 
             if r > max_iter: 
                 print(f'Routine stops due to the limit in iterations: {r} reached')
                 break
+    print(f'\nTime: {time.time()-start_time} s')
+    print()
     if display_fig:
         def sqr_mask(val: float, dim: int) -> NDArray:
             return np.array([ [val, val], 
@@ -1314,8 +1346,10 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
     """
 
     SIZE = 5    #:
-    xmax, ymax = peak_pos(obj)      #: max value coordinates
-    xdim, ydim = obj.shape          #: sizes
+    init_obj = np.copy(obj)
+    c_obj = np.copy(obj)
+    xmax, ymax = peak_pos(c_obj)      #: max value coordinates
+    xdim, ydim = c_obj.shape          #: sizes
     #?
     if maxpos is not None:          #: check  
         xxmax, yymax = maxpos
@@ -1325,18 +1359,18 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             #?
             if debug_plots:
                 fig, ax = plt.subplots(1,1)
-                field_image(fig,ax,obj)
+                field_image(fig,ax,c_obj)
                 ax.plot(ymax,xmax,'.b')
                 ax.plot(yymax,xxmax,'.r')
                 plt.show()
             #?
             raise
     #?
-    val0 = obj[xmax,ymax]
+    val0 = c_obj[xmax,ymax]
     hm = val0/2          #: half maximum
 
     # find the value which best approximate the hm
-    hm_pos = max(minimum_pos(np.abs(np.where(obj != val0,obj,0)-hm)))
+    hm_pos = max(minimum_pos(np.abs(np.where(c_obj != val0,c_obj,0)-hm)))
     # compute the best approximation of the HWHM
     hwhm = np.rint((abs(hm_pos-xmax) + abs(hm_pos-ymax))/2).astype(int)
     if hwhm <= 1: mode = 'low'
@@ -1349,7 +1383,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         # set the centre
         centre = np.array([xmax, ymax])
         # select the pixels of interest from `obj`
-        cut_obj, cut_err, shift = cutting(obj, centre, err=err, debug_plots=debug_plots)
+        cut_obj, cut_err, shift = cutting(c_obj, centre, err=err, debug_plots=debug_plots)
         # reject null object
         if cut_obj is None: return None
         # fit with a gaussian in order to find an approximation for the centroid
@@ -1369,7 +1403,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             # compute centre coordinates in the frame of `obj`
             centre = coord + shift
             # select the pixels of interest from `obj`
-            cut_obj, cut_err, shift = cutting(obj, centre, err=cut_err, debug_plots=debug_plots)
+            cut_obj, cut_err, shift = cutting(c_obj, centre, err=cut_err, debug_plots=debug_plots)
             if cut_obj is None:     #: check
                 return None
         # change coordinates reference
@@ -1406,7 +1440,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             # check the derivative sign out from the bulk
             g_pos = np.where(grad1[mean_width:] >= 0)[0]
             if len(g_pos) != 0:     #: cut the object
-                xdim, ydim = obj.shape  #: initial sizes
+                xdim, ydim = c_obj.shape  #: initial sizes
                 # cut at the first positive value of the derivative
                 mean_width = g_pos[0]
                 print('Quite')
@@ -1414,7 +1448,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
                 xsize = ( max(0, x0-mean_width),  min(xdim, x0+mean_width+1))
                 ysize = ( max(0, y0-mean_width),  min(xdim, y0+mean_width+1))
                 # cut the object
-                obj = obj[slice(*xsize), slice(*ysize)]
+                obj = c_obj[slice(*xsize), slice(*ysize)].copy()
                 if err is not None:
                     err = err[slice(*xsize), slice(*ysize)]
                 #?
@@ -1433,7 +1467,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
                 print('Quite Quite Good')
                 # convert coordinates to the initial frame
                 x0, y0 = np.array([x0, y0]) + shift
-                xdim, ydim = obj.shape  #: initial sizes
+                xdim, ydim = c_obj.shape  #: initial sizes
                 # cut at the first positive value of the derivative
                 mean_width = g_pos[0]
                 print('Quite')
@@ -1441,11 +1475,11 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
                 xsize = ( max(0, x0-mean_width),  min(xdim, x0+mean_width+1))
                 ysize = ( max(0, y0-mean_width),  min(xdim, y0+mean_width+1))
                 # cut the object
-                obj = obj[slice(*xsize), slice(*ysize)]
+                obj = c_obj[slice(*xsize), slice(*ysize)].copy()
                 if err is not None:
                     err = err[slice(*xsize), slice(*ysize)]
                 #?
-                if debug_plots: fast_image(obj,'cutted S/N')
+                if debug_plots: fast_image(c_obj,'cutted S/N')
                 #?
             else:
                 print('RATIO',val0/thr*100,'%')
@@ -1462,7 +1496,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         x0, y0 = centre
         print(max(0, x0-hwhm), min(xdim, x0 + hwhm + 1))
         print(max(0, y0-hwhm), min(ydim, y0 + hwhm + 1))
-        cut_obj = obj[cut(x0, xdim), cut(y0, ydim)].copy()
+        cut_obj = c_obj[cut(x0, xdim), cut(y0, ydim)].copy()
         if err is not None:
             err = err[cut(x0, xdim), cut(y0, ydim)].copy()
         #?
@@ -1493,7 +1527,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             x0, y0 = centre
             print(max(0, x0-hwhm), min(xdim, x0 + hwhm + 1))
             print(max(0, y0-hwhm), min(ydim, y0 + hwhm + 1))
-            cut_obj = obj[cut(x0, xdim), cut(y0, ydim)].copy()
+            cut_obj = c_obj[cut(x0, xdim), cut(y0, ydim)].copy()
             if err is not None:
                 err = err[cut(x0, xdim), cut(y0, ydim)].copy()
             #?
@@ -1532,18 +1566,21 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         if ratio >= 0.5:
             g_pos = np.where(grad1 >= 0)[0]
             if np.mean(grad1) < 0:#len(g_pos) == 0:
-                obj = cut_obj
+                obj = cut_obj.copy()
             else:
                 print('gradient')
                 print('NO GOOD')
                 return None                
         else:
-            print('RATIO',val0/thr*100,'%')
+            print(f'RATIO {val0/thr:%} %')
             print('NO GOOD')
             return None
     if 0 in obj.shape:
+        print('> STOP NO SHAPE')
+        fast_image(init_obj)
+        return -1
         print('position',index)
-        raise Exception('Nononononono')
+        raise Exception(f'Zero shape ')
     # compute the coordinates of the centre and the edges on the board
     #. the changing of coordinates is obtained from the
     #. maximum coordinates
@@ -1711,6 +1748,8 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                         ax0.plot(y0,x0,'xr')
                         plt.show()
                     #?
+                # elif check == -1:
+                #     break
                 else:
                     obj, err, (x0, y0), (xsize, ysize) = check
                     print('xsize',xsize)
@@ -1783,6 +1822,22 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                         ax0.plot(y0,x0,'xr')
                         plt.show()
                     #?
+                elif check == -1:
+                    x0, y0 = xmax, ymax
+                    rej_obj += [obj]
+                    rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
+                    #?
+                    if debug_plots:                    
+                        fig0, ax0 = plt.subplots(1,1)
+                        ax0.set_title('Rejected')
+                        field_image(fig0,ax0,display_field)
+                        if len(acc_pos[0]) != 0:
+                            ax0.plot(acc_pos[1],acc_pos[0],'.b')
+                        ax0.plot(rej_pos[1],rej_pos[0],'.r')
+                        ax0.plot(y0,x0,'xr')
+                        plt.show()
+                    #?
+                    break
                 else:
                     obj, err, (x0, y0), (xsize, ysize) = check
                     print('xsize',xsize)
