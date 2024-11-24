@@ -7,6 +7,9 @@ import skysimulation.field as fld
 import skysimulation.restoration as rst
 from skysimulation.stuff import NDArray, sqr_mask
 
+
+
+
 def plot_obj(obj0: NDArray) -> None:
     x,y = np.arange(obj0.shape[0]), np.arange(obj0.shape[1])
     x, y = np.meshgrid(x,y)
@@ -48,8 +51,10 @@ def pipeline(*args,**kwargs) -> dict[str, fld.Any]:
     ### INITIALIZATION
     # generate the field
     S, (m_light, s_light), (m_dark, s_dark) = fld.field_builder(seed=(mass_seed,pos_seed), back_seed=bkg_seed, det_seed=det_seed,**kwargs)
+    last_sen += [f'L0: {S.lum.max()}\nL0.5: {m_light.max()*np.sqrt(18*np.pi)}']
     # compute the scientific frame
     sci_frame = m_light - m_dark
+    last_sen += [f'L1: {sci_frame.max()*np.sqrt(18*np.pi)}']
     # compute the uncertainty
     sigma = np.sqrt(s_light**2 + s_dark**2)
     m_sigma = sigma.mean()
@@ -94,6 +99,10 @@ def pipeline(*args,**kwargs) -> dict[str, fld.Any]:
         rec_field = rst.LR_deconvolution(sci_frame,kernel,sigma, mean_bkg, sigma_bkg, display_fig=True)
         dpl.fast_image(rec_field - sci_frame - mean_bkg,'Remove before and background')
         results['rl'] = rec_field
+        flat_field = rec_field.flatten()
+        plt.figure()
+        plt.hist(flat_field,100)
+        plt.yscale('log')
         
         fig, ax = plt.subplots(1,1)
         dim = len(rec_field)
@@ -102,6 +111,7 @@ def pipeline(*args,**kwargs) -> dict[str, fld.Any]:
         ax.plot(mask0[:,0], mask0[:,1], color='blue')
         plt.show()
 
+        last_sen += [f'L2: {rec_field.max()*np.sqrt(18*np.pi)}']
         art_bkg = stf.Gaussian(sigma_bkg, mean_bkg).field(rec_field.shape)
         dpl.fast_image(rec_field - art_bkg, 'Removed background')
 
@@ -196,19 +206,31 @@ if __name__ == '__main__':
     objs = default_res['objs'][0]
     pos = default_res['objs'][-1]
     rec_field = default_res['rl']
-    objs, err, pos = rst.searching(rec_field, mean_bkg*105e-100, sigma, max_size=5, cntrl=None, cntrl_sel='bright', debug_plots=False)
+    ker_sigma = default_res['seeing'][0]
+    objs, err, pos = rst.searching(rec_field, mean_bkg, sigma, max_size=5, cntrl=None, cntrl_sel='bright', debug_plots=False)
+    # objs, err, pos = rst.searching(rec_field, mean_bkg*105e-100, sigma, max_size=5, cntrl=None, cntrl_sel='bright', debug_plots=False)
 
-
+    m_dark = default_res['dark'][0]
     maxvalues = np.array([ field[x,y] for x, y in zip(*pos)])
+    print('\nLuminosities:')
+    for sen in last_sen:
+        print(sen)
+    print(f'L3: {maxvalues.max()*np.sqrt(2*np.pi*ker_sigma**2)}')
+    print('VAL',maxvalues.max()*np.sqrt(2*np.pi*ker_sigma**2)/lum.max())
+    print('VAL',(maxvalues.max()+m_dark.mean())*np.sqrt(2*np.pi*ker_sigma**2)/lum.max())
     # from scipy.integrate import trapezoid
     # maxvalues = np.array([ trapezoid(trapezoid(obj)) for obj in objs])
     plt.figure()
     binnn = lambda arr : 10**(np.linspace(np.log10(arr).min(),np.log10(arr).max(),10))
-    plt.hist(maxvalues,binnn(maxvalues), histtype='step',color='red',label='Max Val')
-    plt.hist(lum,binnn(lum), histtype='step', label='Lum',color='blue')
-    plt.xscale('log')
+    plt.hist(maxvalues,30, histtype='step',color='red',label='Max Val')
+    plt.hist((maxvalues+m_dark.mean())*np.sqrt(2*np.pi*ker_sigma**2),30, histtype='step',color='green',label='prod')
+    # plt.hist(maxvalues*2*np.pi*ker_sigma**2,30, histtype='step',color='green',label='prod')
+    plt.hist(lum,60, histtype='step', label='Lum',color='blue')
+    # plt.xscale('log')
     plt.axvline(np.mean(maxvalues),0,1,linestyle='dashed',color='red')
     plt.axvline(np.mean(lum),0,1,linestyle='dashed',color='blue')
+    plt.axvline(mean_bkg,0,1,color='violet')
+    plt.yscale('log')
     plt.legend()
     plt.show()
     print(f'\n\n------\n\nFOUND:\t{len(objs)}\nOBSER:\t{len(lum[lum>mean_bkg])}')
