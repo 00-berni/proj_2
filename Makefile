@@ -8,6 +8,9 @@ requirements:
 	python3.10 -m pip install -r requirements.txt
 # script:
 script:
+	python3.10 ./script.py
+# script:
+script_r:
 	python3.10 ./script.py > $(RDIR)/script_results.txt
 # test:
 test:
