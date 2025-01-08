@@ -1,6 +1,7 @@
 from typing import Sequence, Any
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import NDArray,ArrayLike
+from astropy.units import Quantity
 
 class Gaussian():
     """Gaussian distribution
@@ -185,7 +186,7 @@ def distance(p1: tuple[int,int], p2: tuple[int,int]) -> float:
     x2, y2 = p2
     return np.sqrt((x1-x2)**2 + (y1-y2)**2)
 
-def pad_field(field: NDArray, pad_size: int, bkg: DISTR, norm_cost: float = 1) -> NDArray:
+def pad_field(field: NDArray, pad_size: int, bkg: DISTR | float, norm_cost: float = 1) -> NDArray:
     """To generate a frame of background values around the field
 
     Parameters
@@ -209,7 +210,10 @@ def pad_field(field: NDArray, pad_size: int, bkg: DISTR, norm_cost: float = 1) -
     new_field = np.pad(field, pad_size,'constant',constant_values=-1)
     # substitute negative numbers with values drawn from background distribution
     frame = new_field[new_field < 0]
-    new_field[new_field < 0] = bkg.field(frame.shape)*norm_cost
+    if isinstance(bkg,(float,int)):
+        new_field[new_field < 0] = bkg*norm_cost
+    else:
+        new_field[new_field < 0] = bkg.field(frame.shape)*norm_cost
     return new_field
 
 def sqr_mask(val: float, dim: int) -> NDArray:
@@ -244,7 +248,7 @@ def field_convolve(field: NDArray, kernel: NDArray, bkg: DISTR, norm_cost: float
     -----
 
     """
-    pad_size = (len(kernel)-1) // 2         #: number of pixels to pad the field
+    pad_size = (len(kernel)-1) // 2   +2      #: number of pixels to pad the field
     pad_slice = slice(pad_size, -pad_size)  #: frame cut
     # pad the field to avoid edge artifacts after convolution
     tmp_field = pad_field(field, pad_size, bkg, norm_cost=norm_cost)
@@ -327,3 +331,28 @@ def minimum_pos(field: NDArray) -> int | tuple[int,int]:
         return field.argmin()
     else:
         return np.unravel_index(field.argmin(),field.shape)
+
+def magnitude_order(number: ArrayLike) -> ArrayLike:
+    number = np.abs(number) 
+    order = np.floor(np.log10(number)).astype(int)
+    return order
+
+def unc_format(value: ArrayLike, err: ArrayLike) -> list[str]:
+    err_ord = magnitude_order(err).min()
+    val_ord = magnitude_order(value).max()
+    order = val_ord - err_ord + 1
+    fmt = [f'%.{order:d}e',r'%.1e']
+    return fmt
+    
+def print_measure(value: float | Quantity, err: float | Quantity, name: str = 'value', unit: str = '') -> None:
+    if isinstance(value, Quantity) and isinstance(err, Quantity):
+        unit = value.unit.to_string()
+        value = value.value
+        err = err.value
+    fmt = unc_format(value,err)
+    if value != 0:
+        fmt = name + ' = {value:' + fmt[0][1:] + '} +/- {err:' + fmt[1][1:] + '} ' + unit + ' ---> {perc:.2%}'
+        print(fmt.format(value=value,err=err,perc=err/value))
+    else:
+        fmt = name + ' = {value:' + fmt[0][1:] + '} +/- {err:' + fmt[1][1:] + '} ' + unit 
+        print(fmt.format(value=value,err=err))
