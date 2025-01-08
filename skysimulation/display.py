@@ -58,7 +58,7 @@ def field_image(fig: Figure, image: Axes, F: np.ndarray, v: int = 0, sct: Sequen
         fig.colorbar(pic, ax=image, cmap=color, norm=norm, cax=colorbar_axes)
 
 def fast_image(F: np.ndarray, title: str = '', **kwargs) -> None:
-    fig, ax = plt.subplots(1,1)
+    fig, ax = plt.subplots(1,1,figsize=(10,14))
     ax.set_title(title,fontsize=20)
     field_image(fig,ax,F,**kwargs)
     plt.show()
