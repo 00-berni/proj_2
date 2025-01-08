@@ -290,6 +290,7 @@ def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, 
     The method calls the function `find_peaks()` of the package 
     `scipy.signal` to look for peaks 
     """
+    from statistics import pvariance
     ## Initialization
     frame = field.copy()        #: copy of the field matrix
     data = frame.flatten()      #: 1-D data array
@@ -353,12 +354,19 @@ def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, 
         model = Gaussian(sigma_bkg, mean_bkg)
         k = cnts[max_indx] / model.value((bins[max_indx+1] + bins[max_indx])/2 - mean_bkg)
         model = model.value(xx-mean_bkg) * k   
-        
+
+        n_bkg = np.median(data)
+        n_sigma = pvariance(data-n_bkg)
+        print('New',n_bkg,n_sigma)
+        probe = Gaussian(n_sigma,n_bkg).value(xx-n_bkg)
+        probe = model.max() * probe / probe.mean()
+
         plt.figure()
         plt.title(f'Gaussian Background Estimation\n mean = {mean_bkg:.4} +- {Dmean_bkg:.2} ; sigma = {sigma_bkg:.2}')
         plt.stairs(cnts, bins, fill=False, label='data')
         plt.axvline(mean_bkg, 0, 1, color='red', linestyle='dotted', label='estimated mean')
         plt.plot(xx,model, label='estimated gaussian')
+        plt.plot(xx,probe, label='estimated gaussian II')
         plt.plot((bins[peaks+1] + bins[peaks])/2,cnts[peaks],'.r')
         plt.axhline(sigma_height,0,1)
         plt.legend()
@@ -512,7 +520,7 @@ def new_grad_check(field: NDArray, index: tuple[int,int], back: float, size: int
               [ysize_inf, ysize_sup] ]
     """
     # define a method to move out from the brightest pixel
-    n_mov = lambda val : new_moving(val,field,index,back,size)
+    n_mov = lambda val : new_moving(val,field,index,back,size,debug_check=debug_check)
     xf_dir = ['fx','bx','fy','by']      #: list of all directions
     # compute the size in each directions of `xf_dir`
     a_xysize = np.array([n_mov(dir) for dir in xf_dir]) 
@@ -935,7 +943,7 @@ def new_kernel_fit(obj: NDArray, err: NDArray | None = None, initial_values: lis
         # compute the initial value for sigma from HWHM
         hm = k0/2   #: half maximum
         # find coordinates of the best estimation of `hm`
-        hm_x, hm_y = minimum_pos(abs(obj-hm))        #np.unravel_index(abs(obj-hm).argmin(), obj.shape)
+        hm_x, hm_y = minimum_pos(abs(obj-hm))      
         # compute hwhm
         hwhm = np.sqrt((hm_x - xmax)**2 + (hm_y - ymax)**2)
         # compute sigma from it
@@ -1009,8 +1017,8 @@ def kernel_estimation(extraction: list[NDArray], errors: list[NDArray], bkg: tup
         computed STD from the mean `sigma`
     """
     # copy the lists to prevent errors
-    sel_obj = [*extraction[selected]]
-    sel_err = [*errors[selected]]
+    sel_obj = [ np.copy(elem) for elem in extraction[selected]]
+    sel_err = [ np.copy(elem) for elem in errors[selected]] if errors is not None else [1e-1000 * ext for ext in sel_obj]
     a_sigma = np.empty(shape=(0,2),dtype=float) #: array to store values and uncertainties of sigma
     a_w = []
 
@@ -1052,7 +1060,7 @@ def kernel_estimation(extraction: list[NDArray], errors: list[NDArray], bkg: tup
     return sigma, Dsigma
 
 
-def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: float, sigma_bkg: float, max_iter: int | None = None, display_fig: bool = False, **kwargs) -> NDArray:
+def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: float, sigma_bkg: float, max_iter: int | None = None, max_r: int = 3000, thr_mul: float = 1, mode: None | dict = None, display_fig: bool = False, **kwargs) -> NDArray:
     """To provide the Richardson-Lucy algorithm
 
     Parameters
@@ -1102,18 +1110,21 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
     ## Parameters    
     Dn = sigma.std()                        #: the variance root of the uncertainties
     P = np.copy(kernel.kernel())            #: the estimated kernel
-    bkg = Gaussian(sigma_bkg, mean_bkg)     #: estimated background distribution
     # define the two recursive functions of the algorithm
     #.. they compute the value of `I` and `S` respectively at
     #.. the iteration r 
-    Ir = lambda S: field_convolve(S, P, bkg, mode='2d')
-    Sr = lambda S,Ir: S * field_convolve(I/Ir, P, bkg, mode='2d')
+    if mode is None:
+        mode = {'boundary': 'fill', 'fillvalue': mean_bkg}
+    from scipy.signal import convolve2d    
+    Ir = lambda S: convolve2d(S, P,  mode='same', **mode)
+    Sr = lambda S,Ir: S * convolve2d(I/Ir, P,  mode='same', **mode)
     # pad the field before convolutions
     #.. the field is put in a frame filled by drawing values 
     #.. from `bkg` distribution
-    pad_size  = (len(P)-1)                  #: number of pixels to pad the field
-    pad_slice = slice(pad_size,-pad_size)   #: field size cut
-    I = pad_field(field, pad_size, bkg)
+    pad_size  = (len(P)-1)+2                  #: number of pixels to pad the field
+    # pad_slice = slice(pad_size,-pad_size)   #: field size cut
+    I = pad_field(field, pad_size, mean_bkg)
+    # I = field.copy()
     
     ## RL Algorithm
     import time
@@ -1148,16 +1159,22 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
     # compute the first step
     Sr1 = Sr(I,Ir0)
     Ir1 = Ir(Sr1)
+    Ir1 = np.where(Ir1<0,0,Ir1)
     # estimate the error
-    diff = abs(trapezoid(trapezoid(Ir1-Ir0)))
+    diff = np.abs(Ir1-Ir0).sum()/np.sum(I)
     chisq = ((I-Ir1)**2).sum()/(len(I)**2-1)
     # print
     print('Dn', Dn)
+    print('Dn', Dn/I.sum())
+    print('Dn',Dn*thr_mul)
     print(f'{r:04d}: - diff {diff:.3e}\tchisq {chisq:.3e}',end='\r')
-    while r<3000: #diff >= Dn:
-        if len(np.where(Ir1<=0)[0]):
-            print(Ir1[Ir1<=0])
-            exit()
+    a_diff = []
+    a_chisq = []
+    stop_cond = r<max_r if Dn == 0 else diff >= Dn*thr_mul#/I.sum()
+    while stop_cond: #r<3000: #diff >= Dn:
+        # if len(np.where(Ir1<=0)[0]):
+        #     print(Ir1[Ir1<=0])
+        #     exit()
         r += 1
         # store the previous values
         Sr0 = Sr1
@@ -1165,16 +1182,32 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
         # compute the next step
         Sr1 = Sr(Sr0,Ir0)
         Ir1 = Ir(Sr1)
+        Ir1 = np.where(Ir1<0,0,Ir1)
         # estimate the error
-        diff = abs(trapezoid(trapezoid(Ir1-Ir0)))
+        diff = np.abs(Ir1-Ir0).sum()/np.sum(I)
         chisq = ((I-Ir1)**2).sum()/(len(I)**2-1)
+        a_diff += [diff]
+        a_chisq += [chisq]
         print(f'{r:04d}: - diff {diff:.3e}\tchisq {chisq:.3e}',end='\r')
         if max_iter is not None:    #: limit in iterations 
             if r > max_iter: 
                 print(f'Routine stops due to the limit in iterations: {r} reached')
                 break
+        stop_cond = r<max_iter if Dn == 0 else diff >= Dn*thr_mul#/I.sum()
     print(f'\nTime: {time.time()-start_time} s')
     print()
+    plt.figure(figsize=(10,14))
+    plt.title('Diff')
+    plt.plot(a_diff,'.-')
+    plt.axhline(Dn,0,1,color='orange')
+    # plt.ylim(1e-7,2e-6)
+    # plt.axhline(Dn/sigma.mean(),0,1,color='violet')
+    # plt.axhline(np.mean(a_diff),0,1)
+    plt.figure(figsize=(10,14))
+    plt.title('Chisq')
+    plt.plot(a_chisq,'.-')
+    # plt.axhline(np.mean(a_chisq),0,1)
+    plt.show()
     if display_fig:
         def sqr_mask(val: float, dim: int) -> NDArray:
             return np.array([ [val, val], 
@@ -1196,7 +1229,7 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
         ax.plot(mask3[:,1],mask3[:,0], color='green')
         plt.show()
     # store the result and remove the added frame
-    rec_field = Sr(Sr1,Ir1)[pad_slice,pad_slice]
+    rec_field = Sr(Sr1,Ir1).copy()[pad_size:-pad_size,pad_size:-pad_size]
 
     ## Plotting
     if display_fig:
@@ -1259,9 +1292,11 @@ def cutting(obj: NDArray, centre: Sequence[int], err: NDArray | None = None, deb
         if debug_plots:        fast_image(obj,'! HWHM small')
         #?
         return WRONG_RESULT
+    xends = (max(x0-hwhm,0), min(x0+hwhm +1 , xdim))
+    yends = (max(y0-hwhm,0), min(y0+hwhm +1 , ydim))
     # select only the pixels inside hwhm
-    cut = lambda centre, dim : slice(max(centre-hwhm,0), min(centre+hwhm +1 , dim))     #: function to compute the slices
-    cut_obj = obj[cut(x0,xdim), cut(y0,ydim)].copy()
+    # cut = lambda centre, dim : slice(max(centre-hwhm,0), min(centre+hwhm +1 , dim))     #: function to compute the slices
+    cut_obj = obj[slice(*xends),slice(*yends)].copy()
     if 1 in cut_obj.shape or 2 in cut_obj.shape:    #: check size
         #?
         if debug_plots: fast_image(cut_obj,'! Sizes')
@@ -1273,15 +1308,16 @@ def cutting(obj: NDArray, centre: Sequence[int], err: NDArray | None = None, deb
     print('\tsigma',hwhm / (2*np.log(2)))
     print('\tdim : ', xdim, ydim)
     print('\tcen : ', x0, y0)
-    print('\tx : ', max(x0-hwhm,0), min(x0+hwhm+1, xdim))
-    print('\ty : ', max(y0-hwhm,0), min(y0+hwhm+1, ydim))
+    print('\tx : ', *xends)
+    print('\ty : ', *yends)
+    print('\tval0',val0)
     # compute the shift to trasform the coordinates
-    xmax, ymax = peak_pos(obj)
-    cxmax, cymax = peak_pos(cut_obj)
-    shift = np.array([xmax - cxmax, ymax - cymax])
-    print('shift',shift)
+    shift = np.array([xends[0], yends[0]])
+    print('\tcen : ', x0 - shift[0], y0 - shift[1])
+    print('\tshift',shift)
+    print('\tval1',cut_obj[x0-shift[0],y0-shift[1]])
     if err is not None:
-        err = err[cut(x0,xdim), cut(y0,ydim)].copy()
+        err = err[slice(*xends),slice(*yends)].copy()
     return cut_obj, err, shift
 
 def average_trend(obj: NDArray, centre: tuple[int, int]) -> tuple[NDArray, NDArray]:
@@ -1319,7 +1355,7 @@ def average_trend(obj: NDArray, centre: tuple[int, int]) -> tuple[NDArray, NDArr
     mean_obj = np.array([ np.mean(obj[dist == d]) for d in px])
     return px, mean_obj
 
-def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequence[int] | None, err: NDArray | None = None, mode: Literal["bright", "low"] = 'bright', maxpos: tuple[int,int] | None = None, debug_plots: bool = False) -> tuple[NDArray, NDArray | None, tuple[int, int], tuple[tuple[int, int], tuple[int, int]]] | None:
+def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequence[int] | None, err: NDArray | None = None, mode: Literal["bright", "low"] = 'bright', maxpos: tuple[int,int] | None = None, debug_plots: bool = False,**kwargs) -> tuple[NDArray, NDArray | None, tuple[int, int], tuple[tuple[int, int], tuple[int, int]]] | None:
     """To check whether an object is acceptable as a star or not
 
     Parameters
@@ -1344,7 +1380,8 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
     tuple[NDArray, tuple[int, int], tuple[tuple[int, int], tuple[int, int]]] | None
         _description_
     """
-
+    if 'log' not in kwargs.keys():
+        kwargs['log'] = False
     SIZE = 5    #:
     init_obj = np.copy(obj)
     c_obj = np.copy(obj)
@@ -1354,8 +1391,9 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
     if maxpos is not None:          #: check  
         xxmax, yymax = maxpos
         if xxmax != xmax or yymax != ymax:
-            print('real:', xxmax, yymax)
-            print('used:', xmax, ymax)
+            if kwargs['log']:
+                print('real:', xxmax, yymax)
+                print('used:', xmax, ymax)
             #?
             if debug_plots:
                 fig, ax = plt.subplots(1,1)
@@ -1379,7 +1417,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
     ### Bright object 
     if mode == 'bright':
         ## Cut 
-        print('\n\tFirst cut')
+        if kwargs['log']: print('\n\tFirst cut')
         # set the centre
         centre = np.array([xmax, ymax])
         # select the pixels of interest from `obj`
@@ -1391,15 +1429,20 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         # check sigma
         est_sigma = pop[1]
         if est_sigma <= 0:  #: negative sigma is unacceptable
-            print('BAD SIGMA')
+            if kwargs['log']: print('BAD SIGMA')
             #?
             if debug_plots: fast_image(cut_obj,'Bad Sigma')
             #?
             return None
         coord = np.rint(pop[-2:]).astype(int)
+        if debug_plots:
+            fig,ax = plt.subplots(1,1)
+            field_image(fig,ax,cut_obj)
+            ax.plot(*coord,'xb')
+            plt.show()
         # check the centroid position
         if 0 <= coord[0] < cut_obj.shape[0] and 0 <= coord[1] < cut_obj.shape[1]:
-            print('\n\tSecond cut')
+            if kwargs['log']: print('\n\tSecond cut')
             # compute centre coordinates in the frame of `obj`
             centre = coord + shift
             # select the pixels of interest from `obj`
@@ -1415,7 +1458,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         sigma += [hwhm]
 
         ## Gradient
-        print('cut_dim : ', xdim, ydim)
+        if kwargs['log']: print('cut_dim : ', xdim, ydim)
         # compute the mean trend
         px, mean_obj = average_trend(cut_obj, (x0,y0))
         # compute the first derivative
@@ -1443,7 +1486,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
                 xdim, ydim = c_obj.shape  #: initial sizes
                 # cut at the first positive value of the derivative
                 mean_width = g_pos[0]
-                print('Quite')
+                if kwargs['log']: print('Quite')
                 # compute the size of the object from the centre
                 xsize = ( max(0, x0-mean_width),  min(xdim, x0+mean_width+1))
                 ysize = ( max(0, y0-mean_width),  min(xdim, y0+mean_width+1))
@@ -1454,23 +1497,23 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
                 #?
                 if debug_plots:                fast_image(obj,'cutted')
                 #?
-            print('GOOD')
+            if kwargs['log']: print('GOOD')
         else:
             ## S/N
             # compute the ratio between pixels around the centre and mean background
             ratio = min(mean_obj[1:mean_width+1])/thr
-            print('S/N',ratio*100,'%')
+            if kwargs['log']: print('S/N',ratio*100,'%')
             #?
             if debug_plots:            plt.show()
             #?
             if ratio >= 0.5:
-                print('Quite Quite Good')
+                if kwargs['log']: print('Quite Quite Good')
                 # convert coordinates to the initial frame
                 x0, y0 = np.array([x0, y0]) + shift
                 xdim, ydim = c_obj.shape  #: initial sizes
                 # cut at the first positive value of the derivative
                 mean_width = g_pos[0]
-                print('Quite')
+                if kwargs['log']: print('Quite')
                 # compute the size of the object from the centre
                 xsize = ( max(0, x0-mean_width),  min(xdim, x0+mean_width+1))
                 ysize = ( max(0, y0-mean_width),  min(xdim, y0+mean_width+1))
@@ -1482,20 +1525,22 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
                 if debug_plots: fast_image(c_obj,'cutted S/N')
                 #?
             else:
-                print('RATIO',val0/thr*100,'%')
-                print('NO GOOD')
+                if kwargs['log']:
+                    print('RATIO',val0/thr*100,'%')
+                    print('NO GOOD')
                 return None
     elif mode == 'low':
         #?
         if debug_plots:        fast_image(obj,'LOW before cutting')
         #?
-        print('LOW')
+        if kwargs['log']: print('LOW')
         hwhm = np.rint(np.mean(sigma)).astype(int) if len(sigma) != 0 else SIZE
         cut = lambda centre, dim : slice(max(0, centre-hwhm), min(dim, centre + hwhm + 1))
         centre = np.array([xmax, ymax])
         x0, y0 = centre
-        print(max(0, x0-hwhm), min(xdim, x0 + hwhm + 1))
-        print(max(0, y0-hwhm), min(ydim, y0 + hwhm + 1))
+        if kwargs['log']:
+            print(max(0, x0-hwhm), min(xdim, x0 + hwhm + 1))
+            print(max(0, y0-hwhm), min(ydim, y0 + hwhm + 1))
         cut_obj = c_obj[cut(x0, xdim), cut(y0, ydim)].copy()
         if err is not None:
             err = err[cut(x0, xdim), cut(y0, ydim)].copy()
@@ -1504,18 +1549,19 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         #?
         cxmax, cymax = peak_pos(cut_obj)
         shift = np.array([xmax - cxmax, ymax - cymax])
-        print('\n\thwhm', hwhm)
-        print('\tsigma', hwhm / (2*np.log(2)))
-        print('\tdim : ', xdim, ydim)
-        print('\tcen : ', x0, y0)
-        print('\tx : ', max(x0-hwhm,0), min(x0+hwhm+1, xdim))
-        print('\ty : ', max(y0-hwhm,0), min(y0+hwhm+1, ydim))
+        if kwargs['log']:
+            print('\n\thwhm', hwhm)
+            print('\tsigma', hwhm / (2*np.log(2)))
+            print('\tdim : ', xdim, ydim)
+            print('\tcen : ', x0, y0)
+            print('\tx : ', max(x0-hwhm,0), min(x0+hwhm+1, xdim))
+            print('\ty : ', max(y0-hwhm,0), min(y0+hwhm+1, ydim))
         # fit with a gaussian in order to find the centroid
         pop, _ = new_kernel_fit(cut_obj-thr, err=err, display_fig=False)
         # check sigma
         est_sigma = pop[1]
         if est_sigma <= 0:  #: negative sigma is unacceptable
-            print('BAD SIGMA')
+            if kwargs['log']: print('BAD SIGMA')
             #?
             if debug_plots:            fast_image(cut_obj,'BAD SIGMA')
             #?
@@ -1525,8 +1571,9 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         if 0 <= coord[0] < cut_obj.shape[0] and 0 <= coord[1] < cut_obj.shape[1]:
             centre = coord + shift
             x0, y0 = centre
-            print(max(0, x0-hwhm), min(xdim, x0 + hwhm + 1))
-            print(max(0, y0-hwhm), min(ydim, y0 + hwhm + 1))
+            if kwargs['log']:
+                print(max(0, x0-hwhm), min(xdim, x0 + hwhm + 1))
+                print(max(0, y0-hwhm), min(ydim, y0 + hwhm + 1))
             cut_obj = c_obj[cut(x0, xdim), cut(y0, ydim)].copy()
             if err is not None:
                 err = err[cut(x0, xdim), cut(y0, ydim)].copy()
@@ -1541,12 +1588,14 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             field_image(fig, ax, cut_obj)
             plt.show()
         #?
-        print('zero',x0,y0)
-        print('shift', shift)
+        if kwargs['log']:
+            print('zero',x0,y0)
+            print('shift', shift)
         # change coordinates reference
         x0, y0 = centre - shift
-        print('zero',x0,y0)
-        print('shape',cut_obj.shape)
+        if kwargs['log']:
+            print('zero',x0,y0)
+            print('shape',cut_obj.shape)
         val0 = cut_obj[x0,y0]
         xdim, ydim = cut_obj.shape
         px, mean_obj = average_trend(cut_obj, (x0,y0))
@@ -1568,12 +1617,14 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             if np.mean(grad1) < 0:#len(g_pos) == 0:
                 obj = cut_obj.copy()
             else:
-                print('gradient')
-                print('NO GOOD')
+                if kwargs['log']:
+                    print('gradient')
+                    print('NO GOOD')
                 return None                
         else:
-            print(f'RATIO {val0/thr:%} %')
-            print('NO GOOD')
+            if kwargs['log']:
+                print(f'RATIO {val0/thr:%} %')
+                print('NO GOOD')
             return None
     if 0 in obj.shape:
         print('> STOP NO SHAPE')
@@ -1595,11 +1646,14 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
 
             
 def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size: int = 7, min_dist: int = 0, debug_plots: bool = False, cntrl: int | None = None, cntrl_sel: str | None = None, display_fig: bool = False, **kwargs) -> None | tuple[list[NDArray], list[NDArray] | None, NDArray]:
+    if 'log' not in kwargs.keys():
+        kwargs['log'] = False
     def info_print(cnt: int, index: tuple, peak: float) -> None:
         x0 , y0 = index
-        print(f'\n- - - -\nStep {cnt}')
-        print(f'\tcoor : ({x0}, {y0})')
-        print(f'\tpeak : {peak}')
+        if kwargs['log']:
+            print(f'\n- - - -\nStep {cnt}')
+            print(f'\tcoor : ({x0}, {y0})')
+            print(f'\tpeak : {peak}')
     tmp_field = field.copy()
     display_field = field.copy()
     sigma = []
@@ -1638,13 +1692,14 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
         #?
         if debug_plots: fast_image(obj,'Object')
         #?
-        print('SHAPE: ',obj.shape)
+        if kwargs['log']: print('SHAPE: ',obj.shape)
         # remove small object
-        if obj.shape[0] <= 3 or obj.shape[1] <= 3: 
-                print('xsize',xsize)
-                print('ysize',ysize)
-                print('diff',ymax-ysize)
-                print('Shape no Good')
+        if obj.shape[0] <= 3 or obj.shape[1] <= 3:
+                if kwargs['log']: 
+                    print('xsize',xsize)
+                    print('ysize',ysize)
+                    print('diff',ymax-ysize)
+                    print('Shape no Good')
                 x0, y0 = xmax, ymax
                 rej_obj += [obj]
                 rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
@@ -1662,9 +1717,10 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
         else:
             if cntrl_sel is not None and cntrl_sel == 'low': debug_plots = False
             cxmax, cymax = peak_pos(obj)
-            print('          c s')
-            print('x compare',cxmax,xsize)
-            print('y compare',cymax,ysize)
+            if kwargs['log']:
+                print('          c s')
+                print('x compare',cxmax,xsize)
+                print('y compare',cymax,ysize)
             remove_cond = False
             while cxmax != xsize[0] or cymax != ysize[0]:
                 #?
@@ -1680,15 +1736,16 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                 col = min(cymax, obj.shape[1]-cymax-1)
                 condition = row <= col if all([cxmax != xsize[0], cymax != ysize[0]]) else cymax == ysize[0]
                 if condition:
-                    print('row',cxmax, obj.shape[0]-cxmax-1)
+                    if kwargs['log']: print('row',cxmax, obj.shape[0]-cxmax-1)
                     xsize = np.array([xsize[0]-cxmax-1, xsize[1]]) if cxmax < xsize[0] else np.array([xsize[0], cxmax-xsize[0]-1])
-                    print(xsize)
+                    if kwargs['log']: print(xsize)
                 else:
-                    print('col',cymax, obj.shape[1]-cymax-1)
+                    if kwargs['log']: print('col',cymax, obj.shape[1]-cymax-1)
                     ysize = np.array([ysize[0]-cymax-1, ysize[1]]) if cymax < ysize[0] else np.array([ysize[0], cymax-ysize[0]-1])
-                    print(ysize)
-                print('x compare',cxmax,xsize)
-                print('y compare',cymax,ysize)
+                    if kwargs['log']: print(ysize)
+                if kwargs['log']:
+                    print('x compare',cxmax,xsize)
+                    print('y compare',cymax,ysize)
                 if (xsize < 0).any() or (ysize < 0).any():
                     raise Exception('Void object')
                 # compute slices
@@ -1699,12 +1756,12 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                 if errs is not None:
                     err = errs[x,y].copy()
                 if (obj.shape[0] <= 3) or (obj.shape[1] <= 3):
-                    print('remove')
+                    if kwargs['log']: print('remove')
                     remove_cond = True
                     break
                 cxmax, cymax = peak_pos(obj)
             if remove_cond:            
-                print('New Shape is too small')
+                if kwargs['log']: print('New Shape is too small')
                 x0, y0 = xmax, ymax
                 rej_obj += [obj]
                 rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
@@ -1723,7 +1780,7 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                 #?
                 if debug_plots:                fast_image(obj,'Object before check')
                 #?
-                print(f'\tshape : {obj.shape}')     
+                if kwargs['log']: print(f'\tshape : {obj.shape}')     
                 #?
                 if debug_plots:       
                     fig0, ax0 = plt.subplots(1,1)
@@ -1733,7 +1790,7 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                 # check if object is acceptable
                 check = object_check(obj, (xmax, ymax), thr, sigma, err=err, debug_plots=debug_plots)
                 if check is None:
-                    print('Check is not good 1')
+                    if kwargs['log']: print('Check is not good 1')
                     x0, y0 = xmax, ymax
                     rej_obj += [obj]
                     rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
@@ -1752,8 +1809,9 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                 #     break
                 else:
                     obj, err, (x0, y0), (xsize, ysize) = check
-                    print('xsize',xsize)
-                    print('ysize',ysize)
+                    if kwargs['log']:
+                        print('xsize',xsize)
+                        print('ysize',ysize)
                     # compute slices
                     x = slice(*xsize)
                     y = slice(*ysize)
@@ -1782,7 +1840,7 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                             plt.show()
                         #?
                     else:
-                        print('No for selection')
+                        if kwargs['log']: print('No for selection')
                         rej_obj += [obj]
                         rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
                         #?
@@ -1807,7 +1865,7 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                 # check whether the object is acceptable
                 check = object_check(obj, (xmax, ymax), thr, sigma, mode='low', err=err, maxpos=(xsize[0],ysize[0]), debug_plots=debug_plots)
                 if check is None:
-                    print('Check is not good 2')
+                    if kwargs['log']: print('Check is not good 2')
                     x0, y0 = xmax, ymax
                     rej_obj += [obj]
                     rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
@@ -1840,8 +1898,9 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                     break
                 else:
                     obj, err, (x0, y0), (xsize, ysize) = check
-                    print('xsize',xsize)
-                    print('ysize',ysize)
+                    if kwargs['log']:
+                        print('xsize',xsize)
+                        print('ysize',ysize)
                     # compute slices
                     x = slice(*xsize)
                     y = slice(*ysize)
@@ -1869,7 +1928,7 @@ def searching(field: NDArray, thr: float, errs: NDArray | None = None, max_size:
                             plt.show()
                         #?
                     else:
-                        print('No good for selection low obj')
+                        if kwargs['log']: print('No good for selection low obj')
                         rej_obj += [obj]
                         rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
                         #?
