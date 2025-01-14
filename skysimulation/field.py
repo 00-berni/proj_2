@@ -286,7 +286,7 @@ def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m
     return F, S
 
 
-def atm_seeing(field: NDArray, sigma: float = SEEING_SIGMA, bkg: DISTR = Gaussian(BACK_SIGMA, BACK_MEAN), display_fig: bool = False, **kwargs) -> NDArray:
+def atm_seeing(field: NDArray, sigma: float = SEEING_SIGMA, bkg: DISTR = Gaussian(BACK_SIGMA, BACK_MEAN), size: int = 4, display_fig: bool = False, **kwargs) -> NDArray:
     """To compute the atmospheric seeing
 
     Parameters
@@ -306,7 +306,7 @@ def atm_seeing(field: NDArray, sigma: float = SEEING_SIGMA, bkg: DISTR = Gaussia
         field convolved with the kernel
     """
     # compute the kernel
-    kernel = Gaussian(sigma).kernel()
+    kernel = Gaussian(sigma).kernel(size=size)
     # convolve the field with the kernel
     see_field = field_convolve(field, kernel, bkg, norm_cost=K)
     if display_fig:
@@ -352,7 +352,7 @@ def noise(distr: DISTR, dim: int = N, seed: int | None = None, display_fig: bool
     return n
 
 
-def add_effects(F: NDArray, background: DISTR, back_seed: int | None, atm_param: tuple[str, float], det_noise: DISTR, det_seed: int | None, i: int = 0, display_fig: bool = False, **kwargs) -> NDArray:
+def add_effects(F: NDArray, background: DISTR, back_seed: int | None, atm_param: tuple[str, float], det_noise: DISTR, det_seed: int | None, i: int = 0, add_params: dict = {}, display_fig: bool = False, **kwargs) -> NDArray:
     """To compute the final field 
 
     The method adds to the initialized field the effects of
@@ -386,6 +386,12 @@ def add_effects(F: NDArray, background: DISTR, back_seed: int | None, atm_param:
     F_bsd : NDArray
         final field
     """
+    default_params = {
+        'ker_size' : 4
+        }
+    for key, val in default_params.items():
+        if key not in add_params.keys():
+            add_params[key] = val
     dim = len(F)
     
     ## Background
@@ -401,9 +407,10 @@ def add_effects(F: NDArray, background: DISTR, back_seed: int | None, atm_param:
     ## Atm Seeing
     if atm_param[0] == 'Gaussian':
         sigma = atm_param[1]
+        ker_size = add_params['ker_size']
         kwargs['title'] = 'Atmospheric Seeing'
         # convolve the kernel
-        F_bs = atm_seeing(F_b,sigma,bkg=background,display_fig=display_fig,**kwargs)
+        F_bs = atm_seeing(F_b,sigma,bkg=background,size=ker_size,display_fig=display_fig,**kwargs)
 
     ## Detector
     kwargs['title'] = 'Detector noise'
@@ -432,7 +439,7 @@ def add_effects(F: NDArray, background: DISTR, back_seed: int | None, atm_param:
     return F_bsd
 
 
-def field_builder(acq_num: int = 3, dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, back_param: tuple[str, float | tuple] = BACK_PARAM, back_seed: int | None = BACK_SEED, det_param: tuple[str, float | tuple] = NOISE_PARAM, det_seed: int | None = NOISE_SEED, overlap: bool = False, seed: tuple[int,int] = (M_SEED, POS_SEED), iteration: int = 3, results: bool = True, display_fig: bool = False, **kwargs) -> tuple[Star, list[NDArray], list[NDArray]]:
+def field_builder(acq_num: int = 3, dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, back_param: tuple[str, float | tuple] = BACK_PARAM, back_seed: int | None = BACK_SEED, det_param: tuple[str, float | tuple] = NOISE_PARAM, det_seed: int | None = NOISE_SEED, overlap: bool = False, seed: tuple[int,int] = (M_SEED, POS_SEED), iteration: int = 5, results: bool = True, display_fig: bool = False, **kwargs) -> tuple[Star, list[NDArray], list[NDArray]]:
     """To generate the acquired picture
 
     Parameters
