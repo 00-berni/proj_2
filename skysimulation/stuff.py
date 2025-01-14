@@ -52,7 +52,7 @@ class Gaussian():
         x = r/self.sigma
         return np.exp(-x**2/2)
 ##? -- -- -- -- -- -- -- -- -- -- ?##    
-    def kernel(self) -> NDArray:
+    def kernel(self,size: int = 4) -> NDArray:
         """Computing a Gaussian kernel
 
         :param dim: size of the field
@@ -62,7 +62,7 @@ class Gaussian():
         :rtype: NDArray
         """
         # kernel must have an odd size
-        dim = int(4*self.sigma)*2 + 1
+        dim = int(size*self.sigma)*2 + 1
         if self.mu is None:
             self.mu = dim // 2
         # generating coordinates
