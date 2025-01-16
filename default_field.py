@@ -52,6 +52,9 @@ STARS, (master_light, Dmaster_light), (master_dark, Dmaster_dark) = sky.field_bu
 sci_frame = master_light - master_dark 
 Dsci_frame = np.sqrt(Dmaster_light**2 + Dmaster_dark**2)
 sky.fast_image(sci_frame,'Science Frame')
+plt.figure()
+plt.hist(Dsci_frame.flatten(),71)
+plt.show()
 
 ### RESTORATION
 ## Background Estimation
@@ -62,7 +65,6 @@ thr = bkg_mean + bkg_sigma  #: the threshold for searching algorithm
 max_num_obj = 10            #: number of objects at the most 
 # extract objects
 objs, Dobjs, objs_pos = sky.searching(sci_frame,thr,bkg_mean,Dsci_frame,num_objs=max_num_obj,cntrl=20,log=True)
-
 # fit a 2DGaussian profile to extraction
 ker_sigma, Dker_sigma = sky.kernel_estimation(objs,Dobjs,(bkg_mean,0),results=True,title='title-only')
 # compute the kernel
@@ -72,9 +74,9 @@ atm_kernel = sky.Gaussian(sigma=ker_sigma)
 dec_field = sky.LR_deconvolution(sci_frame,atm_kernel,Dsci_frame,bkg_mean,bkg_sigma)
 
 fig,(ax1,ax2) = plt.subplots(1,2)
-ax1.set_title('Before deconvolution',fontsize=20)
+ax1.set_title('Before deconvolution',fontsize=FONTSIZE+2)
 sky.field_image(fig,ax1,sci_frame)
-ax2.set_title('After deconvolution',fontsize=20)
+ax2.set_title('After deconvolution',fontsize=FONTSIZE+2)
 sky.field_image(fig,ax2,dec_field)
 plt.show()
 
@@ -99,11 +101,24 @@ print(f'S: {mean_lum:.2e}\tL: {mean_rec:.2e}\t{(mean_rec-mean_lum)/mean_lum:.2%}
 #     print(rec_lum.max(),rec_lum.min())
 #     bins = int(len(rec_lum)*3/4)
 plt.figure()
+plt.title('Restored distribution in brightness',fontsize=FONTSIZE+2)
 plt.hist(rec_lum,BINNING,histtype='step')
-plt.axvline(mean_rec,0,1,label='mean recovered brightness')
-plt.axvspan(mean_rec-Dmean_rec,mean_rec+Dmean_rec,facecolor='blue',alpha=0.4)
-plt.axvline(mean_lum,0,1,color='red',label='mean source brightness')
+plt.axvline(mean_rec,0,1,label='mean recovered brightness',linestyle='dotted')
+# plt.axvspan(mean_rec-Dmean_rec,mean_rec+Dmean_rec,facecolor='blue',alpha=0.4)
+plt.axvline(mean_lum,0,1,color='red',label='mean source brightness',linestyle='dotted')
 plt.legend(fontsize=FONTSIZE)
+plt.xlabel('$\\ell$ [a.u.]',fontsize=FONTSIZE)
+plt.ylabel('counts',fontsize=FONTSIZE)
+plt.figure()
+plt.title('Restored distribution in brightness',fontsize=FONTSIZE+2)
+plt.hist(STARS.lum,BINNING,histtype='step')
+plt.hist(rec_lum,BINNING,histtype='step')
+plt.axvline(mean_rec,0,1,label='mean recovered brightness',linestyle='dotted')
+# plt.axvspan(mean_rec-Dmean_rec,mean_rec+Dmean_rec,facecolor='blue',alpha=0.4)
+plt.axvline(mean_lum,0,1,color='red',label='mean source brightness',linestyle='dotted')
+plt.legend(fontsize=FONTSIZE)
+plt.xlabel('$\\ell$ [a.u.]',fontsize=FONTSIZE)
+plt.ylabel('counts',fontsize=FONTSIZE)
 plt.show()
 
 rec_distances = sky.dist_corr(results['pos'])
