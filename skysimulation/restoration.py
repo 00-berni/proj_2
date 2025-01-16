@@ -64,6 +64,82 @@ from .display import fast_image, field_image
 from .stuff import Gaussian, DISTR
 from .stuff import distance, pad_field, field_convolve, mean_n_std, peak_pos, minimum_pos, unc_format, dist_corr
 
+class StellarObject():
+
+    def __init__(self, frame: NDArray, sigma: float, pos: tuple[int,int], errs: NDArray | None = None):
+        self.frame = frame.copy()
+        self.sigma = sigma
+        self.errs  = errs.copy() if errs is not None else None
+        self.pos   = (pos[0],pos[1])
+
+    def max(self, **npargs) -> ArrayLike:
+        return np.max(self.frame,**npargs)
+
+    def update_errs(self,val:ArrayLike) -> 'StellarObject':
+        if self.errs is not None:  
+            new_obj = self.copy()
+            new_obj.errs = np.sqrt(new_obj.errs**2 + val**2)
+
+    def copy(self) -> 'StellarObject':
+        return StellarObject(frame=self.frame,sigma=self.sigma, pos=self.pos,errs=self.errs)
+
+    def __add__(self,val: ArrayLike) -> 'StellarObject':
+        new_obj = self.copy()
+        new_obj.frame += val
+        return new_obj
+
+    def __iadd__(self,val: ArrayLike) -> None:
+        self = self + val
+
+    def __sub__(self,val: ArrayLike) -> 'StellarObject':
+        new_obj = self.copy()
+        new_obj.frame -= val
+        return new_obj
+
+    def __isub__(self,val: ArrayLike) -> None:
+        self = self - val
+
+    def __mul__(self,val: ArrayLike) -> 'StellarObject':
+        new_obj = self.copy()
+        new_obj.frame *= val
+        return new_obj
+    def __truediv__(self,val: ArrayLike) -> 'StellarObject':
+        new_obj = self.copy()
+        new_obj.frame /= val
+        return new_obj
+    
+    def __getitem__(self,index: int | tuple[int] | list[int] | slice ) -> NDArray:
+        return self.frame[index]
+
+    def __setitem__(self,index: int | tuple[int] | list[int] | slice , val: ArrayLike) -> NDArray:
+        return self.frame.__setitem__(index,val)
+    
+class ListObjects():
+
+    def __init__(self, input_list: list[StellarObject] = []):
+        self.objs = [*input_list] 
+
+    # def max(self) -> NDArray:
+
+    # def copy(self) -> 'ListObjects':
+    #     return ListObjects(self.objs)
+    
+    def __add__(self,obj: list[StellarObject] | StellarObject ) -> 'ListObjects':
+        if isinstance(obj,StellarObject):
+            return self.objs + [obj]
+        elif isinstance(obj,ListObjects):
+            return self.objs + obj.objs
+        else:
+            return self.objs + obj
+
+    def __iadd__(self,obj: list[StellarObject] | StellarObject) -> None:
+        self = self + obj
+        
+    def __getitem__(self, index: int | slice) -> StellarObject | list[StellarObject]:
+        return self.objs[index]
+    
+    def __setitem__(self,index: int | slice, obj: StellarObject | list[StellarObject]) -> None:
+        self.objs[index] = obj
 
 class FuncFit():
     """To compute the fit procedure of some data
@@ -1247,7 +1323,7 @@ def kernel_estimation(extraction: list[NDArray], errors: list[NDArray], bkg: tup
     for obj, err in zip(sel_obj, sel_err):
         # remove the contribution of the background
         m_bkg, Dm_bkg = bkg
-        obj -= m_bkg
+        # obj -= m_bkg
         # err = np.sqrt(err**2 + Dm_bkg**2)
         # compute the fit
         pop, Dpop = new_kernel_fit(obj,err,initial_values=None, display_fig=display_plot,**kwargs)
@@ -1337,7 +1413,8 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
         thr_mul = 1/field.sum()    
     Dn = sigma.std()                        #: the variance root of the uncertainties
     # print('Dn', Dn)
-    # Dn = sigma_bkg                        #: the variance root of the uncertainties
+    # Dn = sigma.mean()                        #: the variance root of the uncertainties
+    # # Dn = sigma_bkg                        #: the variance root of the uncertainties
     P = np.copy(kernel.kernel())            #: the estimated kernel
     # define the two recursive functions of the algorithm
     #.. they compute the value of `I` and `S` respectively at
@@ -1462,7 +1539,7 @@ def light_recover(dec_field: NDArray, thr: float, mean_bkg: float, ker_sigma: tu
             search_args[key] = val
     tmp_field = dec_field[sub_frame]
     objs, errs, pos = searching(tmp_field,thr,mean_bkg,**search_args)
-    maxvals = np.array([o.max() for o in objs]) - mean_bkg
+    maxvals = np.array([o.max() for o in objs])# - mean_bkg
     maxerrs = np.array([e[peak_pos(o)] for o, e in zip(objs,errs)])
     sigma,Dsigma = ker_sigma
     rec_brt  = maxvals*np.sqrt(2*np.pi)*sigma
@@ -1994,6 +2071,7 @@ def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArr
     except ValueError:
         print('YOHEY',errs.shape,fit_obj.shape)
         raise
+    if pop[1] < 1: return None,None
     rec_obj = gauss_func((xrange,yrange),*pop) + bkg_val
     print('VARIANCE',np.sqrt(np.var(rec_obj-prb_obj)))
     rec_err = np.full(rec_obj.shape,np.sqrt(np.var(rec_obj-prb_obj)))
@@ -2007,7 +2085,12 @@ def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArr
         fast_image(rec_obj)
     print('CENVAL',prb_obj[avg_cen])
     print('CENVAL',rec_obj[avg_cen])
-    return rec_obj, rec_err
+    dim = 2*int(4*pop[1])+1
+    cen = dim // 2
+    yrange, xrange = np.meshgrid(np.arange(dim),np.arange(dim))
+    new_obj = gauss_func((xrange,yrange),pop[0],pop[1],cen,cen)
+    new_err = np.full(new_obj.shape,np.std(rec_obj-prb_obj))
+    return new_obj, new_err
 
             
 def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None = None, max_size: int = 5, min_dist: int = 0, ker_sigma: float | None = None, num_objs: int | None = None, cntrl_mode: Literal['bright', 'low', 'all'] = 'all', debug_plots: bool = False, cntrl: int | None = None, cntrl_sel: str | None = None, display_fig: bool = False, **kwargs) -> None | tuple[list[NDArray], list[NDArray] | None, NDArray]:
@@ -2226,12 +2309,34 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
                         rec_obj, rec_err = art_obj(obj,(xcen,ycen),bkg_val=bkg_val,errs=err,ker_sigma=ker_sigma,debug_plots=debug_plots)
                         # acc_obj += [obj]
                         if rec_obj is not None:
-                            if kwargs['log']: print('REC ERR',rec_err)
                             obj_cnt += 1
                             acc_obj += [rec_obj]
                             err_obj += [rec_err]
                             acc_pos = np.append(acc_pos, [[x0], [y0]], axis=1)
-                            display_field[x,y] -= rec_obj
+                            cen = rec_obj.shape[0] // 2
+                            xends = (max(0,x0-cen), min(len(tmp_field),x0+cen+1))
+                            yends = (max(0,y0-cen), min(len(tmp_field),y0+cen+1))
+                            x = slice(*xends)
+                            y = slice(*yends)
+                            r_xends = (cen-min(x0,cen), min(len(tmp_field)-x0,cen+1)+cen)
+                            r_yends = (cen-min(y0,cen), min(len(tmp_field)-y0,cen+1)+cen)
+                            r_x = slice(*r_xends)
+                            r_y = slice(*r_yends)
+                            if np.diff(xends) != np.diff(r_xends) or np.diff(yends) != np.diff(r_yends):
+                                print('OOOh')
+                                print(xends,yends)
+                                print(r_xends,r_yends)
+                                raise
+                            try:
+                                display_field[x,y] -= rec_obj[r_x,r_y]
+                            except ValueError:
+                                print('OOOh')
+                                print(xends,yends)
+                                print(r_xends,r_yends)                                
+                                plt.figure()
+                                plt.imshow(display_field[x,y])
+                                plt.figure()
+                                plt.imshow(rec_obj[x,y])
                         else:
                             rej_obj += [obj]
                             rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
@@ -2326,12 +2431,34 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
                         ycen = y0 - y.indices(ymax)[0]
                         rec_obj, rec_err = art_obj(obj,(xcen,ycen),bkg_val=bkg_val,errs=err,ker_sigma=ker_sigma, debug_plots=debug_plots)
                         if rec_obj is not None:
-                            if kwargs['log']: print('REC ERR',rec_err)
                             obj_cnt += 1
                             acc_obj += [rec_obj]
                             err_obj += [rec_err]
                             acc_pos = np.append(acc_pos, [[x0], [y0]], axis=1)
-                            display_field[x,y] -= rec_obj
+                            cen = rec_obj.shape[0] // 2
+                            xends = (max(0,x0-cen), min(len(tmp_field),x0+cen+1))
+                            yends = (max(0,y0-cen), min(len(tmp_field),y0+cen+1))
+                            x = slice(*xends)
+                            y = slice(*yends)
+                            r_xends = (cen-min(x0,cen), min(len(tmp_field)-x0,cen+1)+cen)
+                            r_yends = (cen-min(y0,cen), min(len(tmp_field)-y0,cen+1)+cen)
+                            r_x = slice(*r_xends)
+                            r_y = slice(*r_yends)
+                            if np.diff(xends) != np.diff(r_xends) or np.diff(yends) != np.diff(r_yends):
+                                print('OOOh')
+                                print(xends,yends)
+                                print(r_xends,r_yends)
+                                raise
+                            try:
+                                display_field[x,y] -= rec_obj[r_x,r_y]
+                            except ValueError:
+                                print('OOOh')
+                                print(xends,yends)
+                                print(r_xends,r_yends)                                
+                                plt.figure()
+                                plt.imshow(display_field[x,y])
+                                plt.figure()
+                                plt.imshow(rec_obj[x,y])
                         else:
                             if kwargs['log']: print('rec_obj is None')
                             rej_obj += [obj]
@@ -2370,7 +2497,7 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
         else:
             try:
                 # update the field
-                tmp_field[x,y] -= rec_obj
+                tmp_field[x,y] -= rec_obj[r_x,r_y]
             except:
                 print(x,y)
                 print(x0,y0)
