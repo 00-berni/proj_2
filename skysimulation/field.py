@@ -64,7 +64,7 @@ class Star():
         self.lum = lum        #: star brightness value
         self.pos = pos        #: star coordinates
 
-    def plot_info(self, alpha: float, beta: float, sel: {'all', 'm', 'L'} = 'all') -> None:
+    def plot_info(self, alpha: float, beta: float, sel: {'both', 'mass', 'lum'} = 'both',fontsize: int = 18) -> None:
         """To plot the mass and brightness distribution of the stars sample
 
         Through the `sel` parameter it is possible to choose to plot:
@@ -84,39 +84,66 @@ class Star():
         """
         nstars = len(self.m)    #: number of stars
         ## Mass Distribution Plot
-        if sel == 'all' or sel == 'm':
-            plt.figure(figsize=(12,8))
-            plt.title(f'Mass distribution with $\\alpha = {alpha}$ and {nstars} stars')
+        if 'mass' in sel or sel == 'both':
             # bins = np.linspace(min(self.m),max(self.m),nstars//3*2)
-            cnts, bins = np.histogram(self.m,bins=nstars//3*2)
-            norm = (cnts.sum() * (np.diff(bins).mean()))
-            plt.stairs(cnts,bins,fill=True)
-            mm = np.linspace(self.m.min(),self.m.max(),len(self.m))
-            fm = lambda m: m**(-alpha)
-            from scipy.integrate import quad
-            imf = fm(mm)
-            imf /= quad(fm,mm.min(),mm.max())[0]
-            imf *= norm
-            plt.plot(mm,imf,label='$IMF = m^{-\\alpha}$')
-            plt.xscale('log')
-            plt.xlabel('m [$M_\odot$]')
-            plt.ylabel('counts')
-            plt.legend()
+            m_cnts, m_bins = np.histogram(self.m,bins=nstars//4*3)
+            masses = (m_bins[1:] + m_bins[:-1])/2
+            mm = np.linspace(masses.min(),masses.max(),len(self.m))
+            imf = mm**(-alpha)
+            imf *= m_cnts.max()/imf.max()
+            if 'mass' in sel:
+                plt.figure(figsize=(12,8))
+                plt.title(f'Distribution in mass of {nstars} stars\n$\\alpha = {alpha}$',fontsize=fontsize+2)
+                plt.stairs(m_cnts,m_bins,fill=True)
+                plt.plot(mm,imf,color='red',label='$IMF = M^{-\\alpha}$')
+                plt.xscale('log')
+                plt.xlabel('M [$M_\\odot$]',fontsize=fontsize)
+                plt.ylabel('counts',fontsize=fontsize)
+                plt.legend(fontsize=fontsize)
+                plt.grid()
         ## Brightness Distribution Plot
-        if sel == 'all' or sel == 'L':
+        if 'lum' in sel or sel == 'both':
             # compute the logarithm of the values
-            L = np.log10(self.lum)
-            # plt.figure()
-            # plt.plot(self.m,self.lum,'.')
-            # plt.plot(bins,bins**beta)
-            # plt.yscale('log')
-            plt.figure(figsize=(12,8))
-            plt.title(f'Luminosity distribution with $\\beta = {beta}$ for {nstars} stars')
-            bins = np.linspace(min(L),max(L),nstars//3)
-            plt.hist(L,bins=bins)
-            plt.xlabel('$\log{(L)}$ [$L_\odot$]')
-            plt.ylabel('counts')
-
+            L = np.log10(np.sort(self.lum))
+            # L = np.sort(self.lum)
+            l_bins = np.linspace(min(L),max(L),nstars//2)
+            # bins = np.linspace(min(L),max(L),int(L.max()/L.min()))
+            l_cnts, l_bins = np.histogram(L,bins=l_bins)
+            brigs = (l_bins[1:] + l_bins[:-1])/2
+            # log(IMF) = -a * log(M) = -a/b * log(L/K)
+            ll = np.linspace(brigs.min(),brigs.max(),len(self.m))
+            logimf = -alpha/beta * ll + alpha/beta * np.log10(K)
+            l_imf = 10**logimf
+            l_imf *= l_cnts.max()/l_imf.max()
+            # imf = (bins/K)**(-alpha/beta)
+            # imf *= cnts.max()/imf.max()
+            if 'lum' in sel:
+                plt.figure(figsize=(12,8))
+                plt.title(f'Distribution in brightness of {nstars} stars\n$\\beta = {beta}$',fontsize=fontsize+2)
+                plt.stairs(l_cnts,l_bins,fill=True)
+                plt.plot(ll,l_imf,color='red')
+                plt.xlabel('$\log{(\\ell)}$',fontsize=fontsize)
+                plt.ylabel('counts',fontsize=fontsize)
+                plt.grid()
+        if sel == 'both':
+            fig, (ax1,ax2) = plt.subplots(1,2)
+            fig.suptitle(f'{nstars} stars with $\\alpha = {alpha}$ and $\\beta = {beta}$',fontsize=fontsize+2)
+            ax1.set_title('Distribution in mass',fontsize=fontsize+2)
+            ax1.stairs(m_cnts,m_bins,fill=True)
+            ax1.plot(mm,imf,color='red',label='$IMF = M^{-\\alpha}$')
+            ax1.set_xscale('log')
+            ax1.set_xlabel('M [$M_\\odot$]',fontsize=fontsize)
+            ax1.set_ylabel('counts',fontsize=fontsize)
+            ax1.legend(fontsize=fontsize)
+            # ax1.grid(which='both')
+            ax2.set_title('Distribution in brightness',fontsize=fontsize+2)
+            ax2.stairs(l_cnts,l_bins,fill=True)
+            ax2.plot(ll,l_imf,color='red')
+            ax2.set_xlabel('$\log{(\\ell)}$',fontsize=fontsize)
+            # ax2.grid()
+            plt.figure()
+            plt.plot(self.m,self.lum)
+                        
 
 
 ### STANDARD VALUES
@@ -276,6 +303,11 @@ def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m
     star_pos = star_location(sdim=sdim, dim=dim, overlap=overlap, seed=p_seed)
     # updating the field matrix
     F[star_pos] += L 
+    # sort values
+    sortpos = np.argsort(m)
+    m = m[sortpos]
+    L = L[sortpos]
+    star_pos = (pos[sortpos] for pos in star_pos)
     # saving stars infos
     S = Star(m, L, star_pos)
     if display_fig:
@@ -439,7 +471,7 @@ def add_effects(F: NDArray, background: DISTR, back_seed: int | None, atm_param:
     return F_bsd
 
 
-def field_builder(acq_num: int = 3, dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, back_param: tuple[str, float | tuple] = BACK_PARAM, back_seed: int | None = BACK_SEED, det_param: tuple[str, float | tuple] = NOISE_PARAM, det_seed: int | None = NOISE_SEED, overlap: bool = False, seed: tuple[int,int] = (M_SEED, POS_SEED), iteration: int = 5, results: bool = True, display_fig: bool = False, **kwargs) -> tuple[Star, list[NDArray], list[NDArray]]:
+def field_builder(acq_num: int = 6, dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, back_param: tuple[str, float | tuple] = BACK_PARAM, back_seed: int | None = BACK_SEED, det_param: tuple[str, float | tuple] = NOISE_PARAM, det_seed: int | None = NOISE_SEED, overlap: bool = False, seed: tuple[int,int] = (M_SEED, POS_SEED), iteration: int = 5, results: bool = True, display_fig: bool = False, **kwargs) -> tuple[Star, list[NDArray], list[NDArray]]:
     """To generate the acquired picture
 
     Parameters
@@ -514,17 +546,22 @@ def field_builder(acq_num: int = 3, dim: int = N, stnum: int = M, masses: tuple[
     if results:
         fig, (ax1,ax2) = plt.subplots(1,2)
         field_image(fig,ax1,F,v=1,norm='log')
-        ax1.set_title('Starting field')
+        ax1.set_title('Source Image',fontsize=20)
         field_image(fig,ax2,master_light)
-        ax2.set_title('Master Light')
+        ax2.set_title('Master Light',fontsize=20)
 
-        fig, axs = plt.subplots(1,acq_num+1)
-        
+        cols = acq_num//2 if acq_num%2==0 else acq_num//2+1
+        fig, axs = plt.subplots(2,cols)
+        vmin = np.min([ lights[i].min() for i in range(acq_num)])
+        vmax = np.max([ lights[i].max() for i in range(acq_num)])
+        colorbar = {'colorbar': False, 'colorbar_pos': 'bottom'}
         for i in range(acq_num):
-            axs[i].set_title(f'Light {i}')
-            field_image(fig, axs[i], lights[i])
-        axs[-1].set_title('Master Light')
-        field_image(fig, axs[-1], master_light)
+            index = (i//cols,i%cols)
+            # if i%2 == 1: colorbar['colorbar'] = True  
+            axs[index].set_title(f'Light Frame {i}',fontsize=20)
+            if i == acq_num-1: colorbar['colorbar'] = True
+            field_image(fig, axs[index],lights[i],vmin=vmin,vmax=vmax,**colorbar)
+            # colorbar['colorbar'] = False
         plt.show()
 
     # Dark Computation
@@ -533,11 +570,16 @@ def field_builder(acq_num: int = 3, dim: int = N, stnum: int = M, masses: tuple[
     # averaging
     master_dark, std_dark = mean_n_std(dark, axis=0) 
     if results:
-        fig, ax = plt.subplots(1,iteration+1)
+        vmin = np.min([ dark[i].min() for i in range(iteration)]+[master_dark.min()])
+        vmax = np.max([ dark[i].max() for i in range(iteration)]+[master_dark.max()])
+        fig, ax = plt.subplots(2,iteration//2+1)
+        cols = iteration//2 if iteration%2==0 else iteration//2+1
         for i in range(iteration):
-            field_image(fig,ax[i],dark[i])
-            ax[i].set_title(f'Dark {i}')
-        field_image(fig,ax[-1], master_dark)
-        ax[-1].set_title('Master Dark')
+            index = (i//cols,i%cols)
+            field_image(fig,ax[index],dark[i], vmin=vmin,vmax=vmax,colorbar=False)
+            ax[index].set_title(f'Dark {i}',fontsize=20)
+        colorbar = {'colorbar': True, 'colorbar_pos': 'bottom'}
+        field_image(fig,ax[1,-1], master_dark, vmin=vmin,vmax=vmax,**colorbar)
+        ax[1,-1].set_title('Master Dark',fontsize=20)
         plt.show()
     return S, [master_light, std_light], [master_dark, std_dark]
