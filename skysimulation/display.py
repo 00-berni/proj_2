@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
  
-def field_image(fig: Figure, image: Axes, F: np.ndarray, v: int = 0, sct: Sequence[int | None | Sequence[int | None]] = (0,None), norm: str = 'linear', colorbar: bool = True, ticks: bool = True) -> None:
+def field_image(fig: Figure, image: Axes, F: np.ndarray, v: int = 0, sct: Sequence[int | None | Sequence[int | None]] = (0,None), norm: str = 'linear', colorbar: bool = True, ticks: bool = True, vmin: float | None = None, vmax: float | None = None,**figargs) -> None:
     """Function to display the field.
     It is possible to display only a section of the field 
     through the parameter `sct` 
@@ -20,6 +20,8 @@ def field_image(fig: Figure, image: Axes, F: np.ndarray, v: int = 0, sct: Sequen
     :param sct: selected square section of the field, defaults to (0,-1)
     :type sct: tuple, optional
     """ 
+    if 'colorbar_pos' not in figargs.keys():
+        figargs['colorbar_pos'] = 'right'
     # extracting the edges of image
     if not isinstance(sct[0],(tuple,list)):
         if sct[0] == 0 and sct[1] is None: ticks = False
@@ -35,7 +37,7 @@ def field_image(fig: Figure, image: Axes, F: np.ndarray, v: int = 0, sct: Sequen
     elif v == 1: color = 'viridis' 
     elif v == 2: color = 'brg'
     # generating the image
-    pic = image.imshow(F[xcut,ycut],  origin='lower', cmap=color, norm=norm)
+    pic = image.imshow(F[xcut,ycut],  origin='lower', cmap=color, norm=norm, vmin=vmin, vmax=vmax)
     if ticks:
         x0,x1 = sct[1]
         y0,y1 = sct[0]
@@ -49,16 +51,23 @@ def field_image(fig: Figure, image: Axes, F: np.ndarray, v: int = 0, sct: Sequen
         image.set_yticks(np.arange(0,y1-y0,(y1-y0)//4))
         image.set_xticklabels(xtick)
         image.set_yticklabels(ytick)
-    # adjusting the position and the size of colorbar
-    from mpl_toolkits.axes_grid1 import make_axes_locatable
-    divider = make_axes_locatable(image)
     if colorbar:
-        colorbar_axes = divider.append_axes("right", size="10%", pad=0.1)  
-        # generating the colorbar
-        fig.colorbar(pic, ax=image, cmap=color, norm=norm, cax=colorbar_axes)
+        if figargs['colorbar_pos'] == 'right':
+            # adjusting the position and the size of colorbar
+            from mpl_toolkits.axes_grid1 import make_axes_locatable
+            divider = make_axes_locatable(image)
+            colorbar_axes = divider.append_axes("right", size="10%", pad=0.1)  
+            # generating the colorbar
+            fig.colorbar(pic, ax=image, cmap=color, norm=norm, cax=colorbar_axes)
+        elif figargs['colorbar_pos'] == 'bottom':
+            fig.subplots_adjust(bottom=0.2)
+            cbar_ax = fig.add_axes([0.25, 0.07, 0.5, 0.05])
+            fig.colorbar(pic,cax=cbar_ax, cmap=color, norm=norm, orientation='horizontal')
 
 def fast_image(F: np.ndarray, title: str = '', **kwargs) -> None:
+    if 'fontsize' not in kwargs.keys():
+        kwargs['fontsize'] = 18
     fig, ax = plt.subplots(1,1,figsize=(10,14))
-    ax.set_title(title,fontsize=20)
+    ax.set_title(title,fontsize=kwargs['fontsize']+2)
     field_image(fig,ax,F,**kwargs)
     plt.show()
