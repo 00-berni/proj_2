@@ -49,22 +49,6 @@ RESTORATION PACKAGE
                    .> Reject the object
     !!- [] **Capire come mai un oggetto viene tagliato fino a farlo scomparire**
 
-
-
-***
-    
-?WHAT ASK TO STEVE?
--------------------
-    - [x] ***What's the role of binning? Is mine correct or not?***
-          > Don't do the histogram, but a bar plot. You can do it also
-            reducing data through grid (2x2 or 3x3 ...)
-    - [x] *Is it good to use the brightness as a weight?*
-          > Yes is a good choice
-    - [] *Is it ok to use this method for the fit?*  
-    - [x] ***Is the RL output good?***
-          > No. You have to prevent the RL to touch the edge  
-    - [x] ***After RL dec is taking the std of noise as error of each pixel good choice?***
-          > (I_r - I_r-1) / (I_r + I_r-1)/2 
 """
 
 
@@ -78,7 +62,7 @@ from numpy import ndarray
 from scipy.signal import find_peaks
 from .display import fast_image, field_image
 from .stuff import Gaussian, DISTR
-from .stuff import distance, pad_field, field_convolve, mean_n_std, peak_pos, minimum_pos, unc_format
+from .stuff import distance, pad_field, field_convolve, mean_n_std, peak_pos, minimum_pos, unc_format, dist_corr
 
 
 class FuncFit():
@@ -505,7 +489,7 @@ class Histogram():
 
 
 
-def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, display_plot: bool = False) -> tuple[tuple[float,float],float]:
+def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, display_plot: bool = False,**pltargs) -> tuple[tuple[float,float],float]:
     """To estimate the background brightness
 
     Assuming the distribution of the background is a normal one,
@@ -548,54 +532,9 @@ def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, 
     The method calls the function `find_peaks()` of the package 
     `scipy.signal` to look for peaks 
     """
-    ## Initialization
-    frame = field.copy()        #: copy of the field matrix
-    data = frame.flatten()      #: 1-D data array
-    if binning is None:
-        # compute the magnitude between max and min data
-        ratio = int(data.max()/data.min())
-        if ratio == 0: raise Exception("Binning is not possible")
-        # set the number of bins
-        binning = int(len(field) / np.log10(ratio)) *2 if ratio != 1 else int(len(field)*2)
-        # print information
-        print('\nBinning Results')
-        print('Number of pixels:', data.shape[0])
-        print('Magnitudes:', np.log10(ratio))
-        print('Number of bins:', binning)
-    
-    ## Parameters Estimation
-    # compute the histogram
-    cnts, bins = np.histogram(data,bins=binning)
-    # find the index of the max value
-    max_indx = cnts.argmax()
-    # compute the corresponding brightness value
-    mean_bkg = (bins[max_indx+1] + bins[max_indx])/2
-    Dmean_bkg = (bins[max_indx+1] - bins[max_indx])/2
-    # compute the half maximum value    
-    hm = cnts[max_indx]/2
-    # find the value that approximates better `hm`
-    hm_indx = abs(cnts - hm).argmin()
-    # compute HWHM
-    hwhm = abs((bins[hm_indx+1] + bins[hm_indx])/2 - mean_bkg)
-    # compute variance root assuming a normal distribution
-    sigma_bkg = hwhm/np.sqrt(2*np.log(2))
-    
-    ## Peaks Check
-    # compute the height at which the distribution is at a sigma from the mean   
-    sigma_indx = abs(bins - (mean_bkg-sigma_bkg)).argmin()
-    sigma_height = (cnts[max_indx] + cnts[sigma_indx])/2
-    from scipy.signal import find_peaks
-    peaks, _ = find_peaks(cnts,height=sigma_height)
-    # compute again the parameters in case of multiple peaks
-    if len(peaks) > 1:
-        # average between peaks
-        mean_bkg, Dmean_bkg = mean_n_std(np.array([(bins[pk+1]+bins[pk])/2 for pk in peaks]))
-        hm = cnts[peaks].mean()/2
-        hm_indx = abs(cnts - hm).argmin()
-        hwhm = abs((bins[hm_indx+1] + bins[hm_indx])/2 - mean_bkg)
-        sigma_bkg = hwhm/np.sqrt(2*np.log(2))
-    
-    mean_bkg  = np.median(field)
+    if 'fontsize' not in pltargs.keys():
+        pltargs['fontsize'] = 18    
+    mean_bkg = np.median(field)
     window = 2*mean_bkg - field.min()
     sigma_bkg = np.sqrt(np.var(field[field<=window]))
     # print the results
@@ -604,35 +543,39 @@ def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, 
     
     ## Plotting
     if display_plot:
-        # define variables to plot the estimated distribution
-        #.. the distribution at higher values of brightness is affected by the 
-        #.. brightness distribution of the stars, then only data within 3 sigma 
-        #.. from the mean are taken 
-        l_edge = abs(bins - (mean_bkg - 3*sigma_bkg)).argmin()      #: index of the bin at 3 sigma from mean
-        l_val = (bins[l_edge + 1]+bins[l_edge])/2                   #: bin at 3 sigma from the mean
-        xx = np.linspace(l_val, 2*mean_bkg - l_val ,len(data))
-        model = Gaussian(sigma_bkg, mean_bkg)
-        k = cnts[max_indx] / model.value((bins[max_indx+1] + bins[max_indx])/2 - mean_bkg)
-        model = model.value(xx-mean_bkg) * k   
+        frame = field.copy()        #: copy of the field matrix
+        data = frame.flatten()      #: 1-D data array
+        # if binning is None:
+        #     # compute the magnitude between max and min data
+        #     ratio = int(data.max()/data.min())
+        #     if ratio == 0: raise Exception("Binning is not possible")
+        #     # set the number of bins
+        #     binning = int(len(field) / np.log10(ratio)) *2 if ratio != 1 else int(len(field)*2)
+        #     # print information
+        #     print('\nBinning Results')
+        #     print('Number of pixels:', data.shape[0])
+        #     print('Magnitudes:', np.log10(ratio))
+        #     print('Number of bins:', binning)
+        # # compute the histogram
+        # cnts, bins = np.histogram(data,bins=binning)
 
-        n_bkg = np.median(data)
-        n_sigma = np.var(data-n_bkg)
-        print('New',n_bkg,n_sigma)
-        probe = Gaussian(n_sigma,n_bkg).value(xx-n_bkg)
-        probe = model.max() * probe / probe.mean()
 
+        bkg_fmt = unc_format(mean_bkg,sigma_bkg)
+        mean_label  = '$\\bar{n}_B$ = {mean:' + bkg_fmt[0][1:] + '}'
+        sigma_label = '$\\sigma_B$ = {sigma:' + bkg_fmt[1][1:] + '}'
         plt.figure()
-        plt.title(f'Gaussian Background Estimation\n mean = {mean_bkg:.4} +- {Dmean_bkg:.2} ; sigma = {sigma_bkg:.2}')
-        plt.stairs(cnts, bins, fill=False, label='data')
-        plt.axvline(mean_bkg, 0, 1, color='red', linestyle='dotted', label='estimated mean')
-        plt.plot(xx,model, label='estimated gaussian')
-        plt.plot(xx,probe, label='estimated gaussian II')
-        plt.plot((bins[peaks+1] + bins[peaks])/2,cnts[peaks],'.r')
-        plt.axhline(sigma_height,0,1)
-        plt.legend()
+        plt.title(f'Background Estimation',fontsize=pltargs['fontsize']+2)
+        # plt.stairs(cnts, bins, fill=False)
+        plt.hist(data,len(field)*2,histtype='step')
+        plt.axvline(mean_bkg, 0, 1, color='red', linestyle='dotted', label=mean_label.format(n='{n}',mean=mean_bkg))
+        plt.axvspan(mean_bkg-sigma_bkg,mean_bkg+sigma_bkg, 0, 1, facecolor='orange', alpha=0.4, label=sigma_label.format(sigma=sigma_bkg))
+        plt.xscale('log')
+        plt.xlabel('$\\ell$ [a.u.]',fontsize=pltargs['fontsize'])
+        plt.ylabel('counts',fontsize=pltargs['fontsize'])
+        plt.legend(fontsize=pltargs['fontsize'])
         plt.show()
 
-    return (mean_bkg, Dmean_bkg), sigma_bkg
+    return (mean_bkg, sigma_bkg), sigma_bkg
 
 def new_moving(direction: str, field: NDArray, index: tuple[int,int], back: float, size: int = 7, debug_check: bool = False) -> list[int] | int:
     """To compute the size in one direction
@@ -805,28 +748,43 @@ def new_grad_check(field: NDArray, index: tuple[int,int], back: float, size: int
     if x0 + xsize[1] >= dim: xsize[1] = dim - x0 - 1   
     if y0 - ysize[0] < 0: ysize[0] = y0
     if y0 + ysize[1] >= dim: xsize[1] = dim - y0 - 1   
-
-    # compute slices
-    # x = slice(index[0] - xsize[0], index[0] + xsize[1])
-    # y = slice(index[1] - ysize[0], index[1] + ysize[1])
-    # obj = field[x,y].copy()
-    # emp_pos = np.where(obj == 0)
-    # if len(emp_pos[0]) != 0:
-    #     print('Empty',len(emp_pos))
-    #     print(emp_pos)
-    #     xpos, ypos = emp_pos
-    #     xmax, ymax = peak_pos(obj)
-    #     xpos -= xmax
-    #     ypos -= ymax
-    #     if len(np.where(xpos < 0)[0]) != 0: xsize[0] = (-xpos[xpos < 0]).min()
-    #     if len(np.where(xpos > 0)[0]) != 0: xsize[1] = xpos[xpos > 0].min()
-    #     if len(np.where(ypos < 0)[0]) != 0: ysize[0] = (-ypos[ypos < 0]).min()
-    #     if len(np.where(ypos > 0)[0]) != 0: ysize[1] = ypos[ypos > 0].min()
-    # a_xysize = np.where(a_xysize > size, a_xysize-size, a_xysize)
+    
+    ## Check
+    tmp_obj = field[slice(x0-xsize[0],x0+xsize[1]+1),slice(y0-ysize[0],y0+ysize[1]+1)].copy()
+    cxmax,cymax = peak_pos(tmp_obj)
+    # if x0 == 33:
+    #     print('Lims',cxmax,xsize[0])
+    #     print('Lims',cymax,ysize[0])
+    #     plt.figure()
+    #     plt.imshow(tmp_obj)
+    #     plt.plot(cymax,cxmax,'.')
+    #     plt.plot(ysize[0],xsize[0])
+    #     plt.show()
+    if tmp_obj[cxmax,cymax] != field[x0,y0]:
+        plt.figure()
+        plt.imshow(tmp_obj)
+        plt.plot(cymax,cxmax,'.')
+        plt.figure()
+        plt.imshow(field)
+        plt.plot(y0,x0,'.')
+        plt.show()
+        raise
+    if cxmax != xsize[0] or cymax != ysize[0]:
+        print('oooooh')
+        plt.figure()
+        plt.imshow(tmp_obj)
+        plt.plot(cymax,cxmax,'.')
+        plt.plot(ysize[0],xsize[0])
+        plt.show()
+        print(cxmax,xsize[0])
+        print(cymax,ysize[0])
+        xsize[0] = cxmax
+        ysize[0] = cymax
+        raise
     return xsize, ysize
 
 
-def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: Literal["all", "size", "dist", "new"] = 'all', mindist: int = 5, minsize: int = 3, debug_check: bool = False) -> bool:
+def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel: Literal["all", "size", "dist", "new"] = 'all', mindist: int = 0, minsize: int = 3, debug_check: bool = False) -> bool:
     """To check whether a selected object satisfies some required conditions
 
     Parameters
@@ -1318,7 +1276,12 @@ def kernel_estimation(extraction: list[NDArray], errors: list[NDArray], bkg: tup
     kernel = Gaussian(sigma).kernel()    
     if results:
         if 'title' not in kwargs:
-            kwargs['title'] = f'Estimated kernel\n$\\sigma = $ {sigma:.2} $\pm$ {Dsigma:.2}'
+            value_fmt = unc_format(sigma,Dsigma)
+            value = '$\\sigma = ${sigma:' + value_fmt[0][1:] + '} $\\pm$ {Dsigma:' + value_fmt[1][1:] + '}'
+            kwargs['title'] = 'Estimated kernel\n' + value.format(sigma=sigma,Dsigma=Dsigma)
+        elif kwargs['title'] == 'title-only':
+            kwargs['title'] = 'Estimated kernel'
+
         fast_image(kernel,**kwargs)
     
     return sigma, Dsigma
@@ -1438,9 +1401,11 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
     print(f'\nTime: {time.time()-start_time} s')
     print()
     plt.figure(figsize=(10,14))
-    plt.title('Diff')
+    plt.title('Convergence of R.-L. algorithm',fontsize=20)
     plt.plot(a_diff,'.-')
-    plt.axhline(Dn,0,1,color='orange')
+    plt.xlabel('$r$',fontsize=18)
+    plt.ylabel('$\\Delta I_{(r)}^{(r+1)}$',fontsize=18)
+    # plt.axhline(Dn,0,1,color='orange')
     # plt.ylim(1e-7,2e-6)
     # plt.axhline(Dn/sigma.mean(),0,1,color='violet')
     # plt.axhline(np.mean(a_diff),0,1)
@@ -1474,12 +1439,17 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
 
     ## Plotting
     if display_fig:
-        fast_image(rec_field,'Recovered Field',**kwargs)
+        fast_image(rec_field,'Restored Field',**kwargs)
         fast_image(rec_field, norm='log',**kwargs)
-    
+        fig,(ax1,ax2) = plt.subplots(1,2)
+        ax1.set_title('Science Frame',fontsize=20)
+        field_image(fig,ax1,field)
+        ax2.set_title('Restored Field',fontsize=20)
+        field_image(fig,ax2,rec_field)
+        plt.show()
     return rec_field
 
-def light_recover(dec_field: NDArray, thr: float, mean_bkg: float, ker_sigma: tuple[float,float], sub_frame: tuple[slice,slice] = (slice(None),slice(None)), **search_args) -> tuple[ndarray,ndarray]:
+def light_recover(dec_field: NDArray, thr: float, mean_bkg: float, ker_sigma: tuple[float,float], sub_frame: tuple[slice,slice] = (slice(None),slice(None)),binning: int = 63, results: dict | None = None, **search_args) -> tuple[ndarray,ndarray]:
     default_param = {
         'max_size': 5, 
         'cntrl': None, 
@@ -1491,13 +1461,18 @@ def light_recover(dec_field: NDArray, thr: float, mean_bkg: float, ker_sigma: tu
         if key not in search_args.keys():
             search_args[key] = val
     tmp_field = dec_field[sub_frame]
-    objs, errs, _ = searching(tmp_field,thr,mean_bkg,**search_args)
+    objs, errs, pos = searching(tmp_field,thr,mean_bkg,**search_args)
     maxvals = np.array([o.max() for o in objs]) - mean_bkg
     maxerrs = np.array([e[peak_pos(o)] for o, e in zip(objs,errs)])
     sigma,Dsigma = ker_sigma
     rec_brt  = maxvals*np.sqrt(2*np.pi)*sigma
     Drec_brt = rec_brt * np.sqrt((maxerrs/maxvals)**2 + (Dsigma/sigma)**2 )
     sort_args = np.argsort(rec_brt)[::-1]
+    _ = dist_corr(pos,binning=binning,display_plots=True)
+    if results is not None:
+        results['objs'] = objs
+        results['errs'] = errs
+        results['pos']  = pos
     return rec_brt[sort_args], Drec_brt[sort_args]
 
 def cutting(obj: NDArray, centre: Sequence[int], err: NDArray | None = None, debug_plots: bool = False) -> tuple[NDArray, NDArray | None, NDArray] | tuple[None, None, None]:
@@ -1580,7 +1555,7 @@ def cutting(obj: NDArray, centre: Sequence[int], err: NDArray | None = None, deb
     cut_err = err[slice(*xends),slice(*yends)].copy() if err is not None else None
     return cut_obj, cut_err, shift
 
-def average_trend(obj: NDArray, centre: tuple[int, int]) -> tuple[NDArray, NDArray]:
+def average_trend(obj: NDArray, centre: tuple[int, int], debgug_plots: bool = False) -> tuple[NDArray, NDArray]:
     """To compute the averaged trend of the light value from the centre pixel
 
     The function averages over the values of pixels at the same 
@@ -1608,11 +1583,21 @@ def average_trend(obj: NDArray, centre: tuple[int, int]) -> tuple[NDArray, NDArr
     # define a method to compute the distance from the centre
     centre_dist = lambda pixel : distance(pixel, centre)
     # compute distances
-    dist = np.array([centre_dist((i,j)) for i,j in zip(*np.meshgrid(np.arange(ydim), np.arange(xdim)))])
+    dist = np.array([centre_dist((i,j)) for i,j in zip(*np.meshgrid(np.arange(ydim), np.arange(xdim))[::-1])])
     # remove duplicates
     px = np.unique(dist)
     # average over values at the same distance
     mean_obj = np.array([ np.mean(obj[dist == d]) for d in px])
+
+    if debgug_plots:
+        n_dist = np.array([centre_dist((i,j)) for i,j in zip(*np.meshgrid(np.arange(ydim), np.arange(xdim))[::-1])])
+        # remove duplicates
+        n_px = np.unique(n_dist)
+        # average over values at the same distance
+        n_mean_obj = np.array([ np.mean(obj[n_dist == d]) for d in n_px])
+        plt.figure()
+        plt.title('Transverse')
+        plt.plot(n_px,n_mean_obj,'.--')
     return px, mean_obj
 
 def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequence[int] | None, err: NDArray | None = None, mode: Literal["bright", "low"] = 'bright', maxpos: tuple[int,int] | None = None, debug_plots: bool = False,**kwargs) -> tuple[NDArray, NDArray | None, tuple[int, int], tuple[tuple[int, int], tuple[int, int]]] | None:
@@ -1707,7 +1692,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         if debug_plots:
             fig,ax = plt.subplots(1,1)
             field_image(fig,ax,cut_obj)
-            ax.plot(*coord,'xb')
+            ax.plot(*coord[::-1],'xb')
             plt.show()
         # check the centroid position
         if 0 <= coord[0] < cut_obj.shape[0] and 0 <= coord[1] < cut_obj.shape[1]:
@@ -1715,7 +1700,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             # compute centre coordinates in the frame of `obj`
             centre = coord + shift
             # select the pixels of interest from `obj`
-            cut_obj, cut_err, shift = cutting(cut_obj, centre, err=cut_err, debug_plots=debug_plots)
+            cut_obj, cut_err, shift = cutting(c_obj, centre, err=err, debug_plots=debug_plots)
             if cut_obj is None:     #: check
                 return None
             if err is not None:
@@ -1724,6 +1709,12 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
                     raise IndexError('OH!')
         # change coordinates reference
         x0, y0 = centre - shift
+        if debug_plots:
+            fig,ax = plt.subplots(1,1)
+            field_image(fig,ax,cut_obj)
+            ax.plot(y0,x0,'xb')
+            ax.plot(*peak_pos(cut_obj)[::-1],'xr')
+            plt.show()
         # compute the value of the centroid
         val0 = cut_obj[x0, y0]
         xdim, ydim = cut_obj.shape          #: sizes of the selected portion
@@ -1733,11 +1724,18 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         ## Gradient
         if kwargs['log']: print('cut_dim : ', xdim, ydim)
         # compute the mean trend
-        px, mean_obj = average_trend(cut_obj, (x0,y0))
+        px, mean_obj = average_trend(cut_obj, (x0,y0),debgug_plots=debug_plots)
+        if debug_plots:
+            plt.figure()
+            plt.title('Trend')
+            plt.plot(cut_obj[:,y0])
+            plt.figure()
+            plt.plot(cut_obj[x0,:])
+            plt.show()
         # compute the first derivative
         grad1 = np.diff(mean_obj) 
         # check the derivative sign around the centre
-        mean_width = np.rint(min(hwhm//2, 3)).astype(int)
+        mean_width = np.rint(max(hwhm, 3)).astype(int)
         g_pos = np.where(grad1[:mean_width+1] >= 0)[0]
         #?
         if debug_plots:
@@ -1748,6 +1746,8 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             ax0.plot(m_px, grad1, 'v--', color='orange')
             ax0.plot((m_px[:-1]+m_px[1:])/2, np.diff(grad1), '^--', color='green')
             ax0.axhline(0,0,1,color='black')
+            ax0.axhline(np.mean(mean_obj[1:mean_width+1]),0,1,color='blue',linestyle='dashed')
+            ax0.axhline(thr,0,1,color='red',linestyle='dotted')
             plt.show()
         #?
         if len(g_pos) == 0:
@@ -1774,22 +1774,21 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         else:
             ## S/N
             # compute the ratio between pixels around the centre and mean background
-            ratio = min(mean_obj[1:mean_width+1])/thr
+            ratio = np.mean(mean_obj[1:mean_width+1])/thr
             if kwargs['log']: print('S/N',ratio*100,'%')
             #?
             if debug_plots:            plt.show()
             #?
-            if ratio >= 0.3:
+            if ratio >= 1:
                 if kwargs['log']: print('Quite Quite Good')
                 # convert coordinates to the initial frame
                 x0, y0 = np.array([x0, y0]) + shift
                 xdim, ydim = c_obj.shape  #: initial sizes
-                # cut at the first positive value of the derivative
-                mean_width = g_pos[0]
                 if kwargs['log']: print('Quite')
                 # compute the size of the object from the centre
                 xsize = ( max(0, x0-mean_width),  min(xdim, x0+mean_width+1))
                 ysize = ( max(0, y0-mean_width),  min(xdim, y0+mean_width+1))
+                print('HEY',mean_width,xsize,ysize)
                 # cut the object
                 obj = c_obj[slice(*xsize), slice(*ysize)].copy()
                 if err is not None:
@@ -1815,8 +1814,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             print(max(0, x0-hwhm), min(xdim, x0 + hwhm + 1))
             print(max(0, y0-hwhm), min(ydim, y0 + hwhm + 1))
         cut_obj = c_obj[cut(x0, xdim), cut(y0, ydim)].copy()
-        if err is not None:
-            cut_err = err[cut(x0, xdim), cut(y0, ydim)].copy()
+        cut_err = err[cut(x0, xdim), cut(y0, ydim)].copy() if err is not None else None
         #?
         if debug_plots:        fast_image(cut_obj,'cut_obj')
         #?
@@ -1849,8 +1847,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
                 print(max(0, x0-hwhm), min(xdim, x0 + hwhm + 1))
                 print(max(0, y0-hwhm), min(ydim, y0 + hwhm + 1))
             cut_obj = c_obj[cut(x0, xdim), cut(y0, ydim)].copy()
-            if err is not None:
-                cut_err = err[cut(x0, xdim), cut(y0, ydim)].copy()
+            cut_err = err[cut(x0, xdim), cut(y0, ydim)].copy() if err is not None else None
             #?
             if debug_plots:            fast_image(cut_obj,'Fit cut_obj')
             #?
@@ -1872,7 +1869,15 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             print('shape',cut_obj.shape)
         val0 = cut_obj[x0,y0]
         xdim, ydim = cut_obj.shape
-        px, mean_obj = average_trend(cut_obj, (x0,y0))
+        px, mean_obj = average_trend(cut_obj, (x0,y0),debgug_plots=debug_plots)
+        if debug_plots:
+            plt.figure()
+            plt.title('Trend')
+            plt.plot(cut_obj[:,y0])
+            plt.figure()
+            plt.title('Trend')
+            plt.plot(cut_obj[:,x0])
+            plt.show()
         grad1 = np.diff(mean_obj)
         #?
         if debug_plots:
@@ -1883,10 +1888,12 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             ax0.plot(m_px, grad1, 'v--', color='orange')
             ax0.plot((m_px[:-1]+m_px[1:])/2, np.diff(grad1), '^--', color='green')
             ax0.axhline(0,0,1,color='black')
+            ax0.axhline(np.mean(mean_obj[1:]),0,1,color='blue',linestyle='dashed')
+            ax0.axhline(thr,0,1,color='red',linestyle='dotted')
             plt.show()
         #?
-        ratio = min(mean_obj[1:])/thr
-        if ratio >= 0.3:
+        ratio = np.mean(mean_obj[1:])/thr
+        if ratio >= 1:
             g_pos = np.where(grad1 >= 0)[0]
             if np.mean(grad1) < 0:#len(g_pos) == 0:
                 obj = cut_obj.copy()
@@ -1913,6 +1920,13 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
     xdim, ydim = obj.shape
     x, y = index
     xmax, ymax = peak_pos(obj)
+    if debug_plots:
+        fig,ax = plt.subplots(1,1)
+        field_image(fig,ax,obj)
+        ax.plot(y0,x0,'xb')
+        ax.plot(ymax,xmax,'xr')
+        plt.show()
+        
     index = (x0 + (x-xmax), y0 + (y-ymax))
     xsize = (x-xmax, xdim + (x-xmax))
     ysize = (y-ymax, ydim + (y-ymax))
@@ -1922,7 +1936,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             raise IndexError('NOOOOO')
     return obj, err, index, (xsize, ysize)
                 
-def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArray | None = None, ker_sigma: float | None = None) -> tuple[NDArray,NDArray] | tuple[None,None]:
+def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArray | None = None, ker_sigma: float | None = None, debug_plots: bool = False) -> tuple[NDArray,NDArray] | tuple[None,None]:
     fit_obj = prb_obj.copy() - bkg_val
     # prb_x, prb_y = index
     avg_cen = index 
@@ -1933,13 +1947,16 @@ def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArr
         zy = (ypos-y0)/s
         return k * np.exp(-zx**2/2) * np.exp(-zy**2/2)
     xdim, ydim = prb_obj.shape
-    xrange, yrange = np.meshgrid(np.arange(ydim),np.arange(xdim))
+    # xrange, yrange = np.meshgrid(np.arange(ydim),np.arange(xdim))
+    yrange, xrange = np.meshgrid(np.arange(ydim),np.arange(xdim))
     from scipy.optimize import curve_fit
     try:
         k0 = fit_obj[index]
     except:
-        fast_image(fit_obj)
+        if debug_plots:
+            fast_image(fit_obj)
         print(index)
+        raise
     if ker_sigma is None:
         hm = k0/2
         hm_xpos, hm_ypos = minimum_pos(abs(hm-fit_obj))
@@ -1954,7 +1971,26 @@ def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArr
         pop, pcov = curve_fit(gauss_func,xfit,yfit,initial_values,sigma=sigma)
         print(pop,np.sqrt(pcov.diagonal()))
     except RuntimeError:
-        return None, None
+        try:
+            if debug_plots:        
+                plt.figure()
+                plt.title('runtime0')
+                plt.imshow(fit_obj)
+                plt.plot(index[1],index[0],'.')
+                plt.show()
+            print('Another Chance')
+            _ = new_kernel_fit(fit_obj,display_fig=debug_plots)
+            exit()
+            # pop, pcov = curve_fit(gauss_func,xfit,yfit,initial_values,sigma=None)
+            # print(pop,np.sqrt(pcov.diagonal()))
+        except RuntimeError:
+            if debug_plots:        
+                plt.figure()
+                plt.title('runtime')
+                plt.imshow(fit_obj)
+                plt.show()
+            print('RuntimeError in rec_obj')
+            return None, None
     except ValueError:
         print('YOHEY',errs.shape,fit_obj.shape)
         raise
@@ -1974,9 +2010,13 @@ def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArr
     return rec_obj, rec_err
 
             
-def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None = None, max_size: int = 5, min_dist: int = 2, ker_sigma: float | None = None, num_objs: int | None = None, cntrl_mode: Literal['bright', 'low', 'all'] = 'all', debug_plots: bool = False, cntrl: int | None = None, cntrl_sel: str | None = None, display_fig: bool = False, **kwargs) -> None | tuple[list[NDArray], list[NDArray] | None, NDArray]:
+def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None = None, max_size: int = 5, min_dist: int = 0, ker_sigma: float | None = None, num_objs: int | None = None, cntrl_mode: Literal['bright', 'low', 'all'] = 'all', debug_plots: bool = False, cntrl: int | None = None, cntrl_sel: str | None = None, display_fig: bool = False, **kwargs) -> None | tuple[list[NDArray], list[NDArray] | None, NDArray]:
     if 'log' not in kwargs.keys():
         kwargs['log'] = False
+    if 'debug_check' not in kwargs.keys():
+        kwargs['debug_check'] = False
+    debug_check = kwargs['debug_check']
+    kwargs.pop('debug_check')
     def info_print(cnt: int, index: tuple, peak: float) -> None:
         x0 , y0 = index
         if kwargs['log']:
@@ -2003,6 +2043,8 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
     print(f'Stop_val : {stop_val}')
     info_print(cnt,(xmax, ymax), peak)
     while peak > stop_val:
+        # debug_plots = True if cnt == 2 else False
+        # debug_check = True if cnt == 2 else False
         rec_obj = None
         # compute an estimation of the size of the object
         xsize, ysize = new_grad_check(tmp_field, (xmax, ymax), thr, size=max_size)
@@ -2011,6 +2053,12 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
         y = slice(ymax - ysize[0], ymax + ysize[1]+1)
         # define the object
         obj = field[x,y].copy()
+        # if cnt == 2: 
+        #     cxmax, cymax = peak_pos(obj)
+        #     plt.figure()
+        #     plt.imshow(obj)
+        #     plt.plot(cymax,cxmax,'.')
+        #     plt.plot(ysize[0],xsize[0],'.')
         err = errs[x,y].copy() if errs is not None else None
         # if obj_cnt == 0:
         #     print(xsize,ysize)
@@ -2050,6 +2098,12 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
         else:
             if cntrl_sel is not None and cntrl_sel == 'low': debug_plots = False
             cxmax, cymax = peak_pos(obj)
+            # if cnt == 3: 
+            #     plt.figure()
+            #     plt.imshow(obj)
+            #     plt.plot(cymax,cxmax,'.')
+            #     plt.plot(ysize[0],xsize[0],'.')
+            #     plt.show()
             if kwargs['log']:
                 print('          c s')
                 print('x compare',cxmax,xsize)
@@ -2144,6 +2198,13 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
                 #     break
                 else:
                     obj, err, (x0, y0), (xsize, ysize) = check
+                    # if cnt == 2:
+                    #     print('YO',xsize,ysize)
+                    #     plt.figure()
+                    #     plt.imshow(obj)
+                    #     plt.plot(y0-ysize[0],x0-xsize[0],'.')
+                    #     plt.show()
+                       
                     if kwargs['log']:
                         print('xsize',xsize)
                         print('ysize',ysize)
@@ -2153,15 +2214,16 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
                     #?
                     if debug_plots:
                         figg, axx = plt.subplots(1,2)
+                        axx[0].set_title('Before selection')
                         field_image(figg,axx[0],obj)
                         field_image(figg,axx[1],display_field[x,y])
                         plt.show()
                     #?
                     # check 
-                    if selection(obj,(x0, y0), arr_pos, max_size,  mindist=min_dist, sel='all'):
-                        xcen = x0 - x.indices(x0)[0]
-                        ycen = y0 - y.indices(y0)[0]
-                        rec_obj, rec_err = art_obj(obj,(xcen,ycen),bkg_val=bkg_val,errs=err,ker_sigma=ker_sigma)
+                    if selection(obj,(x0, y0), arr_pos, max_size,  mindist=min_dist, sel='all',debug_check=debug_check):
+                        xcen = x0 - x.indices(xmax)[0]
+                        ycen = y0 - y.indices(ymax)[0]
+                        rec_obj, rec_err = art_obj(obj,(xcen,ycen),bkg_val=bkg_val,errs=err,ker_sigma=ker_sigma,debug_plots=debug_plots)
                         # acc_obj += [obj]
                         if rec_obj is not None:
                             if kwargs['log']: print('REC ERR',rec_err)
@@ -2231,6 +2293,7 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
                     x0, y0 = xmax, ymax
                     rej_obj += [obj]
                     rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
+                    print('No for -1')
                     #?
                     if debug_plots:                    
                         fig0, ax0 = plt.subplots(1,1)
@@ -2258,10 +2321,10 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
                         field_image(figg,axx[1],display_field[x,y])
                         plt.show()
                     #?
-                    if selection(obj,(x0, y0), arr_pos, max_size,  mindist=min_dist, sel='all'):
-                        xcen = x0 - x.indices(x0)[0]
-                        ycen = y0 - y.indices(y0)[0]
-                        rec_obj, rec_err = art_obj(obj,(xcen,ycen),bkg_val=bkg_val,errs=err,ker_sigma=ker_sigma)
+                    if selection(obj,(x0, y0), arr_pos, max_size,  mindist=min_dist, sel='all',debug_check=debug_check):
+                        xcen = x0 - x.indices(xmax)[0]
+                        ycen = y0 - y.indices(ymax)[0]
+                        rec_obj, rec_err = art_obj(obj,(xcen,ycen),bkg_val=bkg_val,errs=err,ker_sigma=ker_sigma, debug_plots=debug_plots)
                         if rec_obj is not None:
                             if kwargs['log']: print('REC ERR',rec_err)
                             obj_cnt += 1
@@ -2270,6 +2333,7 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
                             acc_pos = np.append(acc_pos, [[x0], [y0]], axis=1)
                             display_field[x,y] -= rec_obj
                         else:
+                            if kwargs['log']: print('rec_obj is None')
                             rej_obj += [obj]
                             rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
                         #?
@@ -2317,6 +2381,7 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
                 print(tmp_field[x,y].shape)
                 print(obj.shape)
                 print(rec_obj.shape)
+                raise
 
         old_data = (xmax, ymax)
         # compute the next step
@@ -2345,6 +2410,7 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
             break
                 
     fig, ax = plt.subplots(1,1)
+    ax.set_title('Frame after objects extraction',fontsize=20)
     field_image(fig,ax,display_field)
     if len(acc_pos[0]) != 0:
         ax.plot(acc_pos[1],acc_pos[0],'.b')
@@ -2356,6 +2422,7 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
         ax.plot(rej_pos[1],rej_pos[0],'.r')
     plt.show()
     fig, ax = plt.subplots(1,1)
+    ax.set_title('Searching algorithm',fontsize=20)
     field_image(fig,ax,field)
     if 0 not in acc_pos:
         ax.plot(acc_pos[1],acc_pos[0],'.b')
