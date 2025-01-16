@@ -2,6 +2,7 @@ from typing import Sequence, Any
 import numpy as np
 from numpy.typing import NDArray,ArrayLike
 from astropy.units import Quantity
+import matplotlib.pyplot as plt
 
 class Gaussian():
     """Gaussian distribution
@@ -340,8 +341,8 @@ def magnitude_order(number: ArrayLike) -> ArrayLike:
 def unc_format(value: ArrayLike, err: ArrayLike) -> list[str]:
     err_ord = magnitude_order(err).min()
     val_ord = magnitude_order(value).max()
-    order = val_ord - err_ord + 1
-    fmt = [f'%.{order:d}e',r'%.1e']
+    order = val_ord - err_ord 
+    fmt = [f'%.{order:d}e',r'%.0e']
     return fmt
     
 def print_measure(value: float | Quantity, err: float | Quantity, name: str = 'value', unit: str = '') -> None:
@@ -356,3 +357,17 @@ def print_measure(value: float | Quantity, err: float | Quantity, name: str = 'v
     else:
         fmt = name + ' = {value:' + fmt[0][1:] + '} +/- {err:' + fmt[1][1:] + '} ' + unit 
         print(fmt.format(value=value,err=err))
+
+def dist_corr(postions: tuple[NDArray,NDArray], binning: int = 63,fontsize: int = 18, display_plots: bool = False) -> NDArray:
+    xpos, ypos = postions
+    distances = np.array([np.sqrt((xpos-x)**2 + (ypos-y)**2) for x,y in zip(xpos,ypos)]).flatten()
+    distances = distances[distances!=0]
+    if display_plots:
+        print('Mean Distance',np.mean(distances),'px')
+        plt.figure()
+        plt.title('Distances distribution',fontsize=fontsize+2)
+        plt.hist(distances,binning,histtype='step',density=True)
+        plt.axvline(np.mean(distances),0,1,color='orange',linestyle='dashed',label='mean')
+        plt.legend(fontsize=fontsize)
+        plt.show()
+    return distances
