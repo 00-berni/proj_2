@@ -48,13 +48,22 @@ def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['sta
     print(f'S: {mean_lum:.2e}\tL: {mean_rec:.2e}\t{(mean_rec-mean_lum)/mean_lum:.2%}')
 
     ## Plots
+    try:
+        # compute the magnitude between max and min data
+        ratio = int(rec_lum.max()/rec_lum.min())
+        bins  = int(len(rec_lum) / np.log10(ratio)) *2 if ratio != 1 else int(len(rec_lum)*2/3)
+    except:
+        print(rec_lum.max(),rec_lum.min())
+        bins  = int(len(rec_lum)*2/3)
+
     plt.figure()
-    plt.hist(rec_lum,int(len(rec_lum)*2/3),histtype='step')
+    plt.hist(rec_lum,bins,histtype='step')
     plt.axvline(mean_rec,0,1,label='mean recovered brightness')
     plt.axvspan(mean_rec-Dmean_rec,mean_rec+Dmean_rec,facecolor='blue',alpha=0.4)
     plt.axvline(mean_lum,0,1,color='red',label='mean source brightness')
     plt.legend()
     plt.show()
+    return mean_lum, mean_rec
 
 if __name__ == '__main__':
     
@@ -62,12 +71,20 @@ if __name__ == '__main__':
     DISPLAY_PLOTS = False
 
     ## Overlap
-    # pipeline(**DEFAULT_PARAMS,overlap=True)
+    # _ = pipeline(**DEFAULT_PARAMS,overlap=True)
 
     ## Sparsely and Overpopulated
-    stars = [sky.FRAME['stars']//2,sky.FRAME['stars']*2]
-    for numstar in stars:
-        pipeline(star_num=numstar,**DEFAULT_PARAMS,overlap=True)
+    # 
+    _ = pipeline(star_num=30,**DEFAULT_PARAMS,overlap=True)
+    _ = pipeline(star_num=500,**DEFAULT_PARAMS,overlap=True)
 
     ## Random no overlap
-    pipeline()
+    # iterations = 10
+    # ratio = []
+    # for _ in iterations:
+    #     lum, rec = pipeline()
+    #     ratio += [lum/rec]
+    # plt.figure()
+    # plt.plot(ratio,'.--')
+    # plt.axhline(1,0,1,color='black')
+    # plt.show()
