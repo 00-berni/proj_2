@@ -9,7 +9,7 @@ DEFAULT_PARAMS = {
     'det_seed':  sky.NOISE['seed']
 }
 
-def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['stars'], mass_range: tuple[float,float] = sky.FRAME['mass_range'], mass_seed: float | None = None, pos_seed: float | None = None, bkg_seed: float | None = None, det_seed: float | None = None, overlap: bool = False, acq_num: int = 3, display_plots: bool = False):
+def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['stars'], mass_range: tuple[float,float] = sky.FRAME['mass_range'], mass_seed: float | None = None, pos_seed: float | None = None, bkg_seed: float | None = None, det_seed: float | None = None, overlap: bool = False, acq_num: int = 3, display_plots: bool = False,results:bool=True):
     ### SCIENCE FRAME
     ## Initialization
     STARS, (master_light, Dmaster_light), (master_dark, Dmaster_dark) = sky.field_builder(acq_num=acq_num,dim=frame_size,stnum=star_num,masses=mass_range,back_seed=bkg_seed,det_seed=det_seed,overlap=overlap,seed=(mass_seed,pos_seed),display_fig=display_plots)
@@ -56,13 +56,14 @@ def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['sta
         print(rec_lum.max(),rec_lum.min())
         bins  = int(len(rec_lum)*2/3)
 
-    plt.figure()
-    plt.hist(rec_lum,bins,histtype='step')
-    plt.axvline(mean_rec,0,1,label='mean recovered brightness')
-    plt.axvspan(mean_rec-Dmean_rec,mean_rec+Dmean_rec,facecolor='blue',alpha=0.4)
-    plt.axvline(mean_lum,0,1,color='red',label='mean source brightness')
-    plt.legend()
-    plt.show()
+    if results:
+        plt.figure()
+        plt.hist(rec_lum,bins,histtype='step')
+        plt.axvline(mean_rec,0,1,label='mean recovered brightness')
+        plt.axvspan(mean_rec-Dmean_rec,mean_rec+Dmean_rec,facecolor='blue',alpha=0.4)
+        plt.axvline(mean_lum,0,1,color='red',label='mean source brightness')
+        plt.legend()
+        plt.show()
     return mean_lum, mean_rec
 
 if __name__ == '__main__':
@@ -79,12 +80,12 @@ if __name__ == '__main__':
     _ = pipeline(star_num=500,**DEFAULT_PARAMS,overlap=True)
 
     ## Random no overlap
-    # iterations = 10
-    # ratio = []
-    # for _ in iterations:
-    #     lum, rec = pipeline()
-    #     ratio += [lum/rec]
-    # plt.figure()
-    # plt.plot(ratio,'.--')
-    # plt.axhline(1,0,1,color='black')
-    # plt.show()
+    iterations = 10
+    ratio = []
+    for _ in iterations:
+        lum, rec = pipeline(results=False)
+        ratio += [lum/rec]
+    plt.figure()
+    plt.plot(ratio,'.--')
+    plt.axhline(1,0,1,color='black')
+    plt.show()
