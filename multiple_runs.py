@@ -8,8 +8,17 @@ DEFAULT_PARAMS = {
     'bkg_seed':  sky.BACK['seed'],
     'det_seed':  sky.NOISE['seed']
 }
+BINNING = 63
+FONTSIZE = 18
 
-def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['stars'], mass_range: tuple[float,float] = sky.FRAME['mass_range'], mass_seed: float | None = None, pos_seed: float | None = None, bkg_seed: float | None = None, det_seed: float | None = None, overlap: bool = False, acq_num: int = 3, display_plots: bool = False,results:bool=True):
+### MONTE CARLO REALIZATIONS
+def generate_sample(**initargs) -> sky.NDArray:
+    _, S = sky.initialize(**initargs)
+    distances = sky.dist_corr(S.pos)
+    return distances
+
+
+def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['stars'], mass_range: tuple[float,float] = sky.FRAME['mass_range'], mass_seed: float | None = None, pos_seed: float | None = None, bkg_seed: float | None = None, det_seed: float | None = None, overlap: bool = False, acq_num: int = 6, display_plots: bool = False,results:bool=True):
     ### SCIENCE FRAME
     ## Initialization
     STARS, (master_light, Dmaster_light), (master_dark, Dmaster_dark) = sky.field_builder(acq_num=acq_num,dim=frame_size,stnum=star_num,masses=mass_range,back_seed=bkg_seed,det_seed=det_seed,overlap=overlap,seed=(mass_seed,pos_seed),display_fig=display_plots)
@@ -48,21 +57,27 @@ def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['sta
     print(f'S: {mean_lum:.2e}\tL: {mean_rec:.2e}\t{(mean_rec-mean_lum)/mean_lum:.2%}')
 
     ## Plots
-    try:
-        # compute the magnitude between max and min data
-        ratio = int(rec_lum.max()/rec_lum.min())
-        bins  = int(len(rec_lum) / np.log10(ratio)) *2 if ratio != 1 else int(len(rec_lum)*2/3)
-    except:
-        print(rec_lum.max(),rec_lum.min())
-        bins  = int(len(rec_lum)*2/3)
 
     if results:
         plt.figure()
-        plt.hist(rec_lum,bins,histtype='step')
-        plt.axvline(mean_rec,0,1,label='mean recovered brightness')
-        plt.axvspan(mean_rec-Dmean_rec,mean_rec+Dmean_rec,facecolor='blue',alpha=0.4)
-        plt.axvline(mean_lum,0,1,color='red',label='mean source brightness')
-        plt.legend()
+        plt.title('Restored distribution in brightness',fontsize=FONTSIZE+2)
+        plt.hist(rec_lum,BINNING,histtype='step')
+        plt.axvline(mean_rec,0,1,label='mean recovered brightness',linestyle='dotted')
+        # plt.axvspan(mean_rec-Dmean_rec,mean_rec+Dmean_rec,facecolor='blue',alpha=0.4)
+        plt.axvline(mean_lum,0,1,color='red',label='mean source brightness',linestyle='dotted')
+        plt.legend(fontsize=FONTSIZE)
+        plt.xlabel('$\\ell$ [a.u.]',fontsize=FONTSIZE)
+        plt.ylabel('counts',fontsize=FONTSIZE)
+        plt.figure()
+        plt.title('Restored distribution in brightness',fontsize=FONTSIZE+2)
+        plt.hist(STARS.lum,BINNING,histtype='step')
+        plt.hist(rec_lum,BINNING,histtype='step')
+        plt.axvline(mean_rec,0,1,label='mean recovered brightness',linestyle='dotted')
+        # plt.axvspan(mean_rec-Dmean_rec,mean_rec+Dmean_rec,facecolor='blue',alpha=0.4)
+        plt.axvline(mean_lum,0,1,color='red',label='mean source brightness',linestyle='dotted')
+        plt.legend(fontsize=FONTSIZE)
+        plt.xlabel('$\\ell$ [a.u.]',fontsize=FONTSIZE)
+        plt.ylabel('counts',fontsize=FONTSIZE)
         plt.show()
     return mean_lum, mean_rec
 
@@ -71,21 +86,23 @@ if __name__ == '__main__':
     ## Constants
     DISPLAY_PLOTS = False
 
-    ## Overlap
+    ### DEFAULT WITH OVERLAP 
     # _ = pipeline(**DEFAULT_PARAMS,overlap=True)
 
-    ## Sparsely and Overpopulated
-    # 
-    _ = pipeline(star_num=30,**DEFAULT_PARAMS,overlap=True)
-    _ = pipeline(star_num=500,**DEFAULT_PARAMS,overlap=True)
+    ### SPARSELY POPULATED 
+    
+    _ = pipeline(star_num=50,**DEFAULT_PARAMS,overlap=True)
+    
+    ### OVER-POPULATED 
+    # _ = pipeline(star_num=600,**DEFAULT_PARAMS,overlap=True)
 
-    ## Random no overlap
-    iterations = 10
-    ratio = []
-    for _ in iterations:
-        lum, rec = pipeline(results=False)
-        ratio += [lum/rec]
-    plt.figure()
-    plt.plot(ratio,'.--')
-    plt.axhline(1,0,1,color='black')
-    plt.show()
+    # ## Random no overlap
+    # iterations = 10
+    # ratio = []
+    # for _ in range(iterations):
+    #     lum, rec = pipeline(results=False)
+    #     ratio += [lum/rec]
+    # plt.figure()
+    # plt.plot(ratio,'.--')
+    # plt.axhline(1,0,1,color='black')
+    # plt.show()
