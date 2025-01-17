@@ -15,6 +15,7 @@ def generate_sample() -> sky.NDArray:
 
 max_iter = 3000
 distances = np.array([ generate_sample() for _ in range(max_iter) ])
+samples = distances.copy()
 dist_means = np.array([np.mean(d) for d in distances])
 distances = distances.flatten()
 
@@ -102,8 +103,8 @@ print(f'S: {mean_lum:.2e}\tL: {mean_rec:.2e}\t{(mean_rec-mean_lum)/mean_lum:.2%}
 #     bins = int(len(rec_lum)*3/4)
 plt.figure()
 plt.title('Restored distribution in brightness',fontsize=FONTSIZE+2)
-plt.hist(rec_lum,BINNING,histtype='step')
-plt.axvline(mean_rec,0,1,label='mean recovered brightness',linestyle='dotted')
+plt.hist(rec_lum,BINNING,histtype='step',color='blue')
+plt.axvline(mean_rec,0,1,color='blue',label='mean recovered brightness',linestyle='dotted')
 # plt.axvspan(mean_rec-Dmean_rec,mean_rec+Dmean_rec,facecolor='blue',alpha=0.4)
 plt.axvline(mean_lum,0,1,color='red',label='mean source brightness',linestyle='dotted')
 plt.legend(fontsize=FONTSIZE)
@@ -111,9 +112,9 @@ plt.xlabel('$\\ell$ [a.u.]',fontsize=FONTSIZE)
 plt.ylabel('counts',fontsize=FONTSIZE)
 plt.figure()
 plt.title('Restored distribution in brightness',fontsize=FONTSIZE+2)
-plt.hist(STARS.lum,BINNING,histtype='step')
-plt.hist(rec_lum,BINNING,histtype='step')
-plt.axvline(mean_rec,0,1,label='mean recovered brightness',linestyle='dotted')
+plt.hist(STARS.lum,BINNING,histtype='step',color='red')
+plt.hist(rec_lum,BINNING,histtype='step',color='blue')
+plt.axvline(mean_rec,0,1,color='blue',label='mean recovered brightness',linestyle='dotted')
 # plt.axvspan(mean_rec-Dmean_rec,mean_rec+Dmean_rec,facecolor='blue',alpha=0.4)
 plt.axvline(mean_lum,0,1,color='red',label='mean source brightness',linestyle='dotted')
 plt.legend(fontsize=FONTSIZE)
@@ -123,11 +124,42 @@ plt.show()
 
 rec_distances = sky.dist_corr(results['pos'])
 plt.figure()
-g_cnts, bins, _ = plt.hist(distances,BINNING,density=True,histtype='step',label='generated')
-rec_cnts, _, _  = plt.hist(rec_distances,bins,density=True,histtype='step',label='recover')
+g_cnts, bins, _ = plt.hist(distances,BINNING,color='red',density=True,histtype='step',label='generated')
+rec_cnts, _, _  = plt.hist(rec_distances,bins,color='blue',density=True,histtype='step',label='recover')
 plt.legend(fontsize=FONTSIZE)
 
+
+def compare(gen_sample: sky.NDArray, data_cnts: sky.NDArray, binning: sky.NDArray, avg_dist: float, und_pop: list[float], over_pop: list[float]):
+    smpl_cnts, _, = np.histogram(gen_sample,binning,density=True)
+    avg_bin = (binning[1:]+binning[:-1])/2
+    diff = data_cnts - smpl_cnts
+    near_pos = np.argmax(abs(diff[avg_bin < avg_dist]))
+    far_pos  = np.argmax(abs(diff[avg_bin > avg_dist]))
+    near_max = avg_bin[near_pos]
+    far_max  = avg_bin[far_pos]
+    if diff[near_pos] < 0:   und_pop  += [near_max]
+    elif diff[near_pos] > 0: over_pop += [near_max]
+    if diff[far_pos] < 0:    und_pop  += [far_max]
+    elif diff[far_pos] > 0:  over_pop += [far_max]
+    return near_max, far_max
+
+und_pop  = []
+over_pop = []
+near, far = np.array([ compare(sample,rec_cnts,bins,mean_dist,und_pop,over_pop) for sample in samples]).T
+
+und_pop  = np.asarray(und_pop).flatten()
+over_pop = np.asarray(over_pop).flatten()
+
 plt.figure()
-cen_bins = (bins[1:] + bins[:-1])/2
-plt.plot(cen_bins,rec_cnts-g_cnts,'.--')
+plt.title('Near')
+plt.hist(near,31,density=True)
+plt.figure()
+plt.title('Far')
+plt.hist(far,31,density=True)
+plt.figure()
+plt.title('Under pop')
+plt.hist(und_pop,31,density=True)
+plt.figure()
+plt.title('Over pop')
+plt.hist(over_pop,31,density=True)
 plt.show()
