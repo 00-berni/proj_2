@@ -2027,13 +2027,14 @@ def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArr
     # xrange, yrange = np.meshgrid(np.arange(ydim),np.arange(xdim))
     yrange, xrange = np.meshgrid(np.arange(ydim),np.arange(xdim))
     from scipy.optimize import curve_fit
-    try:
-        k0 = fit_obj[index]
-    except:
-        if debug_plots:
-            fast_image(fit_obj)
-        print(index)
-        raise
+    k0 = fit_obj.max()
+    # try:
+    #     k0 = fit_obj[index]
+    # except:
+    #     if debug_plots:
+    #         fast_image(fit_obj)
+    #     print(index)
+    #     raise
     if ker_sigma is None:
         hm = k0/2
         hm_xpos, hm_ypos = minimum_pos(abs(hm-fit_obj))
