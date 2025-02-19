@@ -360,9 +360,8 @@ def print_measure(value: float | Quantity, err: float | Quantity, name: str = 'v
 
 def dist_corr(postions: tuple[NDArray,NDArray], binning: int = 63,fontsize: int = 18, display_plots: bool = False) -> NDArray:
     xpos, ypos = postions
-    others = lambda x,y : (xpos != x) | (ypos != y)
-    distances = np.array([np.sqrt((xpos[others(x,y)]-x)**2 + (ypos[others(x,y)]-y)**2) for x,y in zip(xpos,ypos)]).flatten()
-    # distances = distances[distances!=0]
+    distances = [np.sqrt((xpos[i+1:]-xpos[i])**2 + (ypos[i+1:]-ypos[i])**2) for i in range(len(xpos)-1)]
+    distances = np.concatenate(distances)
     if display_plots:
         print('Mean Distance',np.mean(distances),'px')
         plt.figure()
