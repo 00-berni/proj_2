@@ -1,5 +1,6 @@
+TIME: 2.5769119262695312
 MONTE CARLO REALIZATIONS
-Mean distance: 52.147085278579496 1.7269547234068927
+Mean distance: 52.22627428038108 1.6760067363531286
 ----------
 Initialization of the field
 Dimension:	100 x 100
@@ -7,8 +8,8 @@ Number of stars:	100
 
 - - - Background - - -
 Gaussian distribution
-mean:	0.5
-sigma:	0.1
+mean:	0.32
+sigma:	0.064
 
 - - - Detector noise - - -
 Gaussian distribution
@@ -18,19 +19,23 @@ sigma:	0.025
 Atm Seeing:
 Gaussian distribution
 sigma:	3
+CHECK 0.00032 48 0.01944675839125418 [0.01944676 0.01384286 0.0126797  0.00746778]
 
 Background estimation
-	mean:	0.0005071027097335189
-	sigma:	1.9110841628827603e-05
-	relerr:	3.77 %
+	mean:	0.0003258771423653441
+	sigma:	1.7818429996517354e-05
+	relerr:	5.47 %
 
 - - - SEARCHING START - - -
-Stop_val : 0.0005262135513623465
+Stop_val : 0.00034369557236186145
 
 - - - -
 Step 1
-	coor : (46, 39)
-	peak : 0.0012261190303166434
+	coor : (45, 39)
+	peak : 0.0006698586044125724
+Max now 45 39
+COMPARE 5 [5 5]
+COMPARE 5 [5 5]
 SHAPE:  (11, 11)
           c s
 x compare 5 [5 5]
@@ -39,123 +44,63 @@ y compare 5 [5 5]
 
 	First cut
 
-	hwhm 5
-	hm_pos 10
-	sigma 3.6067376022224087
+	hwhm 3
+	hm_pos 2
+	sigma 2.1640425613334453
 	dim :  11 11
 	cen :  5 5
-	x :  0 11
-	y :  0 11
-	val0 0.0012261190303166434
-	cen :  5 5
-	shift [0 0]
-	val1 0.0012261190303166434
+	x :  2 9
+	y :  2 9
+	val0 0.0006698586044125724
+	cen :  3 3
+	shift [2 2]
+	val1 0.0006698586044125724
 
-sigma0 = 2.600855472391387
+sigma0 = 3.060418339790368
 XERR None
 
 Fit results:
 	mode : curve_fit
-	k: 7.32e-04 +/- 4e-06  -->  0.61 %	init : 0.00072
-	sigma: 3.00e+00 +/- 2e-02  -->  0.50 %	init : 2.6
-	x0: 4.96e+00 +/- 2e-02  -->  0.36 %	init : 5.0
-	y0: 4.96e+00 +/- 2e-02  -->  0.38 %	init : 5.0
-	corr_k-sigma	 = -0.74
-	corr_k-x0	 = -0.041
-	corr_k-y0	 = 0.045
-	corr_sigma-x0	 = 0.012
-	corr_sigma-y0	 = -0.075
-	corr_x0-y0	 = -0.038
+	k: 3.48e-04 +/- 6e-06  -->  1.83 %	init : 0.00034
+	sigma: 2.87e+00 +/- 6e-02  -->  2.23 %	init : 3.1
+	x0: 3.93e+00 +/- 6e-02  -->  1.43 %	init : 3.0
+	y0: 2.97e+00 +/- 6e-02  -->  1.94 %	init : 3.0
+	corr_k-sigma	 = -0.79
+	corr_k-x0	 = -0.2
+	corr_k-y0	 = 0.022
+	corr_sigma-x0	 = 0.33
+	corr_sigma-y0	 = -0.024
+	corr_x0-y0	 = 0.02
 
 	Second cut
 
-	hwhm 5
-	hm_pos 10
-	sigma 3.6067376022224087
+	hwhm 4
+	hm_pos 2
+	sigma 2.8853900817779268
 	dim :  11 11
-	cen :  5 5
-	x :  0 11
-	y :  0 11
-	val0 0.0012261190303166434
-	cen :  5 5
-	shift [0 0]
-	val1 0.0012261190303166434
-cut_dim :  11 11
-GOOD
-xsize (41, 52)
+	cen :  6 5
+	x :  2 11
+	y :  1 10
+	val0 0.0006526146721760876
+	cen :  4 4
+	shift [2 1]
+	val1 0.0006526146721760876
+cut_dim :  9 9
+S/N 184.86956107439474 %
+Quite Quite Good
+Quite
+HEY 5 (1, 11) (0, 11)
+xsize (41, 51)
 ysize (34, 45)
-[7.31953167e-04 3.00062745e+00 4.95645779e+00 4.95533526e+00] [4.45756725e-06 1.50517169e-02 1.76581294e-02 1.88557176e-02]
-VARIANCE 1.5219024949837114e-05
-CENVAL 0.0012261190303166434
-CENVAL 0.0012388977420571753
+[3.40553915e-04 3.00177414e+00 4.93134738e+00 4.95323913e+00] [4.61458461e-06 3.40409144e-02 3.94433430e-02 4.06299223e-02]
 
 - - - -
 Step 2
 	coor : (33, 86)
-	peak : 0.0010200896070047258
-SHAPE:  (11, 11)
-          c s
-x compare 5 [5 5]
-y compare 5 [5 5]
-	shape : (11, 11)
-
-	First cut
-
-	hwhm 5
-	hm_pos 10
-	sigma 3.6067376022224087
-	dim :  11 11
-	cen :  5 5
-	x :  0 11
-	y :  0 11
-	val0 0.0010200896070047258
-	cen :  5 5
-	shift [0 0]
-	val1 0.0010200896070047258
-
-sigma0 = 3.225964182229561
-XERR None
-
-Fit results:
-	mode : curve_fit
-	k: 5.05e-04 +/- 4e-06  -->  0.86 %	init : 0.00051
-	sigma: 3.00e+00 +/- 2e-02  -->  0.70 %	init : 3.2
-	x0: 4.08e+00 +/- 3e-02  -->  0.66 %	init : 5.0
-	y0: 4.99e+00 +/- 2e-02  -->  0.50 %	init : 5.0
-	corr_k-sigma	 = -0.74
-	corr_k-x0	 = 0.14
-	corr_k-y0	 = -0.0035
-	corr_sigma-x0	 = -0.14
-	corr_sigma-y0	 = 0.064
-	corr_x0-y0	 = -0.016
-
-	Second cut
-
-	hwhm 6
-	hm_pos 10
-	sigma 4.328085122666891
-	dim :  11 11
-	cen :  4 5
-	x :  0 11
-	y :  0 11
-	val0 0.0010023718142070886
-	cen :  4 5
-	shift [0 0]
-	val1 0.0010023718142070886
-cut_dim :  11 11
-Quite
-GOOD
-xsize (28, 39)
-ysize (81, 92)
-[5.05285212e-04 2.99910456e+00 4.07762646e+00 4.98796705e+00] [4.33119070e-06 2.09870271e-02 2.68877435e-02 2.49325452e-02]
-VARIANCE 1.5799519124990962e-05
-CENVAL 0.0010023718142070886
-CENVAL 0.0010122146288778337
-
-- - - -
-Step 3
-	coor : (72, 94)
-	peak : 0.0009885720404489815
+	peak : 0.0005874983637887916
+Max now 33 86
+COMPARE 5 [5 5]
+COMPARE 5 [5 5]
 SHAPE:  (11, 11)
           c s
 x compare 5 [5 5]
@@ -166,58 +111,27 @@ XERR None
 
 Fit results:
 	mode : curve_fit
-	k: 4.68e-04 +/- 5e-06  -->  1.07 %	init : 0.00048
-	sigma: 2.97e+00 +/- 2e-02  -->  0.80 %	init : 2.6
-	x0: 4.94e+00 +/- 3e-02  -->  0.61 %	init : 5.0
-	y0: 5.08e+00 +/- 3e-02  -->  0.59 %	init : 5.0
-	corr_k-sigma	 = -0.75
-	corr_k-x0	 = 0.02
-	corr_k-y0	 = 0.062
-	corr_sigma-x0	 = 0.025
-	corr_sigma-y0	 = -0.099
-	corr_x0-y0	 = 0.047
-xsize (67, 78)
-ysize (89, 100)
-[4.67689216e-04 2.97452215e+00 4.94332728e+00 5.08368541e+00] [4.98945257e-06 2.38225094e-02 2.99483038e-02 2.98910939e-02]
-VARIANCE 1.5045912385667847e-05
-CENVAL 0.0009885720404489815
-CENVAL 0.0009745220224045991
+	k: 2.41e-04 +/- 4e-06  -->  1.70 %	init : 0.00026
+	sigma: 2.98e+00 +/- 4e-02  -->  1.38 %	init : 2.6
+	x0: 4.11e+00 +/- 5e-02  -->  1.29 %	init : 5.0
+	y0: 4.98e+00 +/- 5e-02  -->  0.98 %	init : 5.0
+	corr_k-sigma	 = -0.74
+	corr_k-x0	 = 0.13
+	corr_k-y0	 = -0.012
+	corr_sigma-x0	 = -0.13
+	corr_sigma-y0	 = 0.057
+	corr_x0-y0	 = -0.0077
+xsize (28, 38)
+ysize (81, 92)
+[2.40977882e-04 2.98102832e+00 4.10299422e+00 4.97551626e+00] [4.17883379e-06 4.25666253e-02 5.39614649e-02 4.92122710e-02]
 
 - - - -
-Step 4
-	coor : (69, 42)
-	peak : 0.000757389259034837
-SHAPE:  (11, 11)
-          c s
-x compare 5 [5 5]
-y compare 5 [5 5]
-
-sigma0 = 3.225964182229561
-XERR None
-
-Fit results:
-	mode : curve_fit
-	k: 2.44e-04 +/- 5e-06  -->  1.92 %	init : 0.00025
-	sigma: 2.94e+00 +/- 4e-02  -->  1.50 %	init : 3.2
-	x0: 5.03e+00 +/- 6e-02  -->  1.11 %	init : 5.0
-	y0: 5.95e+00 +/- 6e-02  -->  0.95 %	init : 5.0
-	corr_k-sigma	 = -0.73
-	corr_k-x0	 = -0.041
-	corr_k-y0	 = -0.05
-	corr_sigma-x0	 = 0.05
-	corr_sigma-y0	 = 0.056
-	corr_x0-y0	 = -0.011
-xsize (64, 75)
-ysize (37, 48)
-[2.43621120e-04 2.94179506e+00 5.02757881e+00 5.95216938e+00] [4.66754729e-06 4.40014800e-02 5.58621128e-02 5.64992384e-02]
-VARIANCE 1.5883554970787807e-05
-CENVAL 0.0007516569656583809
-CENVAL 0.000750680926337257
-
-- - - -
-Step 5
-	coor : (38, 29)
-	peak : 0.000733523861453243
+Step 3
+	coor : (72, 94)
+	peak : 0.0005677260956255437
+Max now 72 94
+COMPARE 5 [5 5]
+COMPARE 5 [5 5]
 SHAPE:  (11, 11)
           c s
 x compare 5 [5 5]
@@ -228,140 +142,7917 @@ XERR None
 
 Fit results:
 	mode : curve_fit
-	k: 2.07e-04 +/- 7e-06  -->  3.20 %	init : 0.00023
-	sigma: 3.19e+00 +/- 8e-02  -->  2.64 %	init : 2.3
-	x0: 5.97e+00 +/- 1e-01  -->  1.66 %	init : 5.0
-	y0: 4.2e+00 +/- 1e-01  -->  2.40 %	init : 5.0
+	k: 2.28e-04 +/- 5e-06  -->  2.20 %	init : 0.00024
+	sigma: 2.96e+00 +/- 5e-02  -->  1.60 %	init : 2.3
+	x0: 4.90e+00 +/- 6e-02  -->  1.24 %	init : 5.0
+	y0: 5.15e+00 +/- 6e-02  -->  1.17 %	init : 5.0
 	corr_k-sigma	 = -0.75
-	corr_k-x0	 = -0.064
-	corr_k-y0	 = 0.044
-	corr_sigma-x0	 = 0.13
-	corr_sigma-y0	 = -0.11
-	corr_x0-y0	 = -0.026
-xsize (33, 44)
-ysize (24, 35)
-[2.06658735e-04 3.18511807e+00 5.97052586e+00 4.18694099e+00] [6.60842015e-06 8.41950357e-02 9.93028859e-02 1.00634603e-01]
-VARIANCE 2.2146850022499214e-05
-CENVAL 0.0007169271430326404
-CENVAL 0.0007133969744406276
+	corr_k-x0	 = 0.032
+	corr_k-y0	 = 0.069
+	corr_sigma-x0	 = 0.011
+	corr_sigma-y0	 = -0.12
+	corr_x0-y0	 = 0.053
+xsize (67, 78)
+ysize (89, 100)
+[2.27820787e-04 2.95645557e+00 4.89623575e+00 5.14779777e+00] [5.00506452e-06 4.72958068e-02 6.05543552e-02 6.02327449e-02]
+
+- - - -
+Step 4
+	coor : (69, 42)
+	peak : 0.000460864564112574
+Max now 69 42
+COMPARE 5 [5 5]
+COMPARE 5 [5 5]
+SHAPE:  (11, 11)
+          c s
+x compare 5 [5 5]
+y compare 5 [5 5]
+
+sigma0 = 2.1640425613334453
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 1.21e-04 +/- 5e-06  -->  3.86 %	init : 0.00013
+	sigma: 2.92e+00 +/- 9e-02  -->  3.00 %	init : 2.2
+	x0: 5.1e+00 +/- 1e-01  -->  2.23 %	init : 5.0
+	y0: 5.9e+00 +/- 1e-01  -->  1.91 %	init : 5.0
+	corr_k-sigma	 = -0.73
+	corr_k-x0	 = -0.03
+	corr_k-y0	 = -0.054
+	corr_sigma-x0	 = 0.054
+	corr_sigma-y0	 = 0.073
+	corr_x0-y0	 = -0.006
+xsize (64, 75)
+ysize (38, 48)
+[1.21010429e-04 2.92742362e+00 5.06481637e+00 4.92502384e+00] [4.78588045e-06 9.15856437e-02 1.15058310e-01 1.16457387e-01]
+
+- - - -
+Step 5
+	coor : (38, 29)
+	peak : 0.0004605038641107729
+Max now 38 29
+COMPARE 5 [5 5]
+COMPARE 4 [4 5]
+SHAPE:  (11, 10)
+          c s
+x compare 5 [5 5]
+y compare 4 [4 5]
+
+sigma0 = 2.281101149119438
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 1.15e-04 +/- 5e-06  -->  4.02 %	init : 0.00013
+	sigma: 2.93e+00 +/- 1e-01  -->  3.33 %	init : 2.3
+	x0: 5.8e+00 +/- 1e-01  -->  1.96 %	init : 5.0
+	y0: 3.1e+00 +/- 1e-01  -->  3.97 %	init : 4.0
+	corr_k-sigma	 = -0.74
+	corr_k-x0	 = -0.028
+	corr_k-y0	 = 0.072
+	corr_sigma-x0	 = 0.066
+	corr_sigma-y0	 = -0.2
+	corr_x0-y0	 = -0.011
+xsize (34, 44)
+ysize (25, 34)
+[1.15444124e-04 2.92423627e+00 4.77138053e+00 3.14619552e+00] [4.70968839e-06 1.03625593e-01 1.13814804e-01 1.23784885e-01]
 
 - - - -
 Step 6
 	coor : (62, 12)
-	peak : 0.0006813654743531951
+	peak : 0.0004316511923534369
+Max now 62 12
+COMPARE 5 [5 5]
+COMPARE 5 [5 5]
 SHAPE:  (11, 11)
           c s
 x compare 5 [5 5]
 y compare 5 [5 5]
 
-sigma0 = 2.600855472391387
+sigma0 = 3.6781650828281824
 XERR None
 
 Fit results:
 	mode : curve_fit
-	k: 1.56e-04 +/- 4e-06  -->  2.63 %	init : 0.00017
-	sigma: 3.30e+00 +/- 8e-02  -->  2.30 %	init : 2.6
-	x0: 3.81e+00 +/- 9e-02  -->  2.44 %	init : 5.0
-	y0: 5.25e+00 +/- 8e-02  -->  1.57 %	init : 5.0
-	corr_k-sigma	 = -0.76
+	k: 8.6e-05 +/- 4e-06  -->  4.48 %	init : 0.00011
+	sigma: 3.3e+00 +/- 1e-01  -->  3.99 %	init : 3.7
+	x0: 3.6e+00 +/- 2e-01  -->  4.54 %	init : 5.0
+	y0: 5.2e+00 +/- 1e-01  -->  2.73 %	init : 5.0
+	corr_k-sigma	 = -0.75
 	corr_k-x0	 = 0.12
-	corr_k-y0	 = -0.019
-	corr_sigma-x0	 = -0.18
-	corr_sigma-y0	 = -0.00055
-	corr_x0-y0	 = 0.058
-xsize (57, 68)
+	corr_k-y0	 = -0.026
+	corr_sigma-x0	 = -0.23
+	corr_sigma-y0	 = 0.00096
+	corr_x0-y0	 = 0.066
+xsize (57, 67)
 ysize (7, 18)
-[1.56036238e-04 3.30035086e+00 3.81160756e+00 5.24643291e+00] [4.10293738e-06 7.58779055e-02 9.28390067e-02 8.21109559e-02]
-VARIANCE 1.529304268948713e-05
-CENVAL 0.0006784205024335594
-CENVAL 0.0006624512683612546
+[8.49303959e-05 3.38503185e+00 3.63909185e+00 5.22466418e+00] [3.78445584e-06 1.39255701e-01 1.64598825e-01 1.42957332e-01]
 
 - - - -
 Step 7
 	coor : (23, 69)
-	peak : 0.0006501045152800851
-SHAPE:  (11, 11)
+	peak : 0.0004219632552959701
+Max now 23 69
+COMPARE 5 [5 4]
+COMPARE 5 [5 5]
+SHAPE:  (10, 11)
           c s
-x compare 5 [5 5]
+x compare 5 [5 4]
 y compare 5 [5 5]
 
-sigma0 = 2.600855472391387
+sigma0 = 1.6129820911147805
 XERR None
 
 Fit results:
 	mode : curve_fit
-	k: 1.18e-04 +/- 5e-06  -->  4.27 %	init : 0.00014
-	sigma: 3.0e+00 +/- 1e-01  -->  3.51 %	init : 2.6
-	x0: 6.0e+00 +/- 1e-01  -->  2.43 %	init : 5.0
-	y0: 5.2e+00 +/- 1e-01  -->  2.49 %	init : 5.0
+	k: 7.1e-05 +/- 5e-06  -->  7.58 %	init : 9.6e-05
+	sigma: 2.8e+00 +/- 2e-01  -->  6.27 %	init : 1.6
+	x0: 5.8e+00 +/- 3e-01  -->  4.34 %	init : 5.0
+	y0: 5.2e+00 +/- 2e-01  -->  4.06 %	init : 5.0
 	corr_k-sigma	 = -0.72
-	corr_k-x0	 = -0.08
-	corr_k-y0	 = 0.062
-	corr_sigma-x0	 = 0.13
-	corr_sigma-y0	 = -0.021
-	corr_x0-y0	 = 0.083
-xsize (18, 29)
+	corr_k-x0	 = -0.12
+	corr_k-y0	 = 0.063
+	corr_sigma-x0	 = 0.2
+	corr_sigma-y0	 = -0.025
+	corr_x0-y0	 = 0.076
+xsize (19, 28)
 ysize (64, 75)
-[1.18452524e-04 3.02570584e+00 5.99048071e+00 5.18699968e+00] [5.06166618e-06 1.06296333e-01 1.45741286e-01 1.28993334e-01]
-VARIANCE 1.8283907107233238e-05
-CENVAL 0.0006155499602355093
-CENVAL 0.0006253286384519252
+[6.97770057e-05 2.90323563e+00 4.73203874e+00 5.19977637e+00] [5.31804821e-06 1.88679010e-01 2.58511982e-01 2.14992614e-01]
 
 - - - -
 Step 8
-	coor : (63, 21)
-	peak : 0.00061060031163482
-SHAPE:  (11, 11)
+	coor : (44, 40)
+	peak : 0.00040848352857754215
+Max now 44 40
+COMPARE 3 [3 5]
+COMPARE 3 [3 5]
+SHAPE:  (9, 9)
           c s
-x compare 5 [5 5]
-y compare 5 [5 5]
+x compare 3 [3 5]
+y compare 3 [3 5]
 
-sigma0 = 2.974192019569993
+sigma0 = 1.4426950408889634
 XERR None
 
 Fit results:
 	mode : curve_fit
-	k: 9.3e-05 +/- 5e-06  -->  5.56 %	init : 0.00011
-	sigma: 3.5e+00 +/- 2e-01  -->  5.27 %	init : 3.0
-	x0: 4.2e+00 +/- 2e-01  -->  4.94 %	init : 5.0
-	y0: 3.6e+00 +/- 2e-01  -->  6.03 %	init : 5.0
-	corr_k-sigma	 = -0.74
-	corr_k-x0	 = 0.096
-	corr_k-y0	 = 0.17
+	k: 8e-05 +/- 1e-05  -->  16.70 %	init : 8.3e-05
+	sigma: 1.8e+00 +/- 3e-01  -->  14.66 %	init : 1.4
+	x0: 2.1e+00 +/- 3e-01  -->  13.80 %	init : 3.0
+	y0: 2.1e+00 +/- 3e-01  -->  15.21 %	init : 3.0
+	corr_k-sigma	 = -0.75
+	corr_k-x0	 = 0.14
+	corr_k-y0	 = -0.0081
 	corr_sigma-x0	 = -0.14
-	corr_sigma-y0	 = -0.23
-	corr_x0-y0	 = 0.073
-xsize (58, 69)
-ysize (16, 27)
-[9.26998490e-05 3.53934231e+00 4.21554238e+00 3.62582412e+00] [5.15768799e-06 1.86676592e-01 2.08405591e-01 2.18564618e-01]
-VARIANCE 1.914379581569145e-05
-CENVAL 0.0006088314132280481
-CENVAL 0.000599115191758737
+	corr_sigma-y0	 = -0.067
+	corr_x0-y0	 = -0.04
+xsize (41, 49)
+ysize (37, 45)
+[8.25999165e-05 1.82978538e+00 2.14795230e+00 2.11319959e+00] [1.27153066e-05 2.49503831e-01 2.79012982e-01 3.02441489e-01]
 
 - - - -
 Step 9
-	coor : (97, 66)
-	peak : 0.0005982648525754977
-SHAPE:  (6, 11)
+	coor : (62, 23)
+	peak : 0.0003969517435585165
+Max now 62 23
+COMPARE 5 [5 4]
+COMPARE 3 [3 5]
+SHAPE:  (10, 9)
           c s
-x compare 3 [3 2]
-y compare 5 [5 5]
+x compare 5 [5 4]
+y compare 3 [3 5]
 
 sigma0 = 3.6067376022224087
 XERR None
 
 Fit results:
 	mode : curve_fit
-	k: 6.6e-05 +/- 5e-06  -->  7.62 %	init : 9.1e-05
-	sigma: 3.2e+00 +/- 3e-01  -->  9.32 %	init : 3.6
-	x0: 1.4e+00 +/- 4e-01  -->  26.14 %	init : 3.0
-	y0: 3.5e+00 +/- 3e-01  -->  8.25 %	init : 5.0
-	corr_k-sigma	 = -0.69
-	corr_k-x0	 = 0.056
-	corr_k-y0	 = 0.26
-	corr_sigma-x0	 = -0.41
-	corr_sigma-y0	 = -0.45
-	corr_x0-y0	 = 0.2
+	k: 6.2e-05 +/- 7e-06  -->  10.67 %	init : 7.1e-05
+	sigma: 2.5e+00 +/- 3e-01  -->  10.45 %	init : 3.6
+	x0: 5.7e+00 +/- 2e-01  -->  4.28 %	init : 5.0
+	y0: 1.1e+00 +/- 4e-01  -->  35.84 %	init : 3.0
+	corr_k-sigma	 = -0.7
+	corr_k-x0	 = -0.04
+	corr_k-y0	 = 0.23
+	corr_sigma-x0	 = 0.17
+	corr_sigma-y0	 = -0.57
+	corr_x0-y0	 = -0.09
+xsize (58, 67)
+ysize (20, 27)
+[5.88868613e-05 2.65731517e+00 4.76164518e+00 1.04704394e+00] [6.05295675e-06 3.00534598e-01 2.61161641e-01 4.29362138e-01]
+
+- - - -
+Step 10
+	coor : (35, 58)
+	peak : 0.0003952118316927815
+Max now 35 58
+COMPARE 3 [3 3]
+COMPARE 4 [4 5]
+SHAPE:  (7, 10)
+          c s
+x compare 3 [3 3]
+y compare 4 [4 5]
+
+sigma0 = 1.4426950408889634
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 3.9e-05 +/- 5e-06  -->  13.03 %	init : 6.9e-05
+	sigma: 2.5e+00 +/- 3e-01  -->  11.58 %	init : 1.4
+	x0: 3.1e+00 +/- 4e-01  -->  12.62 %	init : 3.0
+	y0: 3.8e+00 +/- 3e-01  -->  8.57 %	init : 4.0
+	corr_k-sigma	 = -0.72
+	corr_k-x0	 = 0.065
+	corr_k-y0	 = 0.093
+	corr_sigma-x0	 = -0.038
+	corr_sigma-y0	 = -0.16
+	corr_x0-y0	 = 0.017
+xsize (32, 39)
+ysize (54, 64)
+[3.85669327e-05 2.47947427e+00 3.07234390e+00 3.80058944e+00] [5.02348666e-06 2.87155686e-01 3.87657430e-01 3.25620582e-01]
+
+- - - -
+Step 11
+	coor : (15, 14)
+	peak : 0.0003863686868955089
+[[[0.00034055391485430814, 4.614584614532477e-06], [0.0002409778818299581, 4.178833790909618e-06], [0.000227820787222007, 5.005064524110364e-06], [0.00012101042876787745, 4.78588044601779e-06], [0.00011544412388515955, 4.709688394683684e-06], [8.493039594582943e-05, 3.784455839932656e-06], [6.977700565391076e-05, 5.318048210561265e-06], [8.25999164820764e-05, 1.2715306614750489e-05], [5.888686130420652e-05, 6.052956754394713e-06], [3.856693268563965e-05, 5.023486662629325e-06]], [[3.0017741378007, 0.03404091440267051], [2.9810283165060256, 0.042566625288522536], [2.956455565141521, 0.04729580676264316], [2.927423622217125, 0.09158564366183605], [2.924236273483259, 0.10362559295867642], [3.3850318542079565, 0.1392557009097613], [2.9032356297527038, 0.18867900981182922], [1.8297853756152558, 0.2495038306280799], [2.6573151695456763, 0.3005345978200851], [2.479474270865968, 0.28715568635724653]], [[4.931347380001851, 0.03944334296733315], [4.102994223084083, 0.05396146492518684], [4.896235753942116, 0.06055435516542373], [5.064816368225302, 0.11505830963645433], [4.7713805279765, 0.11381480448897698], [3.639091853332684, 0.16459882491068628], [4.732038738862231, 0.2585119821010862], [2.1479522982254515, 0.2790129820959224], [4.761645183700282, 0.26116164116902985], [3.0723438997117194, 0.38765742995022556]], [[4.953239134127863, 0.040629922268236224], [4.975516263162752, 0.04921227098591597], [5.147797769782076, 0.06023274493475977], [4.925023836681497, 0.11645738720882444], [3.1461955183003782, 0.12378488487404453], [5.224664176218733, 0.1429573319957711], [5.199776365228025, 0.21499261434851094], [2.1131995869672378, 0.30244148930432546], [1.0470439440643968, 0.42936213776104454], [3.800589438632558, 0.3256205823618555]]]
+
+sigma = 2.82027 +- 0.53540 -> 1.9e+01 %
+
+- - - SEARCHING START - - -
+Stop_val : 0.00034369557236186145
+
+- - - -
+Step 1
+	coor : (45, 39)
+	peak : 0.0006698586044125724
+Max now 45 39
+COMPARE 9 [9 6]
+COMPARE 7 [7 8]
+SHAPE:  (16, 16)
+          c s
+x compare 9 [9 6]
+y compare 7 [7 8]
+	shape : (16, 16)
+
+	First cut
+
+	hwhm 7
+	hm_pos 15
+	sigma 5.0494326431113725
+	dim :  16 16
+	cen :  9 7
+	x :  2 16
+	y :  0 15
+	val0 0.0006698586044125724
+	cen :  7 7
+	shift [2 0]
+	val1 0.0006698586044125724
+
+sigma0 = 3.060418339790368
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 3.40e-04 +/- 5e-06  -->  1.34 %	init : 0.00034
+	sigma: 3.01e+00 +/- 3e-02  -->  0.99 %	init : 3.1
+	x0: 7.93e+00 +/- 4e-02  -->  0.50 %	init : 7.0
+	y0: 6.93e+00 +/- 4e-02  -->  0.59 %	init : 7.0
+	corr_k-sigma	 = -0.72
+	corr_k-x0	 = -0.072
+	corr_k-y0	 = 0.029
+	corr_sigma-x0	 = 0.08
+	corr_sigma-y0	 = -0.057
+	corr_x0-y0	 = -0.04
+
+	Second cut
+
+	hwhm 6
+	hm_pos 15
+	sigma 4.328085122666891
+	dim :  16 16
+	cen :  10 7
+	x :  4 16
+	y :  1 14
+	val0 0.0006526146721760876
+	cen :  6 6
+	shift [4 1]
+	val1 0.0006526146721760876
+cut_dim :  12 13
+S/N 180.17219038675432 %
+Quite Quite Good
+Quite
+HEY 6 (4, 16) (1, 14)
+xsize (40, 52)
+ysize (33, 46)
+[3.39852503e-04 3.00936048e+00 5.92781627e+00 5.94897555e+00] [4.39206779e-06 2.96496350e-02 3.75558363e-02 3.91220184e-02]
+
+- - - -
+Step 2
+	coor : (45, 39)
+	peak : 0.0005889727422038013
+Max now 45 39
+COMPARE 4 [4 6]
+COMPARE 6 [6 6]
+SHAPE:  (11, 13)
+          c s
+x compare 4 [4 6]
+y compare 6 [6 6]
+
+sigma0 = 2.281101149119438
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 2.7e-04 +/- 3e-05  -->  11.18 %	init : 0.00026
+	sigma: 2.2e+00 +/- 2e-01  -->  8.25 %	init : 2.3
+	x0: 3.2e+00 +/- 2e-01  -->  7.34 %	init : 4.0
+	y0: 5.4e+00 +/- 2e-01  -->  4.45 %	init : 6.0
+	corr_k-sigma	 = -0.73
+	corr_k-x0	 = 0.068
+	corr_k-y0	 = -0.065
+	corr_sigma-x0	 = -0.08
+	corr_sigma-y0	 = 0.035
+	corr_x0-y0	 = 0.049
+xsize (41, 51)
+ysize (33, 45)
+[2.70626219e-04 2.18256155e+00 3.19323684e+00 5.39722476e+00] [2.67014304e-05 1.59256754e-01 2.08917099e-01 2.14370526e-01]
+
+- - - -
+Step 3
+	coor : (33, 86)
+	peak : 0.0005874983637887916
+Max now 33 86
+COMPARE 6 [6 7]
+COMPARE 6 [6 7]
+SHAPE:  (14, 14)
+          c s
+x compare 6 [6 7]
+y compare 6 [6 7]
+
+sigma0 = 2.600855472391387
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 2.42e-04 +/- 4e-06  -->  1.64 %	init : 0.00026
+	sigma: 2.97e+00 +/- 4e-02  -->  1.24 %	init : 2.6
+	x0: 5.09e+00 +/- 5e-02  -->  0.99 %	init : 6.0
+	y0: 5.99e+00 +/- 5e-02  -->  0.78 %	init : 6.0
+	corr_k-sigma	 = -0.72
+	corr_k-x0	 = 0.1
+	corr_k-y0	 = -0.013
+	corr_sigma-x0	 = -0.069
+	corr_sigma-y0	 = 0.061
+	corr_x0-y0	 = -0.0051
+xsize (27, 39)
+ysize (80, 93)
+[2.41609647e-04 2.97160027e+00 5.09188807e+00 5.99052966e+00] [3.94875119e-06 3.68182766e-02 5.01525936e-02 4.67126393e-02]
+
+- - - -
+Step 4
+	coor : (72, 94)
+	peak : 0.0005677260956255437
+Max now 72 94
+COMPARE 7 [7 5]
+COMPARE 6 [6 6]
+SHAPE:  (13, 12)
+          c s
+x compare 7 [7 5]
+y compare 6 [6 6]
+
+sigma0 = 2.281101149119438
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 2.29e-04 +/- 5e-06  -->  2.07 %	init : 0.00024
+	sigma: 2.94e+00 +/- 4e-02  -->  1.45 %	init : 2.3
+	x0: 5.89e+00 +/- 6e-02  -->  0.97 %	init : 6.0
+	y0: 6.16e+00 +/- 6e-02  -->  0.92 %	init : 6.0
+	corr_k-sigma	 = -0.74
+	corr_k-x0	 = 0.009
+	corr_k-y0	 = 0.039
+	corr_sigma-x0	 = 0.053
+	corr_sigma-y0	 = -0.07
+	corr_x0-y0	 = 0.047
+xsize (66, 78)
+ysize (88, 100)
+[2.28784677e-04 2.94041184e+00 5.89419312e+00 6.16411419e+00] [4.73624801e-06 4.25349921e-02 5.70172909e-02 5.64674333e-02]
+
+- - - -
+Step 5
+	coor : (69, 42)
+	peak : 0.000460864564112574
+Max now 69 42
+COMPARE 6 [6 7]
+COMPARE 8 [8 6]
+SHAPE:  (14, 15)
+          c s
+x compare 6 [6 7]
+y compare 8 [8 6]
+
+sigma0 = 2.1640425613334453
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 1.22e-04 +/- 5e-06  -->  3.97 %	init : 0.00013
+	sigma: 2.90e+00 +/- 8e-02  -->  2.86 %	init : 2.2
+	x0: 6.1e+00 +/- 1e-01  -->  1.90 %	init : 6.0
+	y0: 6.9e+00 +/- 1e-01  -->  1.65 %	init : 6.0
+	corr_k-sigma	 = -0.71
+	corr_k-x0	 = -0.022
+	corr_k-y0	 = -0.023
+	corr_sigma-x0	 = 0.042
+	corr_sigma-y0	 = 0.0083
+	corr_x0-y0	 = -0.015
+xsize (63, 76)
+ysize (37, 49)
+[1.22374597e-04 2.88917488e+00 6.05655874e+00 5.95942565e+00] [4.72927198e-06 8.08138137e-02 1.11157242e-01 1.11188250e-01]
+
+- - - -
+Step 6
+	coor : (38, 29)
+	peak : 0.00046051851414454794
+Max now 38 29
+COMPARE 7 [7 5]
+COMPARE 4 [4 8]
+SHAPE:  (13, 13)
+          c s
+x compare 7 [7 5]
+y compare 4 [4 8]
+
+sigma0 = 2.281101149119438
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 1.16e-04 +/- 5e-06  -->  4.03 %	init : 0.00013
+	sigma: 2.90e+00 +/- 1e-01  -->  3.29 %	init : 2.3
+	x0: 6.8e+00 +/- 1e-01  -->  1.67 %	init : 6.0
+	y0: 3.1e+00 +/- 1e-01  -->  3.99 %	init : 4.0
+	corr_k-sigma	 = -0.73
+	corr_k-x0	 = -0.034
+	corr_k-y0	 = 0.074
+	corr_sigma-x0	 = 0.077
+	corr_sigma-y0	 = -0.2
+	corr_x0-y0	 = -0.012
+xsize (33, 44)
+ysize (25, 35)
+[1.16162264e-04 2.90525994e+00 5.79552340e+00 3.12205374e+00] [4.51933133e-06 9.32868941e-02 1.08924878e-01 1.19147234e-01]
+
+- - - -
+Step 7
+	coor : (45, 41)
+	peak : 0.00043205806315311927
+Max now 45 41
+COMPARE 2 [2 3]
+COMPARE 4 [4 3]
+SHAPE:  (6, 8)
+          c s
+x compare 2 [2 3]
+y compare 4 [4 3]
+
+sigma0 = 1.0201394465967897
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 1.0e-04 +/- 3e-05  -->  26.36 %	init : 0.00011
+	sigma: 1.4e+00 +/- 3e-01  -->  18.82 %	init : 1.0
+	x0: 1.5e+00 +/- 4e-01  -->  25.48 %	init : 2.0
+	y0: 4.7e+00 +/- 3e-01  -->  7.07 %	init : 4.0
+	corr_k-sigma	 = -0.72
+	corr_k-x0	 = -0.00029
+	corr_k-y0	 = 0.068
+	corr_sigma-x0	 = -0.094
+	corr_sigma-y0	 = 0.056
+	corr_x0-y0	 = -0.11
+xsize (43, 49)
+ysize (37, 45)
+[1.01499575e-04 1.38588196e+00 1.52312143e+00 4.68752838e+00] [2.67553427e-05 2.60767977e-01 3.88080300e-01 3.31575054e-01]
+
+- - - -
+Step 8
+	coor : (62, 12)
+	peak : 0.0004316511923534369
+Max now 62 12
+COMPARE 5 [5 7]
+COMPARE 10 [10  6]
+SHAPE:  (13, 17)
+          c s
+x compare 5 [5 7]
+y compare 10 [10  6]
+
+sigma0 = 3.6781650828281824
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 8.5e-05 +/- 4e-06  -->  4.62 %	init : 0.00011
+	sigma: 3.4e+00 +/- 1e-01  -->  3.90 %	init : 3.7
+	x0: 3.6e+00 +/- 2e-01  -->  4.90 %	init : 5.0
+	y0: 6.3e+00 +/- 1e-01  -->  2.37 %	init : 6.0
+	corr_k-sigma	 = -0.74
+	corr_k-x0	 = 0.13
+	corr_k-y0	 = -0.021
+	corr_sigma-x0	 = -0.26
+	corr_sigma-y0	 = -0.015
+	corr_x0-y0	 = 0.057
+xsize (57, 68)
+ysize (6, 19)
+[8.37935323e-05 3.44647266e+00 3.61958234e+00 6.32100920e+00] [3.91259617e-06 1.38762377e-01 1.80482539e-01 1.52559859e-01]
+
+- - - -
+Step 9
+	coor : (23, 69)
+	peak : 0.0004219632552959701
+Max now 23 69
+COMPARE 7 [7 4]
+COMPARE 7 [7 7]
+SHAPE:  (12, 15)
+          c s
+x compare 7 [7 4]
+y compare 7 [7 7]
+
+sigma0 = 1.6129820911147805
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 7.0e-05 +/- 5e-06  -->  7.05 %	init : 9.6e-05
+	sigma: 2.9e+00 +/- 2e-01  -->  5.64 %	init : 1.6
+	x0: 6.8e+00 +/- 2e-01  -->  3.60 %	init : 6.0
+	y0: 6.3e+00 +/- 2e-01  -->  3.22 %	init : 6.0
+	corr_k-sigma	 = -0.71
+	corr_k-x0	 = -0.13
+	corr_k-y0	 = 0.075
+	corr_sigma-x0	 = 0.24
+	corr_sigma-y0	 = -0.053
+	corr_x0-y0	 = 0.066
+xsize (18, 28)
+ysize (63, 76)
+[6.90622119e-05 2.95410487e+00 5.81034685e+00 6.25275956e+00] [5.02190043e-06 1.73894200e-01 2.55971114e-01 2.08602468e-01]
+
+- - - -
+Step 10
+	coor : (62, 23)
+	peak : 0.00039687273413469465
+Max now 62 23
+COMPARE 5 [5 4]
+COMPARE 3 [3 5]
+SHAPE:  (10, 9)
+          c s
+x compare 5 [5 4]
+y compare 3 [3 5]
+
+sigma0 = 3.6067376022224087
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 6.2e-05 +/- 7e-06  -->  10.75 %	init : 7.1e-05
+	sigma: 2.5e+00 +/- 3e-01  -->  10.47 %	init : 3.6
+	x0: 5.7e+00 +/- 2e-01  -->  4.29 %	init : 5.0
+	y0: 1.1e+00 +/- 4e-01  -->  35.11 %	init : 3.0
+	corr_k-sigma	 = -0.71
+	corr_k-x0	 = -0.041
+	corr_k-y0	 = 0.23
+	corr_sigma-x0	 = 0.17
+	corr_sigma-y0	 = -0.56
+	corr_x0-y0	 = -0.089
+xsize (57, 67)
+ysize (20, 28)
+[6.12679398e-05 2.47850187e+00 5.74248305e+00 1.09796251e+00] [6.59317124e-06 2.62931572e-01 2.49750893e-01 3.91802513e-01]
+
+- - - -
+Step 11
+	coor : (35, 58)
+	peak : 0.00039521180665345147
+Max now 35 58
+COMPARE 3 [3 3]
+COMPARE 4 [4 5]
+SHAPE:  (7, 10)
+          c s
+x compare 3 [3 3]
+y compare 4 [4 5]
+
+sigma0 = 1.4426950408889634
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 3.9e-05 +/- 5e-06  -->  13.03 %	init : 6.9e-05
+	sigma: 2.5e+00 +/- 3e-01  -->  11.58 %	init : 1.4
+	x0: 3.1e+00 +/- 4e-01  -->  12.62 %	init : 3.0
+	y0: 3.8e+00 +/- 3e-01  -->  8.57 %	init : 4.0
+	corr_k-sigma	 = -0.72
+	corr_k-x0	 = 0.065
+	corr_k-y0	 = 0.093
+	corr_sigma-x0	 = -0.038
+	corr_sigma-y0	 = -0.16
+	corr_x0-y0	 = 0.017
+xsize (32, 39)
+ysize (54, 64)
+[3.85672601e-05 2.47938443e+00 3.07240645e+00 3.80038976e+00] [5.02367567e-06 2.87194328e-01 3.87701324e-01 3.25664005e-01]
+
+- - - -
+Step 12
+	coor : (47, 35)
+	peak : 0.0003864994953283737
+Max now 47 35
+COMPARE 2 [2 2]
+COMPARE 5 [5 4]
+SHAPE:  (5, 10)
+          c s
+x compare 2 [2 2]
+y compare 5 [5 4]
+
+sigma0 = 0.7213475204444817
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 5e-05 +/- 2e-05  -->  33.13 %	init : 6.1e-05
+	sigma: 1.5e+00 +/- 3e-01  -->  23.45 %	init : 0.72
+	x0: 2.0e+00 +/- 5e-01  -->  24.50 %	init : 2.0
+	y0: 3.9e+00 +/- 4e-01  -->  11.00 %	init : 5.0
+	corr_k-sigma	 = -0.74
+	corr_k-x0	 = -0.077
+	corr_k-y0	 = -0.053
+	corr_sigma-x0	 = 0.11
+	corr_sigma-y0	 = 0.052
+	corr_x0-y0	 = 0.068
+xsize (45, 50)
+ysize (30, 40)
+[5.07926542e-05 1.47192182e+00 1.96515153e+00 3.92539829e+00] [1.68296092e-05 3.45122941e-01 4.81507645e-01 4.31633858e-01]
+
+- - - -
+Step 13
+	coor : (15, 14)
+	peak : 0.0003863686868955089
+Max now 15 14
+COMPARE 1 [1 3]
+COMPARE 3 [3 2]
+SHAPE:  (5, 6)
+          c s
+x compare 1 [1 3]
+y compare 3 [3 2]
+
+sigma0 = 0.7213475204444817
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 7e-05 +/- 2e-05  -->  23.49 %	init : 6e-05
+	sigma: 7e-01 +/- 1e-01  -->  17.87 %	init : 0.72
+	x0: 7e-01 +/- 2e-01  -->  23.32 %	init : 1.0
+	y0: 2.8e+00 +/- 2e-01  -->  6.99 %	init : 3.0
+	corr_k-sigma	 = -0.66
+	corr_k-x0	 = -0.11
+	corr_k-y0	 = -0.21
+	corr_sigma-x0	 = 0.16
+	corr_sigma-y0	 = -0.046
+	corr_x0-y0	 = 0.012
+xsize (14, 19)
+ysize (11, 17)
+[6.80617450e-05 7.09261284e-01 7.40556134e-01 2.78672337e+00] [1.59878204e-05 1.26774010e-01 1.72666054e-01 1.94788267e-01]
+rec_obj is None
+
+- - - -
+Step 14
+	coor : (97, 66)
+	peak : 0.0003844838176891804
+Max now 97 66
+COMPARE 1 [1 2]
+COMPARE 1 [1 2]
+SHAPE:  (4, 4)
+          c s
+x compare 1 [1 2]
+y compare 1 [1 2]
+
+sigma0 = 0.7213475204444817
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 6e-05 +/- 1e-05  -->  26.74 %	init : 5.9e-05
+	sigma: 1.2e+00 +/- 4e-01  -->  32.19 %	init : 0.72
+	x0: 5e-01 +/- 5e-01  -->  100.31 %	init : 1.0
+	y0: 4e-01 +/- 5e-01  -->  128.49 %	init : 1.0
+	corr_k-sigma	 = -0.51
+	corr_k-x0	 = 0.14
+	corr_k-y0	 = 0.011
+	corr_sigma-x0	 = -0.66
+	corr_sigma-y0	 = -0.64
+	corr_x0-y0	 = 0.49
+xsize (96, 100)
+ysize (65, 69)
+[5.59249322e-05 1.17571133e+00 4.97317973e-01 3.98191234e-01] [1.49513648e-05 3.78661287e-01 4.99421273e-01 5.11991116e-01]
+
+- - - -
+Step 15
+	coor : (37, 86)
+	peak : 0.00037639718001473835
+Max now 37 86
+COMPARE 2 [2 1]
+COMPARE 3 [3 1]
+SHAPE:  (4, 5)
+          c s
+x compare 2 [2 1]
+y compare 3 [3 1]
+
+sigma0 = 0.7213475204444817
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 3.7e-05 +/- 1e-05  -->  26.27 %	init : 5.1e-05
+	sigma: 1.4e+00 +/- 4e-01  -->  29.45 %	init : 0.72
+	x0: 1.6e+00 +/- 4e-01  -->  22.79 %	init : 2.0
+	y0: 3.4e+00 +/- 5e-01  -->  15.68 %	init : 3.0
+	corr_k-sigma	 = -0.76
+	corr_k-x0	 = -0.061
+	corr_k-y0	 = -0.4
+	corr_sigma-x0	 = 0.077
+	corr_sigma-y0	 = 0.7
+	corr_x0-y0	 = -0.031
+xsize (35, 39)
+ysize (83, 88)
+[3.73841783e-05 1.43850798e+00 1.56988148e+00 3.38922448e+00] [9.82117323e-06 4.23630718e-01 3.57841961e-01 5.31334883e-01]
+
+- - - -
+Step 16
+	coor : (3, 79)
+	peak : 0.00037623868369782046
+Max now 3 79
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [78 78]
+Shape no Good
+
+- - - -
+Step 17
+	coor : (12, 29)
+	peak : 0.0003760739557568276
+Max now 12 29
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [28 28]
+Shape no Good
+
+- - - -
+Step 18
+	coor : (84, 12)
+	peak : 0.000376017475247496
+Max now 84 12
+COMPARE 1 [1 1]
+COMPARE 1 [1 2]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [1 2]
+diff [11 10]
+Shape no Good
+
+- - - -
+Step 19
+	coor : (41, 1)
+	peak : 0.0003742098097082541
+Max now 41 1
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [0 0]
+Shape no Good
+
+- - - -
+Step 20
+	coor : (97, 63)
+	peak : 0.0003736985635973024
+Max now 97 63
+COMPARE 3 [3 2]
+COMPARE 1 [1 4]
+SHAPE:  (6, 6)
+          c s
+x compare 3 [3 2]
+y compare 1 [1 4]
+
+sigma0 = 1.6129820911147805
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 0.00035439071056365934 +/- 0.004464547448324379  -->  1259.78 %	init : 4.8e-05
+	sigma: 5e+00 +/- 1e+01  -->  203.11 %	init : 1.6
+	x0: -3.322666533208658 +/- 21.64825046701258  -->  651.53 %	init : 3.0
+	y0: -9.618528878442058 +/- 44.584659760838704  -->  463.53 %	init : 1.0
+	corr_k-sigma	 = 0.98
+	corr_k-x0	 = -0.98
+	corr_k-y0	 = -1.0
+	corr_sigma-x0	 = -0.99
+	corr_sigma-y0	 = -0.99
+	corr_x0-y0	 = 0.98
 xsize (94, 100)
-ysize (61, 72)
-[6.62005737e-05 3.24704378e+00 1.44070492e+00 3.51013658e+00] 
+ysize (62, 68)
+[ 3.53962962e-04  4.83264481e+00 -3.31975928e+00 -9.61360253e+00] [4.49434542e-03 9.83889950e+00 2.17076616e+01 4.47083771e+01]
+
+- - - -
+Step 21
+	coor : (46, 40)
+	peak : 0.0003732232287430807
+Max now 46 40
+COMPARE 1 [1 3]
+COMPARE 1 [1 2]
+SHAPE:  (5, 4)
+          c s
+x compare 1 [1 3]
+y compare 1 [1 2]
+
+sigma0 = 0.7213475204444817
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 5.316972659003873e-05 +/- 0.00010755610599185922  -->  202.29 %	init : 4.7e-05
+	sigma: 0.7627782710593954 +/- 1.2610430225012876  -->  165.32 %	init : 0.72
+	x0: 0.6663163097921421 +/- 1.3738588323051295  -->  206.19 %	init : 1.0
+	y0: 0.6931258517138489 +/- 1.4629380238135548  -->  211.06 %	init : 1.0
+	corr_k-sigma	 = -0.78
+	corr_k-x0	 = 0.0067
+	corr_k-y0	 = -0.062
+	corr_sigma-x0	 = -0.02
+	corr_sigma-y0	 = 0.021
+	corr_x0-y0	 = 0.14
+Check is not good 2
+
+- - - -
+Step 22
+	coor : (38, 52)
+	peak : 0.00037275784431120643
+Max now 38 52
+COMPARE 1 [1 2]
+COMPARE 1 [1 2]
+SHAPE:  (4, 4)
+          c s
+x compare 1 [1 2]
+y compare 1 [1 2]
+
+sigma0 = 1.6129820911147805
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 9e-05 +/- 5e-05  -->  60.90 %	init : 4.7e-05
+	sigma: 4e-01 +/- 1e-01  -->  29.21 %	init : 1.6
+	x0: 8e-01 +/- 2e-01  -->  27.77 %	init : 1.0
+	y0: 5.7e-01 +/- 9e-02  -->  15.85 %	init : 1.0
+	corr_k-sigma	 = -0.9
+	corr_k-x0	 = -0.63
+	corr_k-y0	 = -0.27
+	corr_sigma-x0	 = 0.46
+	corr_sigma-y0	 = 0.37
+	corr_x0-y0	 = 0.16
+xsize (37, 41)
+ysize (51, 55)
+[8.98419118e-05 4.36483850e-01 8.33445954e-01 5.67735386e-01] [5.47239135e-05 1.27483469e-01 2.31423778e-01 9.00055067e-02]
+rec_obj is None
+
+- - - -
+Step 23
+	coor : (35, 23)
+	peak : 0.00037273550774410627
+Max now 35 23
+COMPARE 1 [1 1]
+COMPARE 2 [2 2]
+SHAPE:  (3, 5)
+xsize [1 1]
+ysize [2 2]
+diff [21 21]
+Shape no Good
+
+- - - -
+Step 24
+	coor : (21, 66)
+	peak : 0.0003706705196685321
+Max now 21 66
+COMPARE 2 [2 2]
+COMPARE 1 [1 1]
+SHAPE:  (5, 3)
+xsize [2 2]
+ysize [1 1]
+diff [65 65]
+Shape no Good
+
+- - - -
+Step 25
+	coor : (87, 79)
+	peak : 0.0003696587259957281
+Max now 87 79
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [78 78]
+Shape no Good
+
+- - - -
+Step 26
+	coor : (50, 14)
+	peak : 0.00036795885810592127
+Max now 50 14
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [13 13]
+Shape no Good
+
+- - - -
+Step 27
+	coor : (33, 99)
+	peak : 0.0003674483474765557
+Max now 33 99
+COMPARE 1 [1 0]
+COMPARE 0 [0 1]
+SHAPE:  (2, 1)
+xsize [1 0]
+ysize [0 1]
+diff [99 98]
+Shape no Good
+
+- - - -
+Step 28
+	coor : (64, 74)
+	peak : 0.00036721115993734987
+Max now 64 74
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [72 73]
+Shape no Good
+
+- - - -
+Step 29
+	coor : (22, 61)
+	peak : 0.0003670232470286975
+Max now 22 61
+COMPARE 2 [2 2]
+COMPARE 2 [2 3]
+SHAPE:  (5, 6)
+          c s
+x compare 2 [2 2]
+y compare 2 [2 3]
+
+sigma0 = 0.7213475204444817
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 4.0e-05 +/- 9e-06  -->  21.79 %	init : 4.1e-05
+	sigma: 1.2e+00 +/- 2e-01  -->  15.67 %	init : 0.72
+	x0: 2.0e+00 +/- 2e-01  -->  12.57 %	init : 2.0
+	y0: 1.3e+00 +/- 2e-01  -->  18.53 %	init : 2.0
+	corr_k-sigma	 = -0.73
+	corr_k-x0	 = -0.02
+	corr_k-y0	 = 0.011
+	corr_sigma-x0	 = 0.026
+	corr_sigma-y0	 = -0.15
+	corr_x0-y0	 = -0.028
+xsize (20, 25)
+ysize (59, 65)
+[4.00118483e-05 1.15972746e+00 1.97064400e+00 1.26530259e+00] [8.71994229e-06 1.81760434e-01 2.47655886e-01 2.34480769e-01]
+
+- - - -
+Step 30
+	coor : (33, 77)
+	peak : 0.00036696460239568786
+Max now 33 77
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [76 76]
+Shape no Good
+
+- - - -
+Step 31
+	coor : (27, 16)
+	peak : 0.00036619584125322256
+Max now 27 16
+COMPARE 1 [1 2]
+COMPARE 2 [2 1]
+SHAPE:  (4, 4)
+          c s
+x compare 1 [1 2]
+y compare 2 [2 1]
+
+sigma0 = 2.0402788931935794
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 2e-05 +/- 1e-05  -->  77.19 %	init : 4e-05
+	sigma: 1e+00 +/- 1e+00  -->  83.57 %	init : 2.0
+	x0: 0.7414881385881494 +/- 1.2152873123044063  -->  163.90 %	init : 1.0
+	y0: 1e+00 +/- 1e+00  -->  90.09 %	init : 2.0
+	corr_k-sigma	 = -0.74
+	corr_k-x0	 = 0.19
+	corr_k-y0	 = 0.16
+	corr_sigma-x0	 = -0.49
+	corr_sigma-y0	 = -0.19
+	corr_x0-y0	 = 0.18
+xsize (26, 30)
+ysize (14, 18)
+[1.77791124e-05 1.33604294e+00 7.41492035e-01 1.24403231e+00] [1.37263738e-05 1.11603048e+00 1.21495926e+00 1.12023125e+00]
+
+- - - -
+Step 32
+	coor : (25, 73)
+	peak : 0.0003660350764873369
+Max now 25 73
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [72 72]
+Shape no Good
+
+- - - -
+Step 33
+	coor : (30, 75)
+	peak : 0.0003658969039942636
+Max now 30 75
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [74 74]
+Shape no Good
+
+- - - -
+Step 34
+	coor : (24, 81)
+	peak : 0.00036576691944168995
+Max now 24 81
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [80 80]
+Shape no Good
+
+- - - -
+Step 35
+	coor : (10, 71)
+	peak : 0.00036538593309263075
+Max now 10 71
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [70 70]
+Shape no Good
+
+- - - -
+Step 36
+	coor : (94, 34)
+	peak : 0.0003651651886164851
+Max now 94 34
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [33 33]
+Shape no Good
+
+- - - -
+Step 37
+	coor : (20, 84)
+	peak : 0.00036516137868843626
+Max now 20 84
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [83 83]
+Shape no Good
+
+- - - -
+Step 38
+	coor : (77, 6)
+	peak : 0.000365159833635881
+Max now 77 6
+COMPARE 1 [1 1]
+COMPARE 4 [4 1]
+SHAPE:  (3, 6)
+xsize [1 1]
+ysize [4 1]
+diff [2 5]
+Shape no Good
+
+- - - -
+Step 39
+	coor : (16, 98)
+	peak : 0.00036481477386594375
+Max now 16 98
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [96 97]
+Shape no Good
+
+- - - -
+Step 40
+	coor : (20, 81)
+	peak : 0.0003646508180507474
+Max now 20 81
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [80 80]
+Shape no Good
+
+- - - -
+Step 41
+	coor : (74, 5)
+	peak : 0.000364601463533678
+Max now 74 5
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [4 4]
+Shape no Good
+
+- - - -
+Step 42
+	coor : (11, 65)
+	peak : 0.00036455446175628415
+Max now 11 65
+COMPARE 1 [1 1]
+COMPARE 1 [1 2]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [1 2]
+diff [64 63]
+Shape no Good
+
+- - - -
+Step 43
+	coor : (44, 1)
+	peak : 0.0003645515293570203
+Max now 44 1
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [0 0]
+Shape no Good
+
+- - - -
+Step 44
+	coor : (66, 23)
+	peak : 0.00036453307000000086
+Max now 66 23
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [22 22]
+Shape no Good
+
+- - - -
+Step 45
+	coor : (85, 39)
+	peak : 0.0003641614057851959
+Max now 85 39
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [38 38]
+Shape no Good
+
+- - - -
+Step 46
+	coor : (67, 75)
+	peak : 0.0003641137689480222
+Max now 67 75
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [74 74]
+Shape no Good
+
+- - - -
+Step 47
+	coor : (10, 1)
+	peak : 0.00036394834487258384
+Max now 10 1
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [0 0]
+Shape no Good
+
+- - - -
+Step 48
+	coor : (60, 47)
+	peak : 0.00036391407547060336
+Max now 60 47
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [46 46]
+Shape no Good
+
+- - - -
+Step 49
+	coor : (47, 36)
+	peak : 0.0003637996858840304
+Max now 47 36
+COMPARE 1 [1 1]
+COMPARE 3 [3 2]
+SHAPE:  (3, 6)
+xsize [1 1]
+ysize [3 2]
+diff [33 34]
+Shape no Good
+
+- - - -
+Step 50
+	coor : (68, 64)
+	peak : 0.0003636588809969222
+Max now 68 64
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [63 63]
+Shape no Good
+
+- - - -
+Step 51
+	coor : (41, 64)
+	peak : 0.000363332006001959
+Max now 41 64
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [63 63]
+Shape no Good
+
+- - - -
+Step 52
+	coor : (52, 12)
+	peak : 0.00036306503455069426
+Max now 52 12
+COMPARE 1 [1 1]
+COMPARE 1 [1 2]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [1 2]
+diff [11 10]
+Shape no Good
+
+- - - -
+Step 53
+	coor : (76, 96)
+	peak : 0.0003629629272325371
+Max now 76 96
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [94 95]
+Shape no Good
+
+- - - -
+Step 54
+	coor : (55, 69)
+	peak : 0.0003628938815635378
+Max now 55 69
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [67 68]
+Shape no Good
+
+- - - -
+Step 55
+	coor : (63, 93)
+	peak : 0.0003628900946607276
+Max now 63 93
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [92 92]
+Shape no Good
+
+- - - -
+Step 56
+	coor : (19, 13)
+	peak : 0.0003628742265593979
+Max now 19 13
+COMPARE 3 [3 1]
+COMPARE 1 [1 1]
+SHAPE:  (5, 3)
+xsize [3 1]
+ysize [1 1]
+diff [12 12]
+Shape no Good
+
+- - - -
+Step 57
+	coor : (5, 43)
+	peak : 0.0003626488297826582
+Max now 5 43
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [42 42]
+Shape no Good
+
+- - - -
+Step 58
+	coor : (33, 15)
+	peak : 0.00036259061509304235
+Max now 33 15
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [14 14]
+Shape no Good
+
+- - - -
+Step 59
+	coor : (34, 52)
+	peak : 0.0003624369904087336
+Max now 34 52
+COMPARE 2 [2 1]
+COMPARE 4 [4 1]
+SHAPE:  (4, 6)
+          c s
+x compare 2 [2 1]
+y compare 4 [4 1]
+
+sigma0 = 1.4426950408889634
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 2.1e-05 +/- 8e-06  -->  37.44 %	init : 3.7e-05
+	sigma: 1.4e+00 +/- 6e-01  -->  42.53 %	init : 1.4
+	x0: 2.3e+00 +/- 6e-01  -->  28.19 %	init : 2.0
+	y0: 3.8e+00 +/- 7e-01  -->  17.30 %	init : 4.0
+	corr_k-sigma	 = -0.77
+	corr_k-x0	 = -0.35
+	corr_k-y0	 = -0.35
+	corr_sigma-x0	 = 0.57
+	corr_sigma-y0	 = 0.42
+	corr_x0-y0	 = 0.19
+xsize (32, 36)
+ysize (48, 54)
+[2.10173288e-05 1.43497225e+00 2.28218314e+00 3.83865883e+00] [7.86756140e-06 6.10421068e-01 6.43693595e-01 6.64154605e-01]
+
+- - - -
+Step 60
+	coor : (66, 3)
+	peak : 0.0003623657440094475
+Max now 66 3
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [2 2]
+Shape no Good
+
+- - - -
+Step 61
+	coor : (73, 39)
+	peak : 0.0003622320284150191
+Max now 73 39
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [38 38]
+Shape no Good
+
+- - - -
+Step 62
+	coor : (33, 25)
+	peak : 0.0003620450572454476
+Max now 33 25
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [24 24]
+Shape no Good
+
+- - - -
+Step 63
+	coor : (14, 31)
+	peak : 0.00036198548216214105
+Max now 14 31
+COMPARE 1 [1 1]
+COMPARE 3 [3 2]
+SHAPE:  (3, 6)
+xsize [1 1]
+ysize [3 2]
+diff [28 29]
+Shape no Good
+
+- - - -
+Step 64
+	coor : (16, 31)
+	peak : 0.0003616774940472866
+Max now 16 31
+COMPARE 1 [1 1]
+COMPARE 6 [6 1]
+SHAPE:  (3, 8)
+xsize [1 1]
+ysize [6 1]
+diff [25 30]
+Shape no Good
+
+- - - -
+Step 65
+	coor : (2, 26)
+	peak : 0.000361534014592597
+Max now 2 26
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [25 25]
+Shape no Good
+
+- - - -
+Step 66
+	coor : (21, 18)
+	peak : 0.00036153237350313984
+Max now 21 18
+COMPARE 3 [3 2]
+COMPARE 1 [1 1]
+SHAPE:  (6, 3)
+xsize [3 2]
+ysize [1 1]
+diff [17 17]
+Shape no Good
+
+- - - -
+Step 67
+	coor : (49, 24)
+	peak : 0.00036136231237966223
+Max now 49 24
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [23 23]
+Shape no Good
+
+- - - -
+Step 68
+	coor : (55, 50)
+	peak : 0.00036135115424895366
+Max now 55 50
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [49 49]
+Shape no Good
+
+- - - -
+Step 69
+	coor : (13, 7)
+	peak : 0.00036132237978131774
+Max now 13 7
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [6 6]
+Shape no Good
+
+- - - -
+Step 70
+	coor : (5, 75)
+	peak : 0.0003612900196726893
+Max now 5 75
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [74 74]
+Shape no Good
+
+- - - -
+Step 71
+	coor : (97, 83)
+	peak : 0.0003612516312611581
+Max now 97 83
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [82 82]
+Shape no Good
+
+- - - -
+Step 72
+	coor : (11, 78)
+	peak : 0.00036124318560455524
+Max now 11 78
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [77 77]
+Shape no Good
+
+- - - -
+Step 73
+	coor : (71, 71)
+	peak : 0.00036118480697769215
+Max now 71 71
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [70 70]
+Shape no Good
+
+- - - -
+Step 74
+	coor : (72, 3)
+	peak : 0.000361065068647162
+Max now 72 3
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [2 2]
+Shape no Good
+
+- - - -
+Step 75
+	coor : (58, 89)
+	peak : 0.00036100635034366573
+Max now 58 89
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [88 88]
+Shape no Good
+
+- - - -
+Step 76
+	coor : (49, 9)
+	peak : 0.0003609357011327918
+Max now 49 9
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [8 8]
+Shape no Good
+
+- - - -
+Step 77
+	coor : (16, 34)
+	peak : 0.0003607908108495247
+Max now 16 34
+COMPARE 1 [1 2]
+COMPARE 3 [3 2]
+SHAPE:  (4, 6)
+          c s
+x compare 1 [1 2]
+y compare 3 [3 2]
+
+sigma0 = 0.7213475204444817
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 3.1039632102689864e-05 +/- 0.00024051666669744378  -->  774.87 %	init : 3.5e-05
+	sigma: -0.7738148445343104 +/- 5.025217402364927  -->  649.41 %	init : 0.72
+	x0: 0.8389751257733497 +/- 5.485373721605484  -->  653.82 %	init : 1.0
+	y0: 5e+00 +/- 7e+00  -->  145.13 %	init : 3.0
+	corr_k-sigma	 = 0.73
+	corr_k-x0	 = -0.0041
+	corr_k-y0	 = -0.17
+	corr_sigma-x0	 = 0.074
+	corr_sigma-y0	 = -0.48
+	corr_x0-y0	 = -0.083
+Check is not good 2
+
+- - - -
+Step 78
+	coor : (37, 28)
+	peak : 0.0003607793562621646
+Max now 37 28
+COMPARE 1 [1 1]
+COMPARE 3 [3 1]
+SHAPE:  (3, 5)
+xsize [1 1]
+ysize [3 1]
+diff [25 27]
+Shape no Good
+
+- - - -
+Step 79
+	coor : (58, 94)
+	peak : 0.00036073321776720934
+Max now 58 94
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [93 93]
+Shape no Good
+
+- - - -
+Step 80
+	coor : (65, 46)
+	peak : 0.00036071062158137815
+Max now 65 46
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [45 45]
+Shape no Good
+
+- - - -
+Step 81
+	coor : (17, 6)
+	peak : 0.00036054912542501726
+Max now 17 6
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [5 5]
+Shape no Good
+
+- - - -
+Step 82
+	coor : (42, 43)
+	peak : 0.0003605088782798673
+Max now 42 43
+COMPARE 2 [2 1]
+COMPARE 2 [2 1]
+SHAPE:  (4, 4)
+          c s
+x compare 2 [2 1]
+y compare 2 [2 1]
+
+sigma0 = 1.4426950408889634
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 2.1e-05 +/- 8e-06  -->  37.50 %	init : 3.5e-05
+	sigma: 3e+00 +/- 3e+00  -->  98.54 %	init : 1.4
+	x0: 2e+00 +/- 1e+00  -->  78.98 %	init : 2.0
+	y0: 2e+00 +/- 1e+00  -->  78.21 %	init : 2.0
+	corr_k-sigma	 = -0.86
+	corr_k-x0	 = -0.086
+	corr_k-y0	 = -0.18
+	corr_sigma-x0	 = 0.14
+	corr_sigma-y0	 = 0.31
+	corr_x0-y0	 = -0.009
+xsize (40, 44)
+ysize (41, 45)
+[2.07210536e-05 2.66514897e+00 1.57064216e+00 1.66172474e+00] [7.76972767e-06 2.62662380e+00 1.24072022e+00 1.29976083e+00]
+
+- - - -
+Step 83
+	coor : (69, 72)
+	peak : 0.00036044914723008125
+Max now 69 72
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [71 71]
+Shape no Good
+
+- - - -
+Step 84
+	coor : (50, 86)
+	peak : 0.0003603680458605881
+Max now 50 86
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [85 85]
+Shape no Good
+
+- - - -
+Step 85
+	coor : (57, 62)
+	peak : 0.0003602075761565833
+Max now 57 62
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [60 61]
+Shape no Good
+
+- - - -
+Step 86
+	coor : (32, 73)
+	peak : 0.0003598624559985426
+Max now 32 73
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [72 72]
+Shape no Good
+
+- - - -
+Step 87
+	coor : (23, 84)
+	peak : 0.00035984374775012033
+Max now 23 84
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [83 83]
+Shape no Good
+
+- - - -
+Step 88
+	coor : (94, 95)
+	peak : 0.00035975977299344716
+Max now 94 95
+COMPARE 1 [1 3]
+COMPARE 1 [1 1]
+SHAPE:  (5, 3)
+xsize [1 3]
+ysize [1 1]
+diff [94 94]
+Shape no Good
+
+- - - -
+Step 89
+	coor : (37, 60)
+	peak : 0.00035972394837297303
+Max now 37 60
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [59 59]
+Shape no Good
+
+- - - -
+Step 90
+	coor : (72, 45)
+	peak : 0.0003596831960074328
+Max now 72 45
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [44 44]
+Shape no Good
+
+- - - -
+Step 91
+	coor : (73, 7)
+	peak : 0.00035961383834279525
+Max now 73 7
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [6 6]
+Shape no Good
+
+- - - -
+Step 92
+	coor : (75, 24)
+	peak : 0.00035953957122799993
+Max now 75 24
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [23 23]
+Shape no Good
+
+- - - -
+Step 93
+	coor : (37, 90)
+	peak : 0.0003595251363392758
+Max now 37 90
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [89 89]
+Shape no Good
+
+- - - -
+Step 94
+	coor : (40, 4)
+	peak : 0.0003595028305858758
+Max now 40 4
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [3 3]
+Shape no Good
+
+- - - -
+Step 95
+	coor : (81, 7)
+	peak : 0.00035943864297521166
+Max now 81 7
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [6 6]
+Shape no Good
+
+- - - -
+Step 96
+	coor : (24, 96)
+	peak : 0.00035941794076585997
+Max now 24 96
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [95 95]
+Shape no Good
+
+- - - -
+Step 97
+	coor : (12, 72)
+	peak : 0.00035940624254904535
+Max now 12 72
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [71 71]
+Shape no Good
+
+- - - -
+Step 98
+	coor : (19, 20)
+	peak : 0.00035935533812321015
+Max now 19 20
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [19 19]
+Shape no Good
+
+- - - -
+Step 99
+	coor : (41, 54)
+	peak : 0.00035887319729160515
+Max now 41 54
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [53 53]
+Shape no Good
+
+- - - -
+Step 100
+	coor : (72, 26)
+	peak : 0.0003587493324012075
+Max now 72 26
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [25 25]
+Shape no Good
+
+- - - -
+Step 101
+	coor : (19, 63)
+	peak : 0.0003587042385299045
+Max now 19 63
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [62 62]
+Shape no Good
+
+- - - -
+Step 102
+	coor : (69, 98)
+	peak : 0.0003586840841636507
+Max now 69 98
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [96 97]
+Shape no Good
+
+- - - -
+Step 103
+	coor : (33, 11)
+	peak : 0.0003586709236804442
+Max now 33 11
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [10 10]
+Shape no Good
+
+- - - -
+Step 104
+	coor : (79, 1)
+	peak : 0.0003586336027988899
+Max now 79 1
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [0 0]
+Shape no Good
+
+- - - -
+Step 105
+	coor : (2, 30)
+	peak : 0.000358456427218948
+Max now 2 30
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [29 29]
+Shape no Good
+
+- - - -
+Step 106
+	coor : (93, 39)
+	peak : 0.00035841377174883045
+Max now 93 39
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [38 38]
+Shape no Good
+
+- - - -
+Step 107
+	coor : (33, 86)
+	peak : 0.0003584062862313505
+Max now 33 86
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [85 85]
+Shape no Good
+
+- - - -
+Step 108
+	coor : (53, 10)
+	peak : 0.0003583826524647639
+Max now 53 10
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [9 9]
+Shape no Good
+
+- - - -
+Step 109
+	coor : (71, 98)
+	peak : 0.00035817593211017563
+Max now 71 98
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [96 97]
+Shape no Good
+
+- - - -
+Step 110
+	coor : (89, 38)
+	peak : 0.0003581508148502374
+Max now 89 38
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [37 37]
+Shape no Good
+
+- - - -
+Step 111
+	coor : (27, 47)
+	peak : 0.00035814984514511236
+Max now 27 47
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [46 46]
+Shape no Good
+
+- - - -
+Step 112
+	coor : (39, 57)
+	peak : 0.0003581058064624837
+Max now 39 57
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [56 56]
+Shape no Good
+
+- - - -
+Step 113
+	coor : (28, 84)
+	peak : 0.00035805478033199077
+Max now 28 84
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [83 83]
+Shape no Good
+
+- - - -
+Step 114
+	coor : (25, 84)
+	peak : 0.000357993859238003
+Max now 25 84
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [83 83]
+Shape no Good
+
+- - - -
+Step 115
+	coor : (84, 98)
+	peak : 0.0003579498472788586
+Max now 84 98
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [96 97]
+Shape no Good
+
+- - - -
+Step 116
+	coor : (31, 78)
+	peak : 0.00035791537911546243
+Max now 31 78
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [77 77]
+Shape no Good
+
+- - - -
+Step 117
+	coor : (29, 12)
+	peak : 0.0003577929653312092
+Max now 29 12
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [11 11]
+Shape no Good
+
+- - - -
+Step 118
+	coor : (93, 10)
+	peak : 0.00035776984218391903
+Max now 93 10
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [9 9]
+Shape no Good
+
+- - - -
+Step 119
+	coor : (13, 14)
+	peak : 0.0003577034160436349
+Max now 13 14
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [13 13]
+Shape no Good
+
+- - - -
+Step 120
+	coor : (88, 95)
+	peak : 0.00035765464025236567
+Max now 88 95
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [94 94]
+Shape no Good
+
+- - - -
+Step 121
+	coor : (54, 71)
+	peak : 0.00035765432457301164
+Max now 54 71
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [70 70]
+Shape no Good
+
+- - - -
+Step 122
+	coor : (10, 3)
+	peak : 0.00035758816221250134
+Max now 10 3
+COMPARE 1 [1 3]
+COMPARE 1 [1 1]
+SHAPE:  (5, 3)
+xsize [1 3]
+ysize [1 1]
+diff [2 2]
+Shape no Good
+
+- - - -
+Step 123
+	coor : (25, 30)
+	peak : 0.00035758160250483936
+Max now 25 30
+COMPARE 2 [2 1]
+COMPARE 1 [1 2]
+SHAPE:  (4, 4)
+          c s
+x compare 2 [2 1]
+y compare 1 [1 2]
+
+sigma0 = 1.6129820911147805
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 0.0009716281361780766 +/- 201.5521081880306  -->  20743749.66 %	init : 3.2e-05
+	sigma: 0.25477086748830785 +/- 7008.872719642666  -->  2751049.52 %	init : 1.6
+	x0: 2.4766484079547926 +/- 1286.938365160268  -->  51962.90 %	init : 2.0
+	y0: 0.5371704637502162 +/- 2048.515870664942  -->  381353.04 %	init : 1.0
+	corr_k-sigma	 = -1.0
+	corr_k-x0	 = 1.0
+	corr_k-y0	 = -1.0
+	corr_sigma-x0	 = -1.0
+	corr_sigma-y0	 = 1.0
+	corr_x0-y0	 = -1.0
+Check is not good 2
+
+- - - -
+Step 124
+	coor : (41, 82)
+	peak : 0.00035752538353748154
+Max now 41 82
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [80 81]
+Shape no Good
+
+- - - -
+Step 125
+	coor : (90, 44)
+	peak : 0.0003575106273701187
+Max now 90 44
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [43 43]
+Shape no Good
+
+- - - -
+Step 126
+	coor : (39, 81)
+	peak : 0.00035749841164541327
+Max now 39 81
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [80 80]
+Shape no Good
+
+- - - -
+Step 127
+	coor : (26, 68)
+	peak : 0.0003574971725124578
+Max now 26 68
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [67 67]
+Shape no Good
+
+- - - -
+Step 128
+	coor : (28, 3)
+	peak : 0.0003573733052918242
+Max now 28 3
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [1 2]
+Shape no Good
+
+- - - -
+Step 129
+	coor : (23, 11)
+	peak : 0.0003573467156997459
+Max now 23 11
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [10 10]
+Shape no Good
+
+- - - -
+Step 130
+	coor : (14, 59)
+	peak : 0.0003572922623050421
+Max now 14 59
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [58 58]
+Shape no Good
+
+- - - -
+Step 131
+	coor : (61, 37)
+	peak : 0.00035727740957502133
+Max now 61 37
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [36 36]
+Shape no Good
+
+- - - -
+Step 132
+	coor : (73, 37)
+	peak : 0.0003570074870428677
+Max now 73 37
+COMPARE 2 [2 1]
+COMPARE 1 [1 2]
+SHAPE:  (4, 4)
+          c s
+x compare 2 [2 1]
+y compare 1 [1 2]
+
+sigma0 = 1.0201394465967897
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: -4.8e-04 +/- 8e-05  -->  15.95 %	init : 3.1e-05
+	sigma: -1.1e+00 +/- 2e-01  -->  17.87 %	init : 1.0
+	x0: 2.2e+00 +/- 2e-01  -->  8.74 %	init : 2.0
+	y0: 2.9e+00 +/- 3e-01  -->  10.21 %	init : 1.0
+	corr_k-sigma	 = -0.51
+	corr_k-x0	 = -0.044
+	corr_k-y0	 = -0.071
+	corr_sigma-x0	 = -0.37
+	corr_sigma-y0	 = -0.65
+	corr_x0-y0	 = 0.47
+Check is not good 2
+
+- - - -
+Step 133
+	coor : (85, 28)
+	peak : 0.00035700202225260523
+Max now 85 28
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [27 27]
+Shape no Good
+
+- - - -
+Step 134
+	coor : (83, 30)
+	peak : 0.0003569954355143445
+Max now 83 30
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [29 29]
+Shape no Good
+
+- - - -
+Step 135
+	coor : (2, 75)
+	peak : 0.00035692965121545295
+Max now 2 75
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [74 74]
+Shape no Good
+
+- - - -
+Step 136
+	coor : (29, 48)
+	peak : 0.00035690470811048963
+Max now 29 48
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [47 47]
+Shape no Good
+
+- - - -
+Step 137
+	coor : (98, 39)
+	peak : 0.0003568622221434104
+Max now 98 39
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [38 38]
+Shape no Good
+
+- - - -
+Step 138
+	coor : (10, 14)
+	peak : 0.0003568618337273032
+Max now 10 14
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [13 13]
+Shape no Good
+
+- - - -
+Step 139
+	coor : (70, 36)
+	peak : 0.00035679504645070003
+Max now 70 36
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [35 35]
+Shape no Good
+
+- - - -
+Step 140
+	coor : (23, 69)
+	peak : 0.00035674675382821834
+Max now 23 69
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [68 68]
+Shape no Good
+
+- - - -
+Step 141
+	coor : (58, 72)
+	peak : 0.00035673456133654446
+Max now 58 72
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [71 71]
+Shape no Good
+
+- - - -
+Step 142
+	coor : (0, 36)
+	peak : 0.0003566590968175797
+Max now 0 36
+COMPARE 0 [0 0]
+COMPARE 1 [1 2]
+SHAPE:  (1, 4)
+xsize [0 0]
+ysize [1 2]
+diff [35 34]
+Shape no Good
+
+- - - -
+Step 143
+	coor : (35, 58)
+	peak : 0.0003566445465845294
+Max now 35 58
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [57 57]
+Shape no Good
+
+- - - -
+Step 144
+	coor : (71, 41)
+	peak : 0.0003565270199364431
+Max now 71 41
+COMPARE 2 [2 3]
+COMPARE 1 [1 1]
+SHAPE:  (6, 3)
+xsize [2 3]
+ysize [1 1]
+diff [40 40]
+Shape no Good
+
+- - - -
+Step 145
+	coor : (85, 78)
+	peak : 0.0003565238769275507
+Max now 85 78
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [77 77]
+Shape no Good
+
+- - - -
+Step 146
+	coor : (21, 78)
+	peak : 0.0003563973860620288
+Max now 21 78
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [77 77]
+Shape no Good
+
+- - - -
+Step 147
+	coor : (89, 92)
+	peak : 0.0003563885935087194
+Max now 89 92
+COMPARE 1 [1 1]
+COMPARE 1 [1 2]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [1 2]
+diff [91 90]
+Shape no Good
+
+- - - -
+Step 148
+	coor : (36, 30)
+	peak : 0.000356261102060836
+Max now 36 30
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [29 29]
+Shape no Good
+
+- - - -
+Step 149
+	coor : (60, 25)
+	peak : 0.0003562304520011785
+Max now 60 25
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [24 24]
+Shape no Good
+
+- - - -
+Step 150
+	coor : (60, 5)
+	peak : 0.00035615406061479586
+Max now 60 5
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [4 4]
+Shape no Good
+
+- - - -
+Step 151
+	coor : (36, 94)
+	peak : 0.00035613394619038615
+Max now 36 94
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [93 93]
+Shape no Good
+
+- - - -
+Step 152
+	coor : (86, 24)
+	peak : 0.0003561180549878023
+Max now 86 24
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [23 23]
+Shape no Good
+
+- - - -
+Step 153
+	coor : (62, 23)
+	peak : 0.00035608882844793553
+Max now 62 23
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [22 22]
+Shape no Good
+
+- - - -
+Step 154
+	coor : (31, 29)
+	peak : 0.00035607886188735745
+Max now 31 29
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [28 28]
+Shape no Good
+
+- - - -
+Step 155
+	coor : (56, 88)
+	peak : 0.0003560363588132248
+Max now 56 88
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [87 87]
+Shape no Good
+
+- - - -
+Step 156
+	coor : (76, 34)
+	peak : 0.0003560057481210262
+Max now 76 34
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [33 33]
+Shape no Good
+
+- - - -
+Step 157
+	coor : (28, 80)
+	peak : 0.0003559931811450253
+Max now 28 80
+COMPARE 1 [1 3]
+COMPARE 1 [1 1]
+SHAPE:  (5, 3)
+xsize [1 3]
+ysize [1 1]
+diff [79 79]
+Shape no Good
+
+- - - -
+Step 158
+	coor : (22, 81)
+	peak : 0.00035595156072648496
+Max now 22 81
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [80 80]
+Shape no Good
+
+- - - -
+Step 159
+	coor : (43, 94)
+	peak : 0.00035586943640869535
+Max now 43 94
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [93 93]
+Shape no Good
+
+- - - -
+Step 160
+	coor : (62, 83)
+	peak : 0.00035580097584492714
+Max now 62 83
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [82 82]
+Shape no Good
+
+- - - -
+Step 161
+	coor : (88, 25)
+	peak : 0.0003557340298075882
+Max now 88 25
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [24 24]
+Shape no Good
+
+- - - -
+Step 162
+	coor : (88, 29)
+	peak : 0.00035573330083948484
+Max now 88 29
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [28 28]
+Shape no Good
+
+- - - -
+Step 163
+	coor : (12, 49)
+	peak : 0.00035571933547800616
+Max now 12 49
+COMPARE 2 [2 1]
+COMPARE 2 [2 1]
+SHAPE:  (4, 4)
+          c s
+x compare 2 [2 1]
+y compare 2 [2 1]
+
+sigma0 = 1.0201394465967897
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 4e-05 +/- 3e-05  -->  59.72 %	init : 3e-05
+	sigma: 6e-01 +/- 3e-01  -->  40.54 %	init : 1.0
+	x0: 2.4e+00 +/- 3e-01  -->  12.86 %	init : 2.0
+	y0: 2.3e+00 +/- 3e-01  -->  14.26 %	init : 2.0
+	corr_k-sigma	 = -0.78
+	corr_k-x0	 = 0.14
+	corr_k-y0	 = 0.22
+	corr_sigma-x0	 = 0.028
+	corr_sigma-y0	 = -0.15
+	corr_x0-y0	 = 0.17
+xsize (10, 14)
+ysize (47, 51)
+[ 4.20661315e-05 -6.43811954e-01  2.41951995e+00  2.25847456e+00] [2.51210634e-05 2.61029977e-01 3.11118331e-01 3.21946742e-01]
+rec_obj is None
+
+- - - -
+Step 164
+	coor : (7, 77)
+	peak : 0.0003556214414672487
+Max now 7 77
+COMPARE 1 [1 1]
+COMPARE 3 [3 1]
+SHAPE:  (3, 5)
+xsize [1 1]
+ysize [3 1]
+diff [74 76]
+Shape no Good
+
+- - - -
+Step 165
+	coor : (59, 22)
+	peak : 0.0003555747198533401
+Max now 59 22
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [21 21]
+Shape no Good
+
+- - - -
+Step 166
+	coor : (29, 73)
+	peak : 0.0003555210833823071
+Max now 29 73
+COMPARE 1 [1 1]
+COMPARE 1 [1 2]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [1 2]
+diff [72 71]
+Shape no Good
+
+- - - -
+Step 167
+	coor : (54, 8)
+	peak : 0.0003554369242455377
+Max now 54 8
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [7 7]
+Shape no Good
+
+- - - -
+Step 168
+	coor : (66, 77)
+	peak : 0.00035543562018526244
+Max now 66 77
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [76 76]
+Shape no Good
+
+- - - -
+Step 169
+	coor : (60, 75)
+	peak : 0.00035532970457948334
+Max now 60 75
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [74 74]
+Shape no Good
+
+- - - -
+Step 170
+	coor : (84, 8)
+	peak : 0.0003553063282638219
+Max now 84 8
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [7 7]
+Shape no Good
+
+- - - -
+Step 171
+	coor : (60, 87)
+	peak : 0.00035513448451945364
+Max now 60 87
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [86 86]
+Shape no Good
+
+- - - -
+Step 172
+	coor : (47, 32)
+	peak : 0.00035511100797695685
+Max now 47 32
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [31 31]
+Shape no Good
+
+- - - -
+Step 173
+	coor : (28, 32)
+	peak : 0.00035508279444998155
+Max now 28 32
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [31 31]
+Shape no Good
+
+- - - -
+Step 174
+	coor : (93, 86)
+	peak : 0.00035504988166162486
+Max now 93 86
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [85 85]
+Shape no Good
+
+- - - -
+Step 175
+	coor : (16, 63)
+	peak : 0.00035504714727759007
+Max now 16 63
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [62 62]
+Shape no Good
+
+- - - -
+Step 176
+	coor : (95, 1)
+	peak : 0.0003550121937071705
+Max now 95 1
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [0 0]
+Shape no Good
+
+- - - -
+Step 177
+	coor : (40, 33)
+	peak : 0.0003549020343121749
+Max now 40 33
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [32 32]
+Shape no Good
+
+- - - -
+Step 178
+	coor : (7, 1)
+	peak : 0.00035487329816233983
+Max now 7 1
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [0 0]
+Shape no Good
+
+- - - -
+Step 179
+	coor : (3, 51)
+	peak : 0.0003548728863978508
+Max now 3 51
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [50 50]
+Shape no Good
+
+- - - -
+Step 180
+	coor : (78, 9)
+	peak : 0.00035483711144992876
+Max now 78 9
+COMPARE 2 [2 2]
+COMPARE 1 [1 1]
+SHAPE:  (5, 3)
+xsize [2 2]
+ysize [1 1]
+diff [8 8]
+Shape no Good
+
+- - - -
+Step 181
+	coor : (82, 23)
+	peak : 0.00035468432044039435
+Max now 82 23
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [22 22]
+Shape no Good
+
+- - - -
+Step 182
+	coor : (23, 22)
+	peak : 0.0003546233129416815
+Max now 23 22
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [21 21]
+Shape no Good
+
+- - - -
+Step 183
+	coor : (34, 38)
+	peak : 0.00035461173608857454
+Max now 34 38
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [37 37]
+Shape no Good
+
+- - - -
+Step 184
+	coor : (27, 17)
+	peak : 0.0003544321131605845
+Max now 27 17
+COMPARE 1 [1 1]
+COMPARE 1 [1 2]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [1 2]
+diff [16 15]
+Shape no Good
+
+- - - -
+Step 185
+	coor : (12, 32)
+	peak : 0.0003543693027282713
+Max now 12 32
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [31 31]
+Shape no Good
+
+- - - -
+Step 186
+	coor : (69, 79)
+	peak : 0.0003543471994801471
+Max now 69 79
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [78 78]
+Shape no Good
+
+- - - -
+Step 187
+	coor : (68, 53)
+	peak : 0.00035427165668036804
+Max now 68 53
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [52 52]
+Shape no Good
+
+- - - -
+Step 188
+	coor : (93, 37)
+	peak : 0.0003542576927318132
+Max now 93 37
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [36 36]
+Shape no Good
+
+- - - -
+Step 189
+	coor : (34, 19)
+	peak : 0.00035421307995423993
+Max now 34 19
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [18 18]
+Shape no Good
+
+- - - -
+Step 190
+	coor : (29, 26)
+	peak : 0.0003541303838884381
+Max now 29 26
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [24 25]
+Shape no Good
+
+- - - -
+Step 191
+	coor : (24, 64)
+	peak : 0.0003541272349851619
+Max now 24 64
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [63 63]
+Shape no Good
+
+- - - -
+Step 192
+	coor : (45, 8)
+	peak : 0.00035410405037978877
+Max now 45 8
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [7 7]
+Shape no Good
+
+- - - -
+Step 193
+	coor : (97, 23)
+	peak : 0.00035409545926057804
+Max now 97 23
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [22 22]
+Shape no Good
+
+- - - -
+Step 194
+	coor : (27, 50)
+	peak : 0.0003540904157460594
+Max now 27 50
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [49 49]
+Shape no Good
+
+- - - -
+Step 195
+	coor : (80, 96)
+	peak : 0.0003540681688073779
+Max now 80 96
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [95 95]
+Shape no Good
+
+- - - -
+Step 196
+	coor : (77, 44)
+	peak : 0.00035404035097366183
+Max now 77 44
+COMPARE 1 [1 1]
+COMPARE 1 [1 2]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [1 2]
+diff [43 42]
+Shape no Good
+
+- - - -
+Step 197
+	coor : (43, 49)
+	peak : 0.00035395147751276726
+Max now 43 49
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [48 48]
+Shape no Good
+
+- - - -
+Step 198
+	coor : (58, 20)
+	peak : 0.0003539220846855125
+Max now 58 20
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [19 19]
+Shape no Good
+
+- - - -
+Step 199
+	coor : (77, 16)
+	peak : 0.00035387182434954464
+Max now 77 16
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [15 15]
+Shape no Good
+
+- - - -
+Step 200
+	coor : (50, 78)
+	peak : 0.00035373377408097603
+Max now 50 78
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [77 77]
+Shape no Good
+
+- - - -
+Step 201
+	coor : (3, 10)
+	peak : 0.00035365983771135946
+Max now 3 10
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [9 9]
+Shape no Good
+
+- - - -
+Step 202
+	coor : (25, 26)
+	peak : 0.00035365288786032945
+Max now 25 26
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [25 25]
+Shape no Good
+
+- - - -
+Step 203
+	coor : (28, 86)
+	peak : 0.00035364427627489447
+Max now 28 86
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [85 85]
+Shape no Good
+
+- - - -
+Step 204
+	coor : (91, 82)
+	peak : 0.0003536255841895393
+Max now 91 82
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [81 81]
+Shape no Good
+
+- - - -
+Step 205
+	coor : (61, 72)
+	peak : 0.0003535513020667537
+Max now 61 72
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [71 71]
+Shape no Good
+
+- - - -
+Step 206
+	coor : (63, 57)
+	peak : 0.0003534537078750638
+Max now 63 57
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [56 56]
+Shape no Good
+
+- - - -
+Step 207
+	coor : (3, 36)
+	peak : 0.00035339840188823525
+Max now 3 36
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [35 35]
+Shape no Good
+
+- - - -
+Step 208
+	coor : (19, 61)
+	peak : 0.00035334880911916107
+Max now 19 61
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [60 60]
+Shape no Good
+
+- - - -
+Step 209
+	coor : (55, 66)
+	peak : 0.0003532946695229185
+Max now 55 66
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [65 65]
+Shape no Good
+
+- - - -
+Step 210
+	coor : (2, 33)
+	peak : 0.0003532501932543149
+Max now 2 33
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [32 32]
+Shape no Good
+
+- - - -
+Step 211
+	coor : (18, 46)
+	peak : 0.0003531602935100427
+Max now 18 46
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [45 45]
+Shape no Good
+
+- - - -
+Step 212
+	coor : (17, 8)
+	peak : 0.00035314813860749735
+Max now 17 8
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [7 7]
+Shape no Good
+
+- - - -
+Step 213
+	coor : (38, 92)
+	peak : 0.00035310297523304503
+Max now 38 92
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [91 91]
+Shape no Good
+
+- - - -
+Step 214
+	coor : (73, 21)
+	peak : 0.000353102728706738
+Max now 73 21
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [19 20]
+Shape no Good
+
+- - - -
+Step 215
+	coor : (64, 53)
+	peak : 0.0003531014027801596
+Max now 64 53
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [52 52]
+Shape no Good
+
+- - - -
+Step 216
+	coor : (15, 8)
+	peak : 0.00035306326413247314
+Max now 15 8
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [7 7]
+Shape no Good
+
+- - - -
+Step 217
+	coor : (99, 94)
+	peak : 0.0003530130623246229
+Max now 99 94
+COMPARE 0 [0 0]
+COMPARE 1 [1 1]
+SHAPE:  (1, 3)
+xsize [0 0]
+ysize [1 1]
+diff [93 93]
+Shape no Good
+
+- - - -
+Step 218
+	coor : (93, 29)
+	peak : 0.00035295004791667577
+Max now 93 29
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [28 28]
+Shape no Good
+
+- - - -
+Step 219
+	coor : (78, 99)
+	peak : 0.0003528891225794947
+Max now 78 99
+COMPARE 1 [1 0]
+COMPARE 0 [0 1]
+SHAPE:  (2, 1)
+xsize [1 0]
+ysize [0 1]
+diff [99 98]
+Shape no Good
+
+- - - -
+Step 220
+	coor : (64, 78)
+	peak : 0.00035285739429474365
+Max now 64 78
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [77 77]
+Shape no Good
+
+- - - -
+Step 221
+	coor : (45, 12)
+	peak : 0.00035281962165645297
+Max now 45 12
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [11 11]
+Shape no Good
+
+- - - -
+Step 222
+	coor : (32, 36)
+	peak : 0.00035281941867057877
+Max now 32 36
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [35 35]
+Shape no Good
+
+- - - -
+Step 223
+	coor : (74, 15)
+	peak : 0.0003526558949337338
+Max now 74 15
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [14 14]
+Shape no Good
+
+- - - -
+Step 224
+	coor : (67, 84)
+	peak : 0.00035262054667915105
+Max now 67 84
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [82 83]
+Shape no Good
+
+- - - -
+Step 225
+	coor : (9, 63)
+	peak : 0.0003526200455919815
+Max now 9 63
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [62 62]
+Shape no Good
+
+- - - -
+Step 226
+	coor : (64, 50)
+	peak : 0.00035260692038843
+Max now 64 50
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [49 49]
+Shape no Good
+
+- - - -
+Step 227
+	coor : (69, 48)
+	peak : 0.00035256594698591915
+Max now 69 48
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [46 47]
+Shape no Good
+
+- - - -
+Step 228
+	coor : (68, 3)
+	peak : 0.0003525410318329023
+Max now 68 3
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [2 2]
+Shape no Good
+
+- - - -
+Step 229
+	coor : (97, 85)
+	peak : 0.00035247848763160863
+Max now 97 85
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [84 84]
+Shape no Good
+
+- - - -
+Step 230
+	coor : (29, 18)
+	peak : 0.0003524528798202486
+Max now 29 18
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [17 17]
+Shape no Good
+
+- - - -
+Step 231
+	coor : (12, 26)
+	peak : 0.0003524424724459141
+Max now 12 26
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [25 25]
+Shape no Good
+
+- - - -
+Step 232
+	coor : (32, 64)
+	peak : 0.00035244033519195425
+Max now 32 64
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [63 63]
+Shape no Good
+
+- - - -
+Step 233
+	coor : (6, 36)
+	peak : 0.00035241961621986206
+Max now 6 36
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [35 35]
+Shape no Good
+
+- - - -
+Step 234
+	coor : (71, 1)
+	peak : 0.0003524071881599026
+Max now 71 1
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [0 0]
+Shape no Good
+
+- - - -
+Step 235
+	coor : (29, 62)
+	peak : 0.0003523059101708755
+Max now 29 62
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [61 61]
+Shape no Good
+
+- - - -
+Step 236
+	coor : (48, 12)
+	peak : 0.0003522325150035806
+Max now 48 12
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [11 11]
+Shape no Good
+
+- - - -
+Step 237
+	coor : (74, 1)
+	peak : 0.0003522275104068977
+Max now 74 1
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [0 0]
+Shape no Good
+
+- - - -
+Step 238
+	coor : (34, 54)
+	peak : 0.00035214542671079945
+Max now 34 54
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [53 53]
+Shape no Good
+
+- - - -
+Step 239
+	coor : (92, 95)
+	peak : 0.0003521294644953478
+Max now 92 95
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [94 94]
+Shape no Good
+
+- - - -
+Step 240
+	coor : (85, 31)
+	peak : 0.00035212619340792154
+Max now 85 31
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [30 30]
+Shape no Good
+
+- - - -
+Step 241
+	coor : (61, 67)
+	peak : 0.0003521092084178881
+Max now 61 67
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [66 66]
+Shape no Good
+
+- - - -
+Step 242
+	coor : (96, 41)
+	peak : 0.00035210129612462293
+Max now 96 41
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [40 40]
+Shape no Good
+
+- - - -
+Step 243
+	coor : (87, 27)
+	peak : 0.0003520787527123481
+Max now 87 27
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [26 26]
+Shape no Good
+
+- - - -
+Step 244
+	coor : (17, 56)
+	peak : 0.00035207829179957303
+Max now 17 56
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [55 55]
+Shape no Good
+
+- - - -
+Step 245
+	coor : (39, 61)
+	peak : 0.00035206709589998865
+Max now 39 61
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [59 60]
+Shape no Good
+
+- - - -
+Step 246
+	coor : (70, 74)
+	peak : 0.0003520511575684309
+Max now 70 74
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [72 73]
+Shape no Good
+
+- - - -
+Step 247
+	coor : (82, 68)
+	peak : 0.0003518880873915091
+Max now 82 68
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [67 67]
+Shape no Good
+
+- - - -
+Step 248
+	coor : (17, 41)
+	peak : 0.0003516687999121485
+Max now 17 41
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [40 40]
+Shape no Good
+
+- - - -
+Step 249
+	coor : (85, 17)
+	peak : 0.000351579734245994
+Max now 85 17
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [16 16]
+Shape no Good
+
+- - - -
+Step 250
+	coor : (45, 89)
+	peak : 0.0003515321472924375
+Max now 45 89
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [88 88]
+Shape no Good
+
+- - - -
+Step 251
+	coor : (3, 22)
+	peak : 0.000351472258186799
+Max now 3 22
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [21 21]
+Shape no Good
+
+- - - -
+Step 252
+	coor : (19, 33)
+	peak : 0.00035146267230864303
+Max now 19 33
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [32 32]
+Shape no Good
+
+- - - -
+Step 253
+	coor : (58, 17)
+	peak : 0.00035143292746718686
+Max now 58 17
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [16 16]
+Shape no Good
+
+- - - -
+Step 254
+	coor : (95, 9)
+	peak : 0.00035138774279849756
+Max now 95 9
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [8 8]
+Shape no Good
+
+- - - -
+Step 255
+	coor : (11, 46)
+	peak : 0.00035136617183392083
+Max now 11 46
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [45 45]
+Shape no Good
+
+- - - -
+Step 256
+	coor : (45, 21)
+	peak : 0.0003513576283715025
+Max now 45 21
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [20 20]
+Shape no Good
+
+- - - -
+Step 257
+	coor : (42, 74)
+	peak : 0.0003513554515928357
+Max now 42 74
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [73 73]
+Shape no Good
+
+- - - -
+Step 258
+	coor : (14, 2)
+	peak : 0.0003513487057995007
+Max now 14 2
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [1 1]
+Shape no Good
+
+- - - -
+Step 259
+	coor : (62, 12)
+	peak : 0.0003512342806015324
+Max now 62 12
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [11 11]
+Shape no Good
+
+- - - -
+Step 260
+	coor : (49, 7)
+	peak : 0.00035120764288768154
+Max now 49 7
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [6 6]
+Shape no Good
+
+- - - -
+Step 261
+	coor : (12, 76)
+	peak : 0.00035116700989571076
+Max now 12 76
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [75 75]
+Shape no Good
+
+- - - -
+Step 262
+	coor : (82, 36)
+	peak : 0.00035116149202665266
+Max now 82 36
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [35 35]
+Shape no Good
+
+- - - -
+Step 263
+	coor : (44, 31)
+	peak : 0.0003511258558363631
+Max now 44 31
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [30 30]
+Shape no Good
+
+- - - -
+Step 264
+	coor : (9, 53)
+	peak : 0.00035112405513275277
+Max now 9 53
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [51 52]
+Shape no Good
+
+- - - -
+Step 265
+	coor : (64, 10)
+	peak : 0.00035104749361574783
+Max now 64 10
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [9 9]
+Shape no Good
+
+- - - -
+Step 266
+	coor : (95, 88)
+	peak : 0.0003510304020655562
+Max now 95 88
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [87 87]
+Shape no Good
+
+- - - -
+Step 267
+	coor : (33, 13)
+	peak : 0.0003509835030155631
+Max now 33 13
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [12 12]
+Shape no Good
+
+- - - -
+Step 268
+	coor : (30, 23)
+	peak : 0.0003509780407622391
+Max now 30 23
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [22 22]
+Shape no Good
+
+- - - -
+Step 269
+	coor : (5, 38)
+	peak : 0.0003509690845355405
+Max now 5 38
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [37 37]
+Shape no Good
+
+- - - -
+Step 270
+	coor : (22, 14)
+	peak : 0.0003509371537455898
+Max now 22 14
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [13 13]
+Shape no Good
+
+- - - -
+Step 271
+	coor : (40, 26)
+	peak : 0.00035093586713557865
+Max now 40 26
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [25 25]
+Shape no Good
+
+- - - -
+Step 272
+	coor : (30, 60)
+	peak : 0.00035090824199266677
+Max now 30 60
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [59 59]
+Shape no Good
+
+- - - -
+Step 273
+	coor : (9, 80)
+	peak : 0.00035089534380450217
+Max now 9 80
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [79 79]
+Shape no Good
+
+- - - -
+Step 274
+	coor : (70, 33)
+	peak : 0.0003508892115278882
+Max now 70 33
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [32 32]
+Shape no Good
+
+- - - -
+Step 275
+	coor : (18, 97)
+	peak : 0.0003508467805490093
+Max now 18 97
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [96 96]
+Shape no Good
+
+- - - -
+Step 276
+	coor : (1, 15)
+	peak : 0.0003508453937558814
+Max now 1 15
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [14 14]
+Shape no Good
+
+- - - -
+Step 277
+	coor : (3, 77)
+	peak : 0.00035082952407231895
+Max now 3 77
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [76 76]
+Shape no Good
+
+- - - -
+Step 278
+	coor : (19, 23)
+	peak : 0.00035082151257942055
+Max now 19 23
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [22 22]
+Shape no Good
+
+- - - -
+Step 279
+	coor : (4, 48)
+	peak : 0.0003507104530826692
+Max now 4 48
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [47 47]
+Shape no Good
+
+- - - -
+Step 280
+	coor : (92, 89)
+	peak : 0.0003506815685947108
+Max now 92 89
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [88 88]
+Shape no Good
+
+- - - -
+Step 281
+	coor : (22, 44)
+	peak : 0.0003506774494783367
+Max now 22 44
+COMPARE 1 [1 1]
+COMPARE 1 [1 2]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [1 2]
+diff [43 42]
+Shape no Good
+
+- - - -
+Step 282
+	coor : (91, 8)
+	peak : 0.00035065861518097593
+Max now 91 8
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [7 7]
+Shape no Good
+
+- - - -
+Step 283
+	coor : (54, 13)
+	peak : 0.0003506364056307975
+Max now 54 13
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [12 12]
+Shape no Good
+
+- - - -
+Step 284
+	coor : (36, 66)
+	peak : 0.00035058707033142896
+Max now 36 66
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [65 65]
+Shape no Good
+
+- - - -
+Step 285
+	coor : (86, 19)
+	peak : 0.0003505772925762004
+Max now 86 19
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [18 18]
+Shape no Good
+
+- - - -
+Step 286
+	coor : (52, 24)
+	peak : 0.00035050824808775067
+Max now 52 24
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [23 23]
+Shape no Good
+
+- - - -
+Step 287
+	coor : (10, 34)
+	peak : 0.0003505063617930173
+Max now 10 34
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [33 33]
+Shape no Good
+
+- - - -
+Step 288
+	coor : (65, 39)
+	peak : 0.00035047282178988907
+Max now 65 39
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [38 38]
+Shape no Good
+
+- - - -
+Step 289
+	coor : (25, 9)
+	peak : 0.000350443320250049
+Max now 25 9
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [7 8]
+Shape no Good
+
+- - - -
+Step 290
+	coor : (73, 68)
+	peak : 0.0003504338798566683
+Max now 73 68
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [67 67]
+Shape no Good
+
+- - - -
+Step 291
+	coor : (8, 17)
+	peak : 0.00035041573863564275
+Max now 8 17
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [16 16]
+Shape no Good
+
+- - - -
+Step 292
+	coor : (81, 80)
+	peak : 0.0003503724138135912
+Max now 81 80
+COMPARE 3 [3 2]
+COMPARE 1 [1 1]
+SHAPE:  (6, 3)
+xsize [3 2]
+ysize [1 1]
+diff [79 79]
+Shape no Good
+
+- - - -
+Step 293
+	coor : (37, 64)
+	peak : 0.0003503597596670729
+Max now 37 64
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [63 63]
+Shape no Good
+
+- - - -
+Step 294
+	coor : (82, 42)
+	peak : 0.00035035521647432664
+Max now 82 42
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [41 41]
+Shape no Good
+
+- - - -
+Step 295
+	coor : (30, 71)
+	peak : 0.0003503380192423665
+Max now 30 71
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [70 70]
+Shape no Good
+
+- - - -
+Step 296
+	coor : (76, 73)
+	peak : 0.000350336570796959
+Max now 76 73
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [72 72]
+Shape no Good
+
+- - - -
+Step 297
+	coor : (33, 83)
+	peak : 0.00035033339950653883
+Max now 33 83
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [82 82]
+Shape no Good
+
+- - - -
+Step 298
+	coor : (1, 90)
+	peak : 0.0003502794505445657
+Max now 1 90
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [89 89]
+Shape no Good
+
+- - - -
+Step 299
+	coor : (16, 10)
+	peak : 0.00035016050974617764
+Max now 16 10
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [9 9]
+Shape no Good
+
+- - - -
+Step 300
+	coor : (88, 3)
+	peak : 0.0003501585620403938
+Max now 88 3
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [2 2]
+Shape no Good
+
+- - - -
+Step 301
+	coor : (73, 77)
+	peak : 0.00035012035464657257
+Max now 73 77
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [76 76]
+Shape no Good
+
+- - - -
+Step 302
+	coor : (32, 21)
+	peak : 0.0003501146411500546
+Max now 32 21
+COMPARE 1 [1 1]
+COMPARE 1 [1 2]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [1 2]
+diff [20 19]
+Shape no Good
+
+- - - -
+Step 303
+	coor : (28, 29)
+	peak : 0.00035011383777762124
+Max now 28 29
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [28 28]
+Shape no Good
+
+- - - -
+Step 304
+	coor : (27, 54)
+	peak : 0.0003501120778881309
+Max now 27 54
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [53 53]
+Shape no Good
+
+- - - -
+Step 305
+	coor : (7, 23)
+	peak : 0.00035007453482933715
+Max now 7 23
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [22 22]
+Shape no Good
+
+- - - -
+Step 306
+	coor : (65, 43)
+	peak : 0.00035005584388497036
+Max now 65 43
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [42 42]
+Shape no Good
+
+- - - -
+Step 307
+	coor : (57, 91)
+	peak : 0.0003500532752873793
+Max now 57 91
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [90 90]
+Shape no Good
+
+- - - -
+Step 308
+	coor : (20, 28)
+	peak : 0.0003499968688160126
+Max now 20 28
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [27 27]
+Shape no Good
+
+- - - -
+Step 309
+	coor : (14, 17)
+	peak : 0.00034998578858557074
+Max now 14 17
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [16 16]
+Shape no Good
+
+- - - -
+Step 310
+	coor : (43, 34)
+	peak : 0.0003499852200326772
+Max now 43 34
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [33 33]
+Shape no Good
+
+- - - -
+Step 311
+	coor : (33, 75)
+	peak : 0.0003499708404380747
+Max now 33 75
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [74 74]
+Shape no Good
+
+- - - -
+Step 312
+	coor : (59, 13)
+	peak : 0.0003499110867527298
+Max now 59 13
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [12 12]
+Shape no Good
+
+- - - -
+Step 313
+	coor : (86, 96)
+	peak : 0.00034990059547015864
+Max now 86 96
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [95 95]
+Shape no Good
+
+- - - -
+Step 314
+	coor : (21, 36)
+	peak : 0.00034986977221523294
+Max now 21 36
+COMPARE 1 [1 1]
+COMPARE 1 [1 2]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [1 2]
+diff [35 34]
+Shape no Good
+
+- - - -
+Step 315
+	coor : (25, 35)
+	peak : 0.0003498609747170043
+Max now 25 35
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [34 34]
+Shape no Good
+
+- - - -
+Step 316
+	coor : (70, 22)
+	peak : 0.0003498590069169286
+Max now 70 22
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [21 21]
+Shape no Good
+
+- - - -
+Step 317
+	coor : (69, 38)
+	peak : 0.00034980535245093044
+Max now 69 38
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [36 37]
+Shape no Good
+
+- - - -
+Step 318
+	coor : (0, 87)
+	peak : 0.00034977910974552873
+Max now 0 87
+COMPARE 0 [0 0]
+COMPARE 1 [1 1]
+SHAPE:  (1, 3)
+xsize [0 0]
+ysize [1 1]
+diff [86 86]
+Shape no Good
+
+- - - -
+Step 319
+	coor : (89, 18)
+	peak : 0.0003497666867799419
+Max now 89 18
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [17 17]
+Shape no Good
+
+- - - -
+Step 320
+	coor : (11, 41)
+	peak : 0.0003497613250343916
+Max now 11 41
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [40 40]
+Shape no Good
+
+- - - -
+Step 321
+	coor : (21, 92)
+	peak : 0.00034973993587406114
+Max now 21 92
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [91 91]
+Shape no Good
+
+- - - -
+Step 322
+	coor : (38, 2)
+	peak : 0.0003497390479471621
+Max now 38 2
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [1 1]
+Shape no Good
+
+- - - -
+Step 323
+	coor : (26, 80)
+	peak : 0.00034962093873404815
+Max now 26 80
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [79 79]
+Shape no Good
+
+- - - -
+Step 324
+	coor : (54, 78)
+	peak : 0.0003496204306216661
+Max now 54 78
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [77 77]
+Shape no Good
+
+- - - -
+Step 325
+	coor : (37, 73)
+	peak : 0.0003496049084683843
+Max now 37 73
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [72 72]
+Shape no Good
+
+- - - -
+Step 326
+	coor : (2, 46)
+	peak : 0.00034952096859594355
+Max now 2 46
+COMPARE 1 [1 2]
+COMPARE 2 [2 1]
+SHAPE:  (4, 4)
+          c s
+x compare 1 [1 2]
+y compare 2 [2 1]
+
+sigma0 = 0.7213475204444817
+XERR None
+
+Fit results:
+	mode : curve_fit
+	k: 9.594738205695264e-05 +/- inf  -->  inf %	init : 2.4e-05
+	sigma: -0.23799932515190436 +/- inf  -->  inf %	init : 0.72
+	x0: -2.0398291314979815 +/- inf  -->  inf %	init : 1.0
+	y0: 0.8548740133729571 +/- inf  -->  inf %	init : 2.0
+	corr_k-sigma	 = nan
+	corr_k-x0	 = nan
+	corr_k-y0	 = nan
+	corr_sigma-x0	 = nan
+	corr_sigma-y0	 = nan
+	corr_x0-y0	 = nan
+Check is not good 2
+
+- - - -
+Step 327
+	coor : (23, 8)
+	peak : 0.00034947726451637777
+Max now 23 8
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [7 7]
+Shape no Good
+
+- - - -
+Step 328
+	coor : (11, 86)
+	peak : 0.0003494565135243142
+Max now 11 86
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [85 85]
+Shape no Good
+
+- - - -
+Step 329
+	coor : (62, 69)
+	peak : 0.0003494122159361356
+Max now 62 69
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [68 68]
+Shape no Good
+
+- - - -
+Step 330
+	coor : (35, 28)
+	peak : 0.00034930575603442295
+Max now 35 28
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [27 27]
+Shape no Good
+
+- - - -
+Step 331
+	coor : (60, 19)
+	peak : 0.0003492443476978218
+Max now 60 19
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [18 18]
+Shape no Good
+
+- - - -
+Step 332
+	coor : (58, 69)
+	peak : 0.00034921948322168815
+Max now 58 69
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [68 68]
+Shape no Good
+
+- - - -
+Step 333
+	coor : (50, 28)
+	peak : 0.00034920414739886925
+Max now 50 28
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [27 27]
+Shape no Good
+
+- - - -
+Step 334
+	coor : (55, 62)
+	peak : 0.0003491941594413942
+Max now 55 62
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [61 61]
+Shape no Good
+
+- - - -
+Step 335
+	coor : (99, 0)
+	peak : 0.0003491902516445963
+Max now 99 0
+COMPARE 0 [0 0]
+COMPARE 0 [0 0]
+SHAPE:  (1, 1)
+xsize [0 0]
+ysize [0 0]
+diff [0 0]
+Shape no Good
+
+- - - -
+Step 336
+	coor : (64, 82)
+	peak : 0.0003491630382894845
+Max now 64 82
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [81 81]
+Shape no Good
+
+- - - -
+Step 337
+	coor : (60, 93)
+	peak : 0.00034915150878571226
+Max now 60 93
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [92 92]
+Shape no Good
+
+- - - -
+Step 338
+	coor : (92, 24)
+	peak : 0.00034911995549501623
+Max now 92 24
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [23 23]
+Shape no Good
+
+- - - -
+Step 339
+	coor : (28, 71)
+	peak : 0.00034908043579363033
+Max now 28 71
+COMPARE 1 [1 1]
+COMPARE 1 [1 2]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [1 2]
+diff [70 69]
+Shape no Good
+
+- - - -
+Step 340
+	coor : (56, 18)
+	peak : 0.00034907280236988984
+Max now 56 18
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [16 17]
+Shape no Good
+
+- - - -
+Step 341
+	coor : (56, 47)
+	peak : 0.00034904743915420167
+Max now 56 47
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [46 46]
+Shape no Good
+
+- - - -
+Step 342
+	coor : (10, 90)
+	peak : 0.00034903721247595834
+Max now 10 90
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [89 89]
+Shape no Good
+
+- - - -
+Step 343
+	coor : (91, 79)
+	peak : 0.0003489867810027192
+Max now 91 79
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [78 78]
+Shape no Good
+
+- - - -
+Step 344
+	coor : (1, 24)
+	peak : 0.0003488898227271941
+Max now 1 24
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [23 23]
+Shape no Good
+
+- - - -
+Step 345
+	coor : (54, 85)
+	peak : 0.0003488856359124116
+Max now 54 85
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [84 84]
+Shape no Good
+
+- - - -
+Step 346
+	coor : (26, 89)
+	peak : 0.00034888100627956313
+Max now 26 89
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [88 88]
+Shape no Good
+
+- - - -
+Step 347
+	coor : (56, 73)
+	peak : 0.0003488794201849089
+Max now 56 73
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [72 72]
+Shape no Good
+
+- - - -
+Step 348
+	coor : (28, 67)
+	peak : 0.0003488629372042209
+Max now 28 67
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [66 66]
+Shape no Good
+
+- - - -
+Step 349
+	coor : (30, 58)
+	peak : 0.00034884436375338414
+Max now 30 58
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [57 57]
+Shape no Good
+
+- - - -
+Step 350
+	coor : (11, 12)
+	peak : 0.0003488160849449985
+Max now 11 12
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [11 11]
+Shape no Good
+
+- - - -
+Step 351
+	coor : (56, 28)
+	peak : 0.00034870579341691457
+Max now 56 28
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [27 27]
+Shape no Good
+
+- - - -
+Step 352
+	coor : (0, 69)
+	peak : 0.00034865986905705204
+Max now 0 69
+COMPARE 0 [0 0]
+COMPARE 1 [1 1]
+SHAPE:  (1, 3)
+xsize [0 0]
+ysize [1 1]
+diff [68 68]
+Shape no Good
+
+- - - -
+Step 353
+	coor : (51, 4)
+	peak : 0.00034861648363153353
+Max now 51 4
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [3 3]
+Shape no Good
+
+- - - -
+Step 354
+	coor : (64, 36)
+	peak : 0.00034860347714591583
+Max now 64 36
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [35 35]
+Shape no Good
+
+- - - -
+Step 355
+	coor : (53, 20)
+	peak : 0.00034859344768109355
+Max now 53 20
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [19 19]
+Shape no Good
+
+- - - -
+Step 356
+	coor : (38, 22)
+	peak : 0.000348553640657727
+Max now 38 22
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [21 21]
+Shape no Good
+
+- - - -
+Step 357
+	coor : (17, 58)
+	peak : 0.0003485506982995982
+Max now 17 58
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [57 57]
+Shape no Good
+
+- - - -
+Step 358
+	coor : (8, 3)
+	peak : 0.0003485463073496793
+Max now 8 3
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [2 2]
+Shape no Good
+
+- - - -
+Step 359
+	coor : (26, 39)
+	peak : 0.00034851901434227556
+Max now 26 39
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [38 38]
+Shape no Good
+
+- - - -
+Step 360
+	coor : (39, 41)
+	peak : 0.00034849891782234594
+Max now 39 41
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [40 40]
+Shape no Good
+
+- - - -
+Step 361
+	coor : (14, 27)
+	peak : 0.0003484968511981787
+Max now 14 27
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [26 26]
+Shape no Good
+
+- - - -
+Step 362
+	coor : (65, 16)
+	peak : 0.00034847929886343374
+Max now 65 16
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [15 15]
+Shape no Good
+
+- - - -
+Step 363
+	coor : (86, 7)
+	peak : 0.00034844612510327483
+Max now 86 7
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [6 6]
+Shape no Good
+
+- - - -
+Step 364
+	coor : (92, 18)
+	peak : 0.0003484444288076991
+Max now 92 18
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [17 17]
+Shape no Good
+
+- - - -
+Step 365
+	coor : (83, 15)
+	peak : 0.00034842354616053053
+Max now 83 15
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [14 14]
+Shape no Good
+
+- - - -
+Step 366
+	coor : (36, 17)
+	peak : 0.00034840946937290664
+Max now 36 17
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [16 16]
+Shape no Good
+
+- - - -
+Step 367
+	coor : (14, 46)
+	peak : 0.00034839037720309706
+Max now 14 46
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [45 45]
+Shape no Good
+
+- - - -
+Step 368
+	coor : (65, 62)
+	peak : 0.0003483615468816106
+Max now 65 62
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [61 61]
+Shape no Good
+
+- - - -
+Step 369
+	coor : (55, 93)
+	peak : 0.00034835081151412053
+Max now 55 93
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [92 92]
+Shape no Good
+
+- - - -
+Step 370
+	coor : (57, 51)
+	peak : 0.00034832942070064704
+Max now 57 51
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [50 50]
+Shape no Good
+
+- - - -
+Step 371
+	coor : (12, 19)
+	peak : 0.0003483083779221028
+Max now 12 19
+COMPARE 1 [1 1]
+COMPARE 3 [3 1]
+SHAPE:  (3, 5)
+xsize [1 1]
+ysize [3 1]
+diff [16 18]
+Shape no Good
+
+- - - -
+Step 372
+	coor : (73, 49)
+	peak : 0.00034830324452100566
+Max now 73 49
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [48 48]
+Shape no Good
+
+- - - -
+Step 373
+	coor : (53, 91)
+	peak : 0.00034828287118642736
+Max now 53 91
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [90 90]
+Shape no Good
+
+- - - -
+Step 374
+	coor : (14, 0)
+	peak : 0.00034828044106469726
+Max now 14 0
+COMPARE 1 [1 1]
+COMPARE 0 [0 0]
+SHAPE:  (3, 1)
+xsize [1 1]
+ysize [0 0]
+diff [0 0]
+Shape no Good
+
+- - - -
+Step 375
+	coor : (60, 64)
+	peak : 0.00034826028422767056
+Max now 60 64
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [62 63]
+Shape no Good
+
+- - - -
+Step 376
+	coor : (53, 75)
+	peak : 0.0003482409777958517
+Max now 53 75
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [74 74]
+Shape no Good
+
+- - - -
+Step 377
+	coor : (19, 68)
+	peak : 0.00034821194219038546
+Max now 19 68
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [67 67]
+Shape no Good
+
+- - - -
+Step 378
+	coor : (56, 23)
+	peak : 0.0003481902452175699
+Max now 56 23
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [22 22]
+Shape no Good
+
+- - - -
+Step 379
+	coor : (20, 31)
+	peak : 0.0003480546859388311
+Max now 20 31
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [30 30]
+Shape no Good
+
+- - - -
+Step 380
+	coor : (34, 90)
+	peak : 0.0003480443393451699
+Max now 34 90
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [89 89]
+Shape no Good
+
+- - - -
+Step 381
+	coor : (73, 74)
+	peak : 0.00034803505867197647
+Max now 73 74
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [73 73]
+Shape no Good
+
+- - - -
+Step 382
+	coor : (60, 31)
+	peak : 0.0003480262145535477
+Max now 60 31
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [30 30]
+Shape no Good
+
+- - - -
+Step 383
+	coor : (61, 9)
+	peak : 0.00034802614668949636
+Max now 61 9
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [8 8]
+Shape no Good
+
+- - - -
+Step 384
+	coor : (13, 23)
+	peak : 0.0003480055497476649
+Max now 13 23
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [22 22]
+Shape no Good
+
+- - - -
+Step 385
+	coor : (56, 64)
+	peak : 0.0003479990446531388
+Max now 56 64
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [63 63]
+Shape no Good
+
+- - - -
+Step 386
+	coor : (63, 61)
+	peak : 0.0003479787181530424
+Max now 63 61
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [60 60]
+Shape no Good
+
+- - - -
+Step 387
+	coor : (4, 28)
+	peak : 0.0003479734648598099
+Max now 4 28
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [27 27]
+Shape no Good
+
+- - - -
+Step 388
+	coor : (86, 45)
+	peak : 0.00034783675359143813
+Max now 86 45
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [44 44]
+Shape no Good
+
+- - - -
+Step 389
+	coor : (79, 93)
+	peak : 0.0003478329263240401
+Max now 79 93
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [92 92]
+Shape no Good
+
+- - - -
+Step 390
+	coor : (50, 67)
+	peak : 0.0003478278088261406
+Max now 50 67
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [66 66]
+Shape no Good
+
+- - - -
+Step 391
+	coor : (43, 72)
+	peak : 0.00034779016661618244
+Max now 43 72
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [71 71]
+Shape no Good
+
+- - - -
+Step 392
+	coor : (23, 49)
+	peak : 0.00034778369604012967
+Max now 23 49
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [48 48]
+Shape no Good
+
+- - - -
+Step 393
+	coor : (8, 31)
+	peak : 0.00034776142078474074
+Max now 8 31
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [30 30]
+Shape no Good
+
+- - - -
+Step 394
+	coor : (5, 15)
+	peak : 0.00034770620869346613
+Max now 5 15
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [14 14]
+Shape no Good
+
+- - - -
+Step 395
+	coor : (99, 1)
+	peak : 0.000347693372100112
+Max now 99 1
+COMPARE 0 [0 0]
+COMPARE 1 [1 1]
+SHAPE:  (1, 3)
+xsize [0 0]
+ysize [1 1]
+diff [0 0]
+Shape no Good
+
+- - - -
+Step 396
+	coor : (59, 10)
+	peak : 0.0003475536812537378
+Max now 59 10
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [9 9]
+Shape no Good
+
+- - - -
+Step 397
+	coor : (11, 37)
+	peak : 0.0003475413864194012
+Max now 11 37
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [36 36]
+Shape no Good
+
+- - - -
+Step 398
+	coor : (64, 18)
+	peak : 0.0003475362200201148
+Max now 64 18
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [17 17]
+Shape no Good
+
+- - - -
+Step 399
+	coor : (26, 64)
+	peak : 0.0003475348084342132
+Max now 26 64
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [63 63]
+Shape no Good
+
+- - - -
+Step 400
+	coor : (4, 88)
+	peak : 0.00034750975826310765
+Max now 4 88
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [87 87]
+Shape no Good
+
+- - - -
+Step 401
+	coor : (65, 96)
+	peak : 0.00034748664828417644
+Max now 65 96
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [95 95]
+Shape no Good
+
+- - - -
+Step 402
+	coor : (43, 23)
+	peak : 0.000347454743404501
+Max now 43 23
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [22 22]
+Shape no Good
+
+- - - -
+Step 403
+	coor : (13, 81)
+	peak : 0.00034743208701575604
+Max now 13 81
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [80 80]
+Shape no Good
+
+- - - -
+Step 404
+	coor : (95, 91)
+	peak : 0.00034735887358379653
+Max now 95 91
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [90 90]
+Shape no Good
+
+- - - -
+Step 405
+	coor : (65, 70)
+	peak : 0.0003473491668907619
+Max now 65 70
+COMPARE 1 [1 1]
+COMPARE 1 [1 2]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [1 2]
+diff [69 68]
+Shape no Good
+
+- - - -
+Step 406
+	coor : (23, 58)
+	peak : 0.0003473486040157014
+Max now 23 58
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [57 57]
+Shape no Good
+
+- - - -
+Step 407
+	coor : (36, 50)
+	peak : 0.0003473472799008728
+Max now 36 50
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [48 49]
+Shape no Good
+
+- - - -
+Step 408
+	coor : (31, 54)
+	peak : 0.0003473309686864685
+Max now 31 54
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [53 53]
+Shape no Good
+
+- - - -
+Step 409
+	coor : (71, 64)
+	peak : 0.0003473052926636903
+Max now 71 64
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [63 63]
+Shape no Good
+
+- - - -
+Step 410
+	coor : (28, 58)
+	peak : 0.0003472114248834191
+Max now 28 58
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [57 57]
+Shape no Good
+
+- - - -
+Step 411
+	coor : (21, 70)
+	peak : 0.0003471962736089305
+Max now 21 70
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [69 69]
+Shape no Good
+
+- - - -
+Step 412
+	coor : (52, 81)
+	peak : 0.0003471812310311206
+Max now 52 81
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [80 80]
+Shape no Good
+
+- - - -
+Step 413
+	coor : (45, 64)
+	peak : 0.0003471283232003697
+Max now 45 64
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [63 63]
+Shape no Good
+
+- - - -
+Step 414
+	coor : (76, 37)
+	peak : 0.00034710121236114017
+Max now 76 37
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [36 36]
+Shape no Good
+
+- - - -
+Step 415
+	coor : (2, 18)
+	peak : 0.0003470859050422748
+Max now 2 18
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [17 17]
+Shape no Good
+
+- - - -
+Step 416
+	coor : (18, 77)
+	peak : 0.00034705593686924123
+Max now 18 77
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [76 76]
+Shape no Good
+
+- - - -
+Step 417
+	coor : (42, 89)
+	peak : 0.00034703489005916496
+Max now 42 89
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [88 88]
+Shape no Good
+
+- - - -
+Step 418
+	coor : (16, 19)
+	peak : 0.0003470227758346254
+Max now 16 19
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [18 18]
+Shape no Good
+
+- - - -
+Step 419
+	coor : (72, 33)
+	peak : 0.00034701531533855973
+Max now 72 33
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [32 32]
+Shape no Good
+
+- - - -
+Step 420
+	coor : (66, 87)
+	peak : 0.00034691085106781835
+Max now 66 87
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [86 86]
+Shape no Good
+
+- - - -
+Step 421
+	coor : (9, 22)
+	peak : 0.0003469078349909805
+Max now 9 22
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [21 21]
+Shape no Good
+
+- - - -
+Step 422
+	coor : (57, 13)
+	peak : 0.0003468894260971435
+Max now 57 13
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [12 12]
+Shape no Good
+
+- - - -
+Step 423
+	coor : (35, 92)
+	peak : 0.0003468851113046976
+Max now 35 92
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [91 91]
+Shape no Good
+
+- - - -
+Step 424
+	coor : (46, 76)
+	peak : 0.00034685825847397553
+Max now 46 76
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [75 75]
+Shape no Good
+
+- - - -
+Step 425
+	coor : (25, 17)
+	peak : 0.00034684189927434696
+Max now 25 17
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [16 16]
+Shape no Good
+
+- - - -
+Step 426
+	coor : (62, 4)
+	peak : 0.0003467867336983358
+Max now 62 4
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [3 3]
+Shape no Good
+
+- - - -
+Step 427
+	coor : (75, 63)
+	peak : 0.00034677761916322714
+Max now 75 63
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [62 62]
+Shape no Good
+
+- - - -
+Step 428
+	coor : (50, 75)
+	peak : 0.0003467591311294386
+Max now 50 75
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [74 74]
+Shape no Good
+
+- - - -
+Step 429
+	coor : (37, 80)
+	peak : 0.0003467406000244551
+Max now 37 80
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [78 79]
+Shape no Good
+
+- - - -
+Step 430
+	coor : (7, 64)
+	peak : 0.0003467147754165933
+Max now 7 64
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [63 63]
+Shape no Good
+
+- - - -
+Step 431
+	coor : (52, 18)
+	peak : 0.000346706162090532
+Max now 52 18
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [17 17]
+Shape no Good
+
+- - - -
+Step 432
+	coor : (87, 93)
+	peak : 0.0003466740789951706
+Max now 87 93
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [92 92]
+Shape no Good
+
+- - - -
+Step 433
+	coor : (51, 72)
+	peak : 0.0003466342876032773
+Max now 51 72
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [71 71]
+Shape no Good
+
+- - - -
+Step 434
+	coor : (35, 81)
+	peak : 0.00034663150376864916
+Max now 35 81
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [80 80]
+Shape no Good
+
+- - - -
+Step 435
+	coor : (23, 71)
+	peak : 0.0003466179292553718
+Max now 23 71
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [70 70]
+Shape no Good
+
+- - - -
+Step 436
+	coor : (7, 54)
+	peak : 0.0003466110240079556
+Max now 7 54
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [53 53]
+Shape no Good
+
+- - - -
+Step 437
+	coor : (3, 40)
+	peak : 0.000346602578866374
+Max now 3 40
+COMPARE 2 [2 1]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [2 1]
+ysize [1 1]
+diff [39 39]
+Shape no Good
+
+- - - -
+Step 438
+	coor : (40, 46)
+	peak : 0.0003465799346580783
+Max now 40 46
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [45 45]
+Shape no Good
+
+- - - -
+Step 439
+	coor : (64, 59)
+	peak : 0.00034657608103548206
+Max now 64 59
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [58 58]
+Shape no Good
+
+- - - -
+Step 440
+	coor : (67, 49)
+	peak : 0.0003465476395030861
+Max now 67 49
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [48 48]
+Shape no Good
+
+- - - -
+Step 441
+	coor : (7, 27)
+	peak : 0.0003465142208914526
+Max now 7 27
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [25 26]
+Shape no Good
+
+- - - -
+Step 442
+	coor : (82, 2)
+	peak : 0.0003464748949987265
+Max now 82 2
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [1 1]
+Shape no Good
+
+- - - -
+Step 443
+	coor : (71, 19)
+	peak : 0.0003464660401144438
+Max now 71 19
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [18 18]
+Shape no Good
+
+- - - -
+Step 444
+	coor : (41, 87)
+	peak : 0.00034645099653667245
+Max now 41 87
+COMPARE 1 [1 2]
+COMPARE 1 [1 1]
+SHAPE:  (4, 3)
+xsize [1 2]
+ysize [1 1]
+diff [86 86]
+Shape no Good
+
+- - - -
+Step 445
+	coor : (83, 78)
+	peak : 0.0003464327797828096
+Max now 83 78
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [77 77]
+Shape no Good
+
+- - - -
+Step 446
+	coor : (25, 76)
+	peak : 0.00034639862397138404
+Max now 25 76
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [75 75]
+Shape no Good
+
+- - - -
+Step 447
+	coor : (81, 89)
+	peak : 0.00034639571710802405
+Max now 81 89
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [88 88]
+Shape no Good
+
+- - - -
+Step 448
+	coor : (92, 13)
+	peak : 0.0003463727558527015
+Max now 92 13
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [12 12]
+Shape no Good
+
+- - - -
+Step 449
+	coor : (6, 61)
+	peak : 0.00034635321603915313
+Max now 6 61
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [60 60]
+Shape no Good
+
+- - - -
+Step 450
+	coor : (15, 52)
+	peak : 0.0003463516636511339
+Max now 15 52
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [51 51]
+Shape no Good
+
+- - - -
+Step 451
+	coor : (67, 20)
+	peak : 0.00034624014741684126
+Max now 67 20
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [19 19]
+Shape no Good
+
+- - - -
+Step 452
+	coor : (51, 6)
+	peak : 0.0003461407233399339
+Max now 51 6
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [5 5]
+Shape no Good
+
+- - - -
+Step 453
+	coor : (14, 90)
+	peak : 0.0003461281308520221
+Max now 14 90
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [89 89]
+Shape no Good
+
+- - - -
+Step 454
+	coor : (74, 56)
+	peak : 0.00034604479271689494
+Max now 74 56
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [55 55]
+Shape no Good
+
+- - - -
+Step 455
+	coor : (68, 40)
+	peak : 0.0003459920829761937
+Max now 68 40
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [39 39]
+Shape no Good
+
+- - - -
+Step 456
+	coor : (91, 0)
+	peak : 0.0003459556469375659
+Max now 91 0
+COMPARE 1 [1 1]
+COMPARE 0 [0 0]
+SHAPE:  (3, 1)
+xsize [1 1]
+ysize [0 0]
+diff [0 0]
+Shape no Good
+
+- - - -
+Step 457
+	coor : (23, 42)
+	peak : 0.0003459253959926596
+Max now 23 42
+COMPARE 1 [1 1]
+COMPARE 1 [1 2]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [1 2]
+diff [41 40]
+Shape no Good
+
+- - - -
+Step 458
+	coor : (30, 15)
+	peak : 0.000345734044039805
+Max now 30 15
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [14 14]
+Shape no Good
+
+- - - -
+Step 459
+	coor : (27, 26)
+	peak : 0.0003456920432844472
+Max now 27 26
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [25 25]
+Shape no Good
+
+- - - -
+Step 460
+	coor : (62, 44)
+	peak : 0.0003456731911949978
+Max now 62 44
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [43 43]
+Shape no Good
+
+- - - -
+Step 461
+	coor : (7, 89)
+	peak : 0.00034565129584234264
+Max now 7 89
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [88 88]
+Shape no Good
+
+- - - -
+Step 462
+	coor : (42, 11)
+	peak : 0.00034564749765785257
+Max now 42 11
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [10 10]
+Shape no Good
+
+- - - -
+Step 463
+	coor : (27, 14)
+	peak : 0.00034564504914244305
+Max now 27 14
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [13 13]
+Shape no Good
+
+- - - -
+Step 464
+	coor : (10, 73)
+	peak : 0.00034562601303043434
+Max now 10 73
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [72 72]
+Shape no Good
+
+- - - -
+Step 465
+	coor : (20, 47)
+	peak : 0.0003456043756345072
+Max now 20 47
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [46 46]
+Shape no Good
+
+- - - -
+Step 466
+	coor : (45, 73)
+	peak : 0.0003456000997505755
+Max now 45 73
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [72 72]
+Shape no Good
+
+- - - -
+Step 467
+	coor : (48, 69)
+	peak : 0.00034559356583323427
+Max now 48 69
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [68 68]
+Shape no Good
+
+- - - -
+Step 468
+	coor : (8, 35)
+	peak : 0.0003455084940774761
+Max now 8 35
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [34 34]
+Shape no Good
+
+- - - -
+Step 469
+	coor : (51, 60)
+	peak : 0.00034550208751969654
+Max now 51 60
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [59 59]
+Shape no Good
+
+- - - -
+Step 470
+	coor : (40, 74)
+	peak : 0.0003454445154813797
+Max now 40 74
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [73 73]
+Shape no Good
+
+- - - -
+Step 471
+	coor : (33, 66)
+	peak : 0.0003453856262504777
+Max now 33 66
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [65 65]
+Shape no Good
+
+- - - -
+Step 472
+	coor : (39, 50)
+	peak : 0.00034537215752396104
+Max now 39 50
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [49 49]
+Shape no Good
+
+- - - -
+Step 473
+	coor : (61, 91)
+	peak : 0.00034533637535324324
+Max now 61 91
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [90 90]
+Shape no Good
+
+- - - -
+Step 474
+	coor : (81, 14)
+	peak : 0.0003453151569210028
+Max now 81 14
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [13 13]
+Shape no Good
+
+- - - -
+Step 475
+	coor : (56, 84)
+	peak : 0.0003452893084229633
+Max now 56 84
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [83 83]
+Shape no Good
+
+- - - -
+Step 476
+	coor : (23, 0)
+	peak : 0.00034528790488734095
+Max now 23 0
+COMPARE 1 [1 1]
+COMPARE 0 [0 0]
+SHAPE:  (3, 1)
+xsize [1 1]
+ysize [0 0]
+diff [0 0]
+Shape no Good
+
+- - - -
+Step 477
+	coor : (47, 82)
+	peak : 0.00034526712506775386
+Max now 47 82
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [81 81]
+Shape no Good
+
+- - - -
+Step 478
+	coor : (77, 18)
+	peak : 0.0003452465636769034
+Max now 77 18
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [17 17]
+Shape no Good
+
+- - - -
+Step 479
+	coor : (12, 21)
+	peak : 0.0003452450033641785
+Max now 12 21
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [20 20]
+Shape no Good
+
+- - - -
+Step 480
+	coor : (53, 28)
+	peak : 0.000345224855498728
+Max now 53 28
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [27 27]
+Shape no Good
+
+- - - -
+Step 481
+	coor : (42, 62)
+	peak : 0.00034521455599020173
+Max now 42 62
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [61 61]
+Shape no Good
+
+- - - -
+Step 482
+	coor : (81, 28)
+	peak : 0.00034520328870193436
+Max now 81 28
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [27 27]
+Shape no Good
+
+- - - -
+Step 483
+	coor : (53, 89)
+	peak : 0.0003451828479752227
+Max now 53 89
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [88 88]
+Shape no Good
+
+- - - -
+Step 484
+	coor : (13, 74)
+	peak : 0.00034518101668579073
+Max now 13 74
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [73 73]
+Shape no Good
+
+- - - -
+Step 485
+	coor : (97, 18)
+	peak : 0.00034518032254648377
+Max now 97 18
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [17 17]
+Shape no Good
+
+- - - -
+Step 486
+	coor : (68, 77)
+	peak : 0.00034512002615335203
+Max now 68 77
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [76 76]
+Shape no Good
+
+- - - -
+Step 487
+	coor : (26, 20)
+	peak : 0.0003451173841078281
+Max now 26 20
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [19 19]
+Shape no Good
+
+- - - -
+Step 488
+	coor : (34, 48)
+	peak : 0.0003450527679546501
+Max now 34 48
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [47 47]
+Shape no Good
+
+- - - -
+Step 489
+	coor : (61, 97)
+	peak : 0.0003450342031624478
+Max now 61 97
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [96 96]
+Shape no Good
+
+- - - -
+Step 490
+	coor : (92, 41)
+	peak : 0.00034502990126238927
+Max now 92 41
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [40 40]
+Shape no Good
+
+- - - -
+Step 491
+	coor : (80, 76)
+	peak : 0.00034501420276050797
+Max now 80 76
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [75 75]
+Shape no Good
+
+- - - -
+Step 492
+	coor : (30, 21)
+	peak : 0.00034500088933763943
+Max now 30 21
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [20 20]
+Shape no Good
+
+- - - -
+Step 493
+	coor : (57, 97)
+	peak : 0.000345000744860682
+Max now 57 97
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [96 96]
+Shape no Good
+
+- - - -
+Step 494
+	coor : (60, 95)
+	peak : 0.00034496436391473825
+Max now 60 95
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [94 94]
+Shape no Good
+
+- - - -
+Step 495
+	coor : (37, 69)
+	peak : 0.0003449501687233611
+Max now 37 69
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [68 68]
+Shape no Good
+
+- - - -
+Step 496
+	coor : (29, 53)
+	peak : 0.00034493866216989876
+Max now 29 53
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [52 52]
+Shape no Good
+
+- - - -
+Step 497
+	coor : (21, 25)
+	peak : 0.0003449346651511217
+Max now 21 25
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [24 24]
+Shape no Good
+
+- - - -
+Step 498
+	coor : (2, 61)
+	peak : 0.0003449233384249018
+Max now 2 61
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [60 60]
+Shape no Good
+
+- - - -
+Step 499
+	coor : (62, 25)
+	peak : 0.0003449121637725135
+Max now 62 25
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [24 24]
+Shape no Good
+
+- - - -
+Step 500
+	coor : (23, 33)
+	peak : 0.00034490206703453185
+Max now 23 33
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [32 32]
+Shape no Good
+
+- - - -
+Step 501
+	coor : (41, 79)
+	peak : 0.0003448921460377721
+Max now 41 79
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [78 78]
+Shape no Good
+
+- - - -
+Step 502
+	coor : (73, 96)
+	peak : 0.00034484640477233587
+Max now 73 96
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [95 95]
+Shape no Good
+
+- - - -
+Step 503
+	coor : (74, 33)
+	peak : 0.0003448116803740024
+Max now 74 33
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [31 32]
+Shape no Good
+
+- - - -
+Step 504
+	coor : (81, 98)
+	peak : 0.000344797645169626
+Max now 81 98
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [96 97]
+Shape no Good
+
+- - - -
+Step 505
+	coor : (26, 52)
+	peak : 0.0003447605958742072
+Max now 26 52
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [51 51]
+Shape no Good
+
+- - - -
+Step 506
+	coor : (37, 71)
+	peak : 0.0003447139436844305
+Max now 37 71
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [70 70]
+Shape no Good
+
+- - - -
+Step 507
+	coor : (36, 85)
+	peak : 0.0003447101976949417
+Max now 36 85
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [84 84]
+Shape no Good
+
+- - - -
+Step 508
+	coor : (25, 54)
+	peak : 0.0003446671796271589
+Max now 25 54
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [53 53]
+Shape no Good
+
+- - - -
+Step 509
+	coor : (30, 98)
+	peak : 0.00034463849607032385
+Max now 30 98
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [96 97]
+Shape no Good
+
+- - - -
+Step 510
+	coor : (18, 65)
+	peak : 0.0003446282941448275
+Max now 18 65
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [64 64]
+Shape no Good
+
+- - - -
+Step 511
+	coor : (31, 27)
+	peak : 0.00034457852079742776
+Max now 31 27
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [26 26]
+Shape no Good
+
+- - - -
+Step 512
+	coor : (7, 79)
+	peak : 0.00034457733014918234
+Max now 7 79
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [78 78]
+Shape no Good
+
+- - - -
+Step 513
+	coor : (53, 0)
+	peak : 0.0003445409892511744
+Max now 53 0
+COMPARE 1 [1 1]
+COMPARE 0 [0 0]
+SHAPE:  (3, 1)
+xsize [1 1]
+ysize [0 0]
+diff [0 0]
+Shape no Good
+
+- - - -
+Step 514
+	coor : (68, 87)
+	peak : 0.00034452408703442917
+Max now 68 87
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [86 86]
+Shape no Good
+
+- - - -
+Step 515
+	coor : (88, 14)
+	peak : 0.0003445097792061129
+Max now 88 14
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [13 13]
+Shape no Good
+
+- - - -
+Step 516
+	coor : (29, 9)
+	peak : 0.00034450840452566176
+Max now 29 9
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [8 8]
+Shape no Good
+
+- - - -
+Step 517
+	coor : (24, 40)
+	peak : 0.00034450369920428775
+Max now 24 40
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [39 39]
+Shape no Good
+
+- - - -
+Step 518
+	coor : (0, 10)
+	peak : 0.0003444520382730386
+Max now 0 10
+COMPARE 0 [0 0]
+COMPARE 1 [1 1]
+SHAPE:  (1, 3)
+xsize [0 0]
+ysize [1 1]
+diff [9 9]
+Shape no Good
+
+- - - -
+Step 519
+	coor : (2, 87)
+	peak : 0.00034440474690937835
+Max now 2 87
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [86 86]
+Shape no Good
+
+- - - -
+Step 520
+	coor : (40, 98)
+	peak : 0.0003443521096255705
+Max now 40 98
+COMPARE 1 [1 1]
+COMPARE 2 [2 1]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [2 1]
+diff [96 97]
+Shape no Good
+
+- - - -
+Step 521
+	coor : (2, 38)
+	peak : 0.000344321123181742
+Max now 2 38
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [37 37]
+Shape no Good
+
+- - - -
+Step 522
+	coor : (42, 70)
+	peak : 0.000344319773464347
+Max now 42 70
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [69 69]
+Shape no Good
+
+- - - -
+Step 523
+	coor : (34, 95)
+	peak : 0.0003443165466487552
+Max now 34 95
+COMPARE 1 [1 1]
+COMPARE 1 [1 2]
+SHAPE:  (3, 4)
+xsize [1 1]
+ysize [1 2]
+diff [94 93]
+Shape no Good
+
+- - - -
+Step 524
+	coor : (36, 76)
+	peak : 0.00034427650736103125
+Max now 36 76
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [75 75]
+Shape no Good
+
+- - - -
+Step 525
+	coor : (87, 21)
+	peak : 0.0003442593225309214
+Max now 87 21
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [20 20]
+Shape no Good
+
+- - - -
+Step 526
+	coor : (10, 9)
+	peak : 0.00034419645697947375
+Max now 10 9
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [8 8]
+Shape no Good
+
+- - - -
+Step 527
+	coor : (70, 93)
+	peak : 0.00034419450128530486
+Max now 70 93
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [92 92]
+Shape no Good
+
+- - - -
+Step 528
+	coor : (5, 94)
+	peak : 0.0003441862565587144
+Max now 5 94
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [93 93]
+Shape no Good
+
+- - - -
+Step 529
+	coor : (10, 7)
+	peak : 0.000344146933833803
+Max now 10 7
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [6 6]
+Shape no Good
+
+- - - -
+Step 530
+	coor : (80, 37)
+	peak : 0.0003441232228997302
+Max now 80 37
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [36 36]
+Shape no Good
+
+- - - -
+Step 531
+	coor : (46, 46)
+	peak : 0.0003441136967196147
+Max now 46 46
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [45 45]
+Shape no Good
+
+- - - -
+Step 532
+	coor : (97, 10)
+	peak : 0.0003441091740341816
+Max now 97 10
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [9 9]
+Shape no Good
+
+- - - -
+Step 533
+	coor : (67, 56)
+	peak : 0.00034410463385402956
+Max now 67 56
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [55 55]
+Shape no Good
+
+- - - -
+Step 534
+	coor : (66, 30)
+	peak : 0.00034405165410633816
+Max now 66 30
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [29 29]
+Shape no Good
+
+- - - -
+Step 535
+	coor : (7, 66)
+	peak : 0.00034403875428558816
+Max now 7 66
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [65 65]
+Shape no Good
+
+- - - -
+Step 536
+	coor : (39, 88)
+	peak : 0.0003440317263800761
+Max now 39 88
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [87 87]
+Shape no Good
+
+- - - -
+Step 537
+	coor : (52, 93)
+	peak : 0.00034401951659980806
+Max now 52 93
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [92 92]
+Shape no Good
+
+- - - -
+Step 538
+	coor : (81, 26)
+	peak : 0.00034397158843236603
+Max now 81 26
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [25 25]
+Shape no Good
+
+- - - -
+Step 539
+	coor : (8, 60)
+	peak : 0.0003439617911725281
+Max now 8 60
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [59 59]
+Shape no Good
+
+- - - -
+Step 540
+	coor : (94, 44)
+	peak : 0.00034391891776505115
+Max now 94 44
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [43 43]
+Shape no Good
+
+- - - -
+Step 541
+	coor : (16, 46)
+	peak : 0.00034390765488046714
+Max now 16 46
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [45 45]
+Shape no Good
+
+- - - -
+Step 542
+	coor : (76, 54)
+	peak : 0.0003438920923101989
+Max now 76 54
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [53 53]
+Shape no Good
+
+- - - -
+Step 543
+	coor : (87, 41)
+	peak : 0.0003438664835748891
+Max now 87 41
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [40 40]
+Shape no Good
+
+- - - -
+Step 544
+	coor : (58, 54)
+	peak : 0.0003438614576340455
+Max now 58 54
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [53 53]
+Shape no Good
+
+- - - -
+Step 545
+	coor : (37, 0)
+	peak : 0.00034384827335854197
+Max now 37 0
+COMPARE 1 [1 1]
+COMPARE 0 [0 0]
+SHAPE:  (3, 1)
+xsize [1 1]
+ysize [0 0]
+diff [0 0]
+Shape no Good
+
+- - - -
+Step 546
+	coor : (91, 49)
+	peak : 0.0003438354724602973
+Max now 91 49
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [48 48]
+Shape no Good
+
+- - - -
+Step 547
+	coor : (47, 26)
+	peak : 0.0003437846229204255
+Max now 47 26
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [25 25]
+Shape no Good
+
+- - - -
+Step 548
+	coor : (0, 63)
+	peak : 0.000343759794914959
+Max now 0 63
+COMPARE 0 [0 0]
+COMPARE 1 [1 1]
+SHAPE:  (1, 3)
+xsize [0 0]
+ysize [1 1]
+diff [62 62]
+Shape no Good
+
+- - - -
+Step 549
+	coor : (76, 82)
+	peak : 0.00034374519352558066
+Max now 76 82
+COMPARE 1 [1 1]
+COMPARE 1 [1 1]
+SHAPE:  (3, 3)
+xsize [1 1]
+ysize [1 1]
+diff [81 81]
+Shape no Good
+
+- - - -
+Step 550
+	coor : (0, 59)
+	peak : 0.0003437436465167079
+Max now 0 59
+COMPARE 0 [0 0]
+COMPARE 1 [1 1]
+SHAPE:  (1, 3)
+xsize [0 0]
+ysize [1 1]
+diff [58 58]
+Shape no Good
+
+- - - -
+Step 551
+	coor : (75, 78)
+	peak : 0.00034368529808532887
+Slum [0.01944676 0.01384286 0.0126797  0.00746778]
+Glum [0.01933716 0.00809857 0.01340254 0.01242651]
+S: 2.07e-03	L: 7.17e-03	246.06%
+FOUND: 19
+EXPEC: 51
