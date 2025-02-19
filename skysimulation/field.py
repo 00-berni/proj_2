@@ -48,7 +48,7 @@ class Star():
     pos : tuple[float  |  NDArray, float  |  NDArray]
         star coordinates (x,y)
     """
-    def __init__(self, mass: float | NDArray, lum: float | NDArray, pos: tuple[float | NDArray, float | NDArray]) -> None:
+    def __init__(self, mass: float | NDArray, lum: float | NDArray, pos: tuple[float | NDArray, float | NDArray], alpha: float, beta: float, mrange: tuple[float,float]) -> None:
         """Constructor of the class
 
         Parameters
@@ -63,8 +63,42 @@ class Star():
         self.m   = mass       #: star mass value
         self.lum = lum        #: star brightness value
         self.pos = pos        #: star coordinates
+        self.mrange = mrange
+        self.alpha = alpha
+        self.beta  = beta
 
-    def plot_info(self, alpha: float, beta: float, sel: {'both', 'mass', 'lum'} = 'both',fontsize: int = 18) -> None:
+    def lrange(self) -> tuple[float,float]:
+        return (self.mrange[0]**self.beta*K,self.mrange[1]**self.beta*K)
+
+    def mean_mass(self) -> float | None:
+        if self.alpha <= 2:
+            return None
+        else:
+            alpha = self.alpha
+            minf, msup = self.mrange
+            diff = lambda power: (minf**(power)-msup**(power))
+            avg_mass = (alpha-1)/(alpha-2) * diff(2-alpha)/diff(1-alpha)
+            return avg_mass
+
+    def mean_lum(self) -> float | None:
+        avg_mass = self.mean_mass()
+        if avg_mass is None: return None
+        else:
+            beta = self.beta
+            avg_lum = K*avg_mass**beta
+            return avg_lum
+        # if self.alpha <= 2:
+        #     return None
+        # else:
+        #     alpha = self.alpha
+        #     beta  = self.beta
+        #     linf, lsup = self.lrange()
+        #     diff = lambda power: (linf**(power)-lsup**(power))
+        #     avg_mass = (1-alpha)/(1+beta-alpha) * diff((1+beta-alpha)/beta)/diff((1-alpha)/beta)
+        #     return avg_mass
+
+
+    def plot_info(self, sel: {'both', 'mass', 'lum'} = 'both',fontsize: int = 18) -> None:
         """To plot the mass and brightness distribution of the stars sample
 
         Through the `sel` parameter it is possible to choose to plot:
@@ -82,6 +116,8 @@ class Star():
         sel : {'all', 'm', 'L'}, optional
             selection parameter, by default `'all'`
         """
+        alpha = self.alpha
+        beta  = self.beta
         nstars = len(self.m)    #: number of stars
         ## Mass Distribution Plot
         if 'mass' in sel or sel == 'both':
@@ -91,11 +127,14 @@ class Star():
             mm = np.linspace(masses.min(),masses.max(),len(self.m))
             imf = mm**(-alpha)
             imf *= m_cnts.max()/imf.max()
+            avg_mass = self.mean_mass()
             if 'mass' in sel:
                 plt.figure(figsize=(12,8))
                 plt.title(f'Distribution in mass of {nstars} stars\n$\\alpha = {alpha}$',fontsize=fontsize+2)
                 plt.stairs(m_cnts,m_bins,fill=True)
                 plt.plot(mm,imf,color='red',label='$IMF = M^{-\\alpha}$')
+                if avg_mass is not None:
+                    plt.axvline(avg_mass,0,1,label='$\\bar{M}='+f'{avg_mass:.2f}$')
                 plt.xscale('log')
                 plt.xlabel('M [$M_\\odot$]',fontsize=fontsize)
                 plt.ylabel('counts',fontsize=fontsize)
@@ -115,6 +154,7 @@ class Star():
             logimf = -alpha/beta * ll + alpha/beta * np.log10(K)
             l_imf = 10**logimf
             l_imf *= l_cnts.max()/l_imf.max()
+            avg_lum = self.mean_lum()
             # imf = (bins/K)**(-alpha/beta)
             # imf *= cnts.max()/imf.max()
             if 'lum' in sel:
@@ -122,6 +162,9 @@ class Star():
                 plt.title(f'Distribution in brightness of {nstars} stars\n$\\beta = {beta}$',fontsize=fontsize+2)
                 plt.stairs(l_cnts,l_bins,fill=True)
                 plt.plot(ll,l_imf,color='red')
+                # if avg_lum is not None:
+                #     plt.axvline(np.log10(avg_lum),0,1,label=f'mean={avg_lum}')
+                #     plt.legend()
                 plt.xlabel('$\log{(\\ell)}$',fontsize=fontsize)
                 plt.ylabel('counts',fontsize=fontsize)
                 plt.grid()
@@ -131,6 +174,8 @@ class Star():
             ax1.set_title('Distribution in mass',fontsize=fontsize+2)
             ax1.stairs(m_cnts,m_bins,fill=True)
             ax1.plot(mm,imf,color='red',label='$IMF = M^{-\\alpha}$')
+            if avg_mass is not None:
+                ax1.axvline(avg_mass,0,1,label='$\\bar{M}='+f'{avg_mass:.2f}$')
             ax1.set_xscale('log')
             ax1.set_xlabel('M [$M_\\odot$]',fontsize=fontsize)
             ax1.set_ylabel('counts',fontsize=fontsize)
@@ -139,6 +184,10 @@ class Star():
             ax2.set_title('Distribution in brightness',fontsize=fontsize+2)
             ax2.stairs(l_cnts,l_bins,fill=True)
             ax2.plot(ll,l_imf,color='red')
+            if avg_lum is not None:
+                ax2.axvline(avg_lum,0,1,label='$\\bar{\\ell}='+f'{avg_lum:.3f}$')
+                # ax2.axvline(np.log10(avg_lum),0,1,label=f'mean={avg_lum}')
+                ax2.legend(fontsize=fontsize)
             ax2.set_xlabel('$\log{(\\ell)}$',fontsize=fontsize)
             # ax2.grid()
             plt.figure()
@@ -153,13 +202,13 @@ N = int(1e2)            #: size of the field matrix
 M = int(1e2)            #: number of stars
 MIN_m = 0.5             #: min mass value for stars
 MAX_m = 10              #: max mass value for stars
-ALPHA = 2               #: IMF exp
+ALPHA = 2.35            #: IMF exp
 BETA = 3                #: M-L exp
 K = 1/(MAX_m**BETA)     #: normalization constant
 M_SEED = 15             #: seed for mass sample generation
 POS_SEED = 38
 # background values for a Gaussian distribution
-BACK_MEAN = MAX_m**BETA * 5e-4      #: mean
+BACK_MEAN = MAX_m**BETA * 3.2e-4      #: mean
 BACK_SIGMA = BACK_MEAN * 20e-2      #: sigma
 BACK_PARAM = ('Gaussian',(BACK_MEAN, BACK_SIGMA))
 BACK_SEED = 1000
@@ -304,14 +353,14 @@ def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m
     # updating the field matrix
     F[star_pos] += L 
     # sort values
-    sortpos = np.argsort(m)
+    sortpos = np.argsort(m)[::-1]
     m = m[sortpos]
     L = L[sortpos]
-    star_pos = (pos[sortpos] for pos in star_pos)
+    star_pos = (star_pos[0][sortpos],star_pos[1][sortpos])
     # saving stars infos
-    S = Star(m, L, star_pos)
+    S = Star(m, L, star_pos,alpha,beta,(m_inf,m_sup))
     if display_fig:
-        S.plot_info(alpha,beta)       
+        S.plot_info()       
         if 'title' not in kwargs:
             kwargs['title'] = 'Inizialized Field'
         fast_image(F,**kwargs)
