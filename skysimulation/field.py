@@ -122,7 +122,8 @@ class Star():
         ## Mass Distribution Plot
         if 'mass' in sel or sel == 'both':
             # bins = np.linspace(min(self.m),max(self.m),nstars//3*2)
-            m_cnts, m_bins = np.histogram(self.m,bins=nstars//4*3)
+            # m_cnts, m_bins = np.histogram(self.m,bins=nstars//4*3)
+            m_cnts, m_bins = np.histogram(self.m,bins=nstars//5*4)
             masses = (m_bins[1:] + m_bins[:-1])/2
             mm = np.linspace(masses.min(),masses.max(),len(self.m))
             imf = mm**(-alpha)
@@ -131,7 +132,7 @@ class Star():
             if 'mass' in sel:
                 plt.figure(figsize=(12,8))
                 plt.title(f'Distribution in mass of {nstars} stars\n$\\alpha = {alpha}$',fontsize=fontsize+2)
-                plt.stairs(m_cnts,m_bins,fill=True)
+                plt.stairs(m_cnts,m_bins,fill=False)
                 plt.plot(mm,imf,color='red',label='$IMF = M^{-\\alpha}$')
                 if avg_mass is not None:
                     plt.axvline(avg_mass,0,1,label='$\\bar{M}='+f'{avg_mass:.2f}$')
@@ -172,26 +173,25 @@ class Star():
             fig, (ax1,ax2) = plt.subplots(1,2)
             fig.suptitle(f'{nstars} stars with $\\alpha = {alpha}$ and $\\beta = {beta}$',fontsize=fontsize+2)
             ax1.set_title('Distribution in mass',fontsize=fontsize+2)
-            ax1.stairs(m_cnts,m_bins,fill=True)
+            ax1.stairs(m_cnts,m_bins,fill=False)
             ax1.plot(mm,imf,color='red',label='$IMF = M^{-\\alpha}$')
             if avg_mass is not None:
-                ax1.axvline(avg_mass,0,1,label='$\\bar{M}='+f'{avg_mass:.2f}$')
+                ax1.axvline(avg_mass,0,1,color='green',linestyle='dashed',label='$\\bar{M}='+f'{avg_mass:.2f}$ '+'$M_{\\odot}$',alpha=0.6)
             ax1.set_xscale('log')
             ax1.set_xlabel('M [$M_\\odot$]',fontsize=fontsize)
             ax1.set_ylabel('counts',fontsize=fontsize)
             ax1.legend(fontsize=fontsize)
-            # ax1.grid(which='both')
+            ax1.grid(which='both',linestyle='dashed',color='gray',alpha=0.3)
             ax2.set_title('Distribution in brightness',fontsize=fontsize+2)
-            ax2.stairs(l_cnts,l_bins,fill=True)
-            ax2.plot(ll,l_imf,color='red')
+            ax2.stairs(l_cnts,l_bins,fill=False)
+            ax2.plot(ll,l_imf,color='red',label='$IMF = \\ell^{-\\alpha/\\beta}$')
             if avg_lum is not None:
-                ax2.axvline(avg_lum,0,1,label='$\\bar{\\ell}='+f'{avg_lum:.3f}$')
+                ax2.axvline(np.log10(avg_lum),0,1,color='lime',linestyle='dashed',label='$\\bar{\\ell}='+f'{avg_lum:.3f}$',alpha=0.6)
                 # ax2.axvline(np.log10(avg_lum),0,1,label=f'mean={avg_lum}')
                 ax2.legend(fontsize=fontsize)
             ax2.set_xlabel('$\log{(\\ell)}$',fontsize=fontsize)
-            # ax2.grid()
-            plt.figure()
-            plt.plot(self.m,self.lum)
+            ax2.grid(which='both',linestyle='dashed',color='gray',alpha=0.3)
+
                         
 
 
