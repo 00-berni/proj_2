@@ -1547,12 +1547,12 @@ def light_recover(dec_field: NDArray, thr: float, mean_bkg: float, ker_sigma: tu
         'cntrl_sel': 'bright', 
         'debug_plots': False,
         'log': 'True'
-        }
+        }  
     for key, val in default_param.items():
         if key not in search_args.keys():
             search_args[key] = val
     tmp_field = dec_field[sub_frame]
-    objs, errs, pos = searching(tmp_field,thr,mean_bkg,**search_args)
+    objs, errs, pos = searching(tmp_field,thr,mean_bkg,ker_sigma=ker_sigma[0],**search_args)
     print('SUM EST',[np.sum(o) for o in objs[:4]])
     # maxvals = np.array([o.max() for o in objs])# - mean_bkg
     rec_brt  = np.array([o.sum() for o in objs])# - mean_bkg
@@ -2608,7 +2608,7 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
             ax.plot(rej_pos[1],rej_pos[0],'.r')
         plt.show()
         fig, ax = plt.subplots(1,1)
-        ax.set_title('Searching algorithm',fontsize=20)
+        ax.set_title('Detecting algorithm',fontsize=20)
         field_image(fig,ax,field)
         if 0 not in acc_pos:
             ax.plot(acc_pos[1],acc_pos[0],'.b')
