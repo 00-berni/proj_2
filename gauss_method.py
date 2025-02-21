@@ -124,11 +124,12 @@ plt.show()
 
 g_diff = g_rec_lum-STARS.lum[:len(g_rec_lum)]
 plt.figure()
+x_ticks = np.arange(len(g_rec_lum))*5
 plt.title('Brightness comparison',fontsize=FONTSIZE+2)
-plt.errorbar(np.arange(len(g_rec_lum)),g_diff,g_Drec_lum,fmt='.--',capsize=3)
+plt.errorbar(x_ticks,g_diff,g_Drec_lum,fmt='.--',capsize=3)
 plt.axhline(0,0,1,color='k')
 plt.grid(linestyle='dashed',color='gray',alpha=0.5)
-plt.xticks(np.arange(len(g_rec_lum)),np.round(g_rec_lum*1e4,0))
+plt.xticks(x_ticks,np.round(g_rec_lum*1e4,0))
 plt.xlabel('$\\ell_{rec}$',fontsize=FONTSIZE)
 plt.ylabel('$\\ell_{rec} - \\ell_0$',fontsize=FONTSIZE)
 
