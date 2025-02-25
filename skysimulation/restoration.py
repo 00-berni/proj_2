@@ -648,6 +648,7 @@ def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, 
         plt.xscale('log')
         plt.xlabel('$\\ell$ [a.u.]',fontsize=pltargs['fontsize'])
         plt.ylabel('counts',fontsize=pltargs['fontsize'])
+        plt.grid(linestyle='dashed',color='gray',alpha=0.5)
         plt.legend(fontsize=pltargs['fontsize'])
         plt.show()
 
@@ -1495,6 +1496,7 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
         plt.plot(a_diff,'.-')
         plt.xlabel('$r$',fontsize=18)
         plt.ylabel('$\\Delta I_{(r)}^{(r+1)}$',fontsize=18)
+        plt.grid(linestyle='dashed',color='gray',alpha=0.3)
         # plt.axhline(Dn,0,1,color='orange')
         # plt.ylim(1e-7,2e-6)
         # plt.axhline(Dn/sigma.mean(),0,1,color='violet')
@@ -1546,30 +1548,42 @@ def light_recover(dec_field: NDArray, thr: float, mean_bkg: float, ker_sigma: tu
         'sel_cond': 'new',
         'cntrl_sel': 'bright', 
         'debug_plots': False,
-        'log': 'True'
+        'log': 'True',
+        'obj_params': [[],[],[],[]] # [[k,Dk],[s,Ds],[x0,Dx0],[y0,Dy0]]
         }  
     for key, val in default_param.items():
         if key not in search_args.keys():
             search_args[key] = val
     tmp_field = dec_field[sub_frame]
     objs, errs, pos = searching(tmp_field,thr,mean_bkg,ker_sigma=ker_sigma[0],**search_args)
+    if len(objs) != len(errs): 
+        raise Exception('OH NOOOOOOOOO')
     print('SUM EST',[np.sum(o) for o in objs[:4]])
     # maxvals = np.array([o.max() for o in objs])# - mean_bkg
     rec_brt  = np.array([o.sum() for o in objs])# - mean_bkg
-    Drec_brt = np.array([e[0,0]*e.shape[0]**2 for e in errs]) 
-    fast_image(objs[rec_brt.argmax()])
-    fig,ax = plt.subplots(1,1)
-    field_image(fig,ax,dec_field)
-    plt.plot(*pos[:,rec_brt.argmax()],'.')
-    plt.show()
+    Drec_brt = np.array([e[0,0]*e.shape[0] for e in errs]) 
+    rec_param = np.asarray(search_args['obj_params'])
     maxpos = rec_brt.argmax()
+    # fast_image(objs[maxpos])
+    # fig,ax = plt.subplots(1,1)
+    # field_image(fig,ax,dec_field)
+    # ax.plot(pos[1,maxpos],pos[0,maxpos],'.')
+    # plt.show()
     print('ERRS',abs(rec_brt.max()-np.mean(rec_brt[rec_brt!=rec_brt.max()]))/Drec_brt[maxpos])
-    if abs(rec_brt.max()-np.mean(rec_brt[rec_brt!=rec_brt.max()]))/Drec_brt[maxpos] >= 2:
-        rec_brt = np.delete(rec_brt,maxpos)
-        Drec_brt = np.delete(Drec_brt,maxpos)
-    sort_args = slice(None)# np.argsort(rec_brt)[::-1]
-    if len(objs) > 1:
-        _ = dist_corr(pos,binning=binning,display_plots=results)
+    print('SIGMAS',rec_param[1,:,0])
+    # if abs(rec_brt.max()-np.mean(rec_brt[rec_brt!=rec_brt.max()]))/Drec_brt[maxpos] >= 2:
+    #     print('No good one:', rec_param[1,maxpos,0])
+    #     rec_brt = np.delete(rec_brt,maxpos)
+    #     Drec_brt = np.delete(Drec_brt,maxpos)
+    #     rec_param = np.delete(rec_param,maxpos,axis=1)
+    #     print('Mean sigma',rec_param[1,:,0].mean())
+    # print('New good one:', rec_param[1,rec_brt.argmax(),0])
+    fails = rec_brt >= 0
+    rec_brt  = rec_brt[fails]
+    Drec_brt = Drec_brt[fails]
+    sort_args =  np.argsort(rec_brt)[::-1]
+    # if len(objs) > 1:
+    #     _ = dist_corr(pos,binning=binning,display_plots=results)
     if extraction is not None:
         extraction['objs'] = objs
         extraction['errs'] = errs
@@ -2098,7 +2112,10 @@ def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArr
         print('YOHEY',errs.shape,fit_obj.shape)
         print(type(xfit),type(yfit),initial_values)
         raise
-    if pop[1] < 1: return None,None
+    if pop[1] < 1: 
+        return None,None
+    elif ker_sigma is not None and pop[1] > ker_sigma:
+        return None,None
     rec_obj = gauss_func((xrange,yrange),*pop)
     # print('VARIANCE',np.sqrt(np.var(rec_obj-prb_obj)))
     # rec_err = np.full(rec_obj.shape,np.sqrt(np.var(rec_obj-prb_obj)))
