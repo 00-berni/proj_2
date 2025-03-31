@@ -1181,7 +1181,7 @@ def selection(obj: NDArray, index: tuple[int,int], apos: NDArray, size: int, sel
 #     return obj, err, sel_pos
 
 
-def new_kernel_fit(obj: NDArray, err: NDArray | None = None, initial_values: list[int] | None = None, display_fig: bool = False, **kwargs) -> tuple[NDArray,NDArray]:
+def new_kernel_fit(obj: NDArray, err: NDArray | None = None, initial_values: list[int] | None = None, fit_cov: None | list = None, display_fig: bool = False, **kwargs) -> tuple[NDArray,NDArray]:
     """To compute a gaussian fit for an object
 
     Parameters
@@ -1265,7 +1265,8 @@ def new_kernel_fit(obj: NDArray, err: NDArray | None = None, initial_values: lis
         return None, None
     # store the results
     pop, Dpop = fit.results()    
-    
+    if fit_cov is not None:
+        fit_cov += [fit.res['cov']]
     ## Plotting
     if display_fig:
         sigma, Dsigma = pop[1], Dpop[1]
@@ -1557,7 +1558,11 @@ def light_recover(dec_field: NDArray, thr: float, mean_bkg: float, ker_sigma: tu
     tmp_field = dec_field[sub_frame]
     objs, errs, pos = searching(tmp_field,thr,mean_bkg,ker_sigma=ker_sigma[0],**search_args)
     if len(objs) != len(errs): 
-        raise Exception('OH NOOOOOOOOO')
+        print('LENNN',len(objs),len(errs),pos.shape[-1])
+        objs = objs[:min(len(objs),len(errs),pos.shape[-1])]
+        errs = errs[:min(len(objs),len(errs),pos.shape[-1])]
+        pos  = pos[:,:min(len(objs),len(errs),pos.shape[-1])]
+        # raise Exception('OH NOOOOOOOOO')
     print('SUM EST',[np.sum(o) for o in objs[:4]])
     # maxvals = np.array([o.max() for o in objs])# - mean_bkg
     rec_brt  = np.array([o.sum() for o in objs])# - mean_bkg
@@ -2073,12 +2078,13 @@ def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArr
     #         fast_image(fit_obj)
     #     print(index)
     #     raise
-    if ker_sigma is None:
+    std0 = ker_sigma
+    if std0 is None:
         hm = k0/2
         hm_xpos, hm_ypos = minimum_pos(abs(hm-fit_obj))
         hwhm = np.sqrt((hm_xpos - index[0])**2 + (hm_ypos - index[1])**2)
-        ker_sigma = hwhm   
-    initial_values = [k0,ker_sigma,index[0],index[1]]  
+        std0 = hwhm   
+    initial_values = [k0,std0,index[0],index[1]]  
     xfit = np.vstack((xrange.ravel(),yrange.ravel()))
     yfit = fit_obj.ravel()
     sigma = errs.ravel().copy() if errs is not None else None
@@ -2086,6 +2092,7 @@ def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArr
     try:
         pop, pcov = curve_fit(gauss_func,xfit,yfit,initial_values,sigma=sigma)
         print(pop,np.sqrt(pcov.diagonal()))
+        pop_err = np.sqrt(pcov.diagonal())
     except RuntimeError:
         try:
             if debug_plots:        
@@ -2095,7 +2102,7 @@ def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArr
                 plt.plot(index[1],index[0],'.')
                 plt.show()
             print('Another Chance')
-            pop, pcov = new_kernel_fit(fit_obj,display_fig=debug_plots)
+            pop, pop_err = new_kernel_fit(fit_obj,display_fig=debug_plots)
             # return None, None
             # exit()
             # pop, pcov = curve_fit(gauss_func,xfit,yfit,initial_values,sigma=None)
@@ -2112,10 +2119,16 @@ def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArr
         print('YOHEY',errs.shape,fit_obj.shape)
         print(type(xfit),type(yfit),initial_values)
         raise
-    if pop[1] < 1: 
+    if pop[1] < 0: 
+        print('Sigma is negative -->',pop[1])
         return None,None
-    elif ker_sigma is not None and pop[1] > ker_sigma:
-        return None,None
+    elif ker_sigma is not None: 
+        if pop[1] >= ker_sigma or pop[1] < 1:
+            print('Sigma > Kernel -->',pop[1])
+            return None,None
+    # elif ker_sigma is not None and pop[1] >= ker_sigma:
+    #     print('Sigma > Kernel -->',pop[1])
+    #     return None,None
     rec_obj = gauss_func((xrange,yrange),*pop)
     # print('VARIANCE',np.sqrt(np.var(rec_obj-prb_obj)))
     # rec_err = np.full(rec_obj.shape,np.sqrt(np.var(rec_obj-prb_obj)))
@@ -2129,7 +2142,7 @@ def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArr
     #     fast_image(rec_obj)
     # print('CENVAL',prb_obj[avg_cen])
     # print('CENVAL',rec_obj[avg_cen])
-    pop_err = np.sqrt(pcov.diagonal())
+    
     if obj_param is not None:
         # obj_param = np.asarray(obj_param)
         for i in range(len(pop)):
@@ -2175,6 +2188,7 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
     print(f'Stop_val : {stop_val}')
     info_print(cnt,(xmax, ymax), peak)
     while peak > stop_val:
+        print(f'ker_sigma : {ker_sigma}')
         # debug_plots = True if cnt == 2 else False
         # debug_check = True if cnt == 2 else False
         rec_obj = None
@@ -2631,4 +2645,6 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
             ax.plot(acc_pos[1],acc_pos[0],'.b')
         plt.show()
     if 0 in acc_pos.shape: return None
+    if len(acc_obj) != acc_pos.shape[1]:
+        raise IndexError(f'Different lengths acc_obj : {len(acc_obj)} acc_pos : {len(acc_pos)}')
     return acc_obj, err_obj, acc_pos
