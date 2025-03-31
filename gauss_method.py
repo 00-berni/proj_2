@@ -78,13 +78,19 @@ ker_sigma, Dker_sigma = sky.kernel_estimation(objs,Dobjs,(bkg_mean,0),obj_param=
 atm_kernel = sky.Gaussian(sigma=ker_sigma)
 
 ### ANOTHER METHOD
-g_objs, g_errs, g_pos = sky.searching(sci_frame,thr,bkg_mean,Dsci_frame,ker_sigma=ker_sigma,max_size=10,cntrl=None,cntrl_sel='bright',sel_cond='new',debug_plots=False,log=True)
+obj_param = [[],[],[],[]]   #: list of gaussian fit results for each obj
+g_objs, g_errs, g_pos = sky.searching(sci_frame,thr,bkg_mean,Dsci_frame,ker_sigma=ker_sigma,max_size=10,cntrl=None,cntrl_sel='bright',sel_cond='new',obj_params=obj_param,debug_plots=False,log=True)
 g_rec_lum  = np.array([ obj.max() for obj in g_objs])
 g_Drec_lum = np.array([ err[sky.peak_pos(obj)] for obj,err in zip(g_objs,g_errs)])
-
+obj_param = np.asarray(obj_param)
 g_Drec_lum = g_rec_lum * np.sqrt(2*np.pi)*ker_sigma * np.sqrt((g_Drec_lum/g_rec_lum)**2 + (Dker_sigma/ker_sigma)**2)
 g_rec_lum *= np.sqrt(2*np.pi)*ker_sigma
 g_rec_lum = np.array([ obj.sum() for obj in g_objs])
+sortpos = np.argsort(g_rec_lum)[::-1]
+g_rec_lum = g_rec_lum[sortpos]
+g_objs = [g_objs[i] for i in sortpos]
+g_errs = [g_errs[i] for i in sortpos]
+g_pos  = g_pos[:,sortpos]
 
 mean_lum = STARS.mean_lum() if STARS.mean_lum() is not None else STARS.lum.mean()           #: mean value
 # average and compute the STD
@@ -92,6 +98,7 @@ g_mean_rec = np.mean(g_rec_lum)
 # print
 print(f'Slum {STARS.lum[:4]}')
 print(f'Glum {g_rec_lum[:4]}')
+print(f'G2lum {obj_param[0,:4,0]}')
 print(f'S: {mean_lum:.2e}\tL: {g_mean_rec:.2e}\t{(g_mean_rec-mean_lum)/mean_lum:.2%}')
 print(f'FOUND: {len(g_rec_lum)}')
 print(f'EXPEC: {len(STARS.lum[STARS.lum>bkg_mean])}')
@@ -124,12 +131,12 @@ plt.show()
 
 g_diff = g_rec_lum-STARS.lum[:len(g_rec_lum)]
 plt.figure()
-x_ticks = np.arange(len(g_rec_lum))*5
+x_ticks = np.arange(len(g_rec_lum))*10
 plt.title('Brightness comparison',fontsize=FONTSIZE+2)
 plt.errorbar(x_ticks,g_diff,g_Drec_lum,fmt='.--',capsize=3)
 plt.axhline(0,0,1,color='k')
 plt.grid(linestyle='dashed',color='gray',alpha=0.5)
-plt.xticks(x_ticks,np.round(g_rec_lum*1e4,0))
+plt.xticks(x_ticks,np.round(g_rec_lum*1e3,1))
 plt.xlabel('$\\ell_{rec}$',fontsize=FONTSIZE)
 plt.ylabel('$\\ell_{rec} - \\ell_0$',fontsize=FONTSIZE)
 
