@@ -1,8 +1,16 @@
+import os
 from typing import Sequence, Any
 import numpy as np
 from numpy.typing import NDArray,ArrayLike
 from astropy.units import Quantity
 import matplotlib.pyplot as plt
+
+### CONSTANTS
+## Paths
+PWD = os.path.dirname(os.path.realpath(__file__))           #: path of the current dir
+PROJECT_DIR = os.path.split(PWD)[0]                         #: path of the project dir
+RESULT_DIR = os.path.join(PROJECT_DIR, 'result_data')       #: path of results dir
+
 
 class Gaussian():
     """Gaussian distribution
@@ -371,3 +379,33 @@ def dist_corr(postions: tuple[NDArray,NDArray], binning: int = 63,fontsize: int 
         plt.legend(fontsize=fontsize)
         plt.show()
     return distances
+
+def store_results(file_name: str, data: ArrayLike, main_dir: str | None = None, **txtkw) -> None:
+    """To store results in a `.txt` file
+
+    Parameters
+    ----------
+    file_name : str
+        name of the file
+    data : ArrayLike
+        data to store
+    ch_obs : str
+        chosen observation
+    ch_obj : str
+        chosen target name
+    **txtkw
+        parameters of `numpy.savetxt()`
+        the parameter `'delimiter'` is set to `'\t'` by default
+    """
+    # check delimiter
+    if 'delimiter' not in txtkw.keys():
+        txtkw['delimiter'] = '\t'
+    # build the path
+    res_dir = RESULT_DIR
+    if main_dir is not None:
+        new_dir = os.path.join(res_dir,main_dir)
+        if not os.path.isdir(new_dir): os.mkdir(new_dir)
+        res_dir = new_dir
+    file_path = os.path.join(res_dir, file_name + '.txt')
+    # save data
+    np.savetxt(file_path, np.column_stack(data), **txtkw)
