@@ -3,11 +3,12 @@ import matplotlib.pyplot as plt
 import skysimulation as sky
 
 ## Constants
-PLOTTING = False
+PLOTTING = True
 DISPLAY_PLOTS = False
 BINNING = 20
 FONTSIZE = 18
 BKG_MEAN = sky.BACK_MEAN
+OVERLAP  = True
 
 ### MONTE CARLO REALIZATIONS
 def generate_sample(selection: None | sky.ArrayLike = None,**initargs) -> sky.NDArray:
@@ -21,7 +22,7 @@ def generate_sample(selection: None | sky.ArrayLike = None,**initargs) -> sky.ND
 max_iter = 2000
 from time import time    
 start_time = time()
-distances = np.array([ generate_sample() for _ in range(max_iter) ])
+distances = np.array([ generate_sample(overlap=OVERLAP) for _ in range(max_iter) ])
 end_time = time()
 print('TIME:',end_time-start_time)
 samples = distances.copy()
@@ -55,7 +56,7 @@ if PLOTTING:
 
 ### SCIENCE FRAME
 ## Initialization
-STARS, (master_light, Dmaster_light), (master_dark, Dmaster_dark) = sky.field_builder(results=PLOTTING,display_fig=DISPLAY_PLOTS)
+STARS, (master_light, Dmaster_light), (master_dark, Dmaster_dark) = sky.field_builder(overlap=OVERLAP,results=PLOTTING,display_fig=DISPLAY_PLOTS)
 if PLOTTING:
     STARS.plot_info()
     plt.show()
@@ -223,11 +224,13 @@ print()
 print(mindist,new_sort,tmp_init_pos)
 print('LEN',len(new_sort),len(np.unique(new_sort)))
 # update the arrays
+print('Rec0',rec_lum.shape,Drec_lum.shape,rec_pos.shape)
 fake_obj = rec_lum[fake_index]
 fake_pos = rec_pos[:,fake_index]
 rec_lum  = np.delete(rec_lum,fake_index)
 Drec_lum = np.delete(Drec_lum,fake_index)
 rec_pos  = np.delete(rec_pos,fake_index,axis=1)
+print('Rec1',rec_lum.shape,Drec_lum.shape,rec_pos.shape)
 # source brightness
 lum0 = STARS.lum[new_sort]
 # compute the differences
@@ -286,44 +289,44 @@ plt.title('Artifacts removal',fontsize=FONTSIZE+2)
 plt.xlabel('$d$ [px]',fontsize=FONTSIZE)
 # plt.ylabel('norm. counts',fontsize=FONTSIZE)
 g_cnts, bins, _ = plt.hist(distances,BINNING*3,color='red',density=True,histtype='step',label='generated')
-rec_cnts, _, _  = plt.hist(rec_distances,bins,color='blue',density=True,histtype='step',label='recover')
+rec_cnts, _, _  = plt.hist(rec_distances,8,color='blue',density=True,histtype='step',label='recover')
 obs_cnts, _, _  = plt.hist(obs_distances,bins,color='green',density=True,histtype='step',label='observable')
 plt.legend(fontsize=FONTSIZE)
 
-def compare(gen_sample: sky.NDArray, data_cnts: sky.NDArray, binning: sky.NDArray, avg_dist: float, und_pop: list[float], over_pop: list[float]):
-    smpl_cnts, _, = np.histogram(gen_sample,binning,density=True)
-    avg_bin = (binning[1:]+binning[:-1])/2
-    diff = data_cnts - smpl_cnts
-    near_pos = np.argmax(abs(diff[avg_bin < avg_dist]))
-    far_pos  = np.argmax(abs(diff[avg_bin > avg_dist])) + np.where(avg_bin > avg_dist)[0][0]
-    near_max = avg_bin[near_pos]
-    far_max  = avg_bin[far_pos]
-    if diff[near_pos] < 0:   und_pop  += [near_max]
-    elif diff[near_pos] > 0: over_pop += [near_max]
-    if diff[far_pos] < 0:    und_pop  += [far_max]
-    elif diff[far_pos] > 0:  over_pop += [far_max]
-    return near_max, far_max
+# def compare(gen_sample: sky.NDArray, data_cnts: sky.NDArray, binning: sky.NDArray, avg_dist: float, und_pop: list[float], over_pop: list[float]):
+#     smpl_cnts, _, = np.histogram(gen_sample,binning,density=True)
+#     avg_bin = (binning[1:]+binning[:-1])/2
+#     diff = data_cnts - smpl_cnts
+#     near_pos = np.argmax(abs(diff[avg_bin < avg_dist]))
+#     far_pos  = np.argmax(abs(diff[avg_bin > avg_dist])) + np.where(avg_bin > avg_dist)[0][0]
+#     near_max = avg_bin[near_pos]
+#     far_max  = avg_bin[far_pos]
+#     if diff[near_pos] < 0:   und_pop  += [near_max]
+#     elif diff[near_pos] > 0: over_pop += [near_max]
+#     if diff[far_pos] < 0:    und_pop  += [far_max]
+#     elif diff[far_pos] > 0:  over_pop += [far_max]
+#     return near_max, far_max
 
-und_pop  = []
-over_pop = []
-near, far = np.array([ compare(sample,rec_cnts,bins,mean_dist,und_pop,over_pop) for sample in samples]).T
+# und_pop  = []
+# over_pop = []
+# near, far = np.array([ compare(sample,rec_cnts,bins,mean_dist,und_pop,over_pop) for sample in samples]).T
 
-und_pop  = np.asarray(und_pop).flatten()
-over_pop = np.asarray(over_pop).flatten()
+# und_pop  = np.asarray(und_pop).flatten()
+# over_pop = np.asarray(over_pop).flatten()
 
-plt.figure()
-plt.title('Near')
-plt.hist(near,31,density=True)
-plt.figure()
-plt.title('Far')
-plt.hist(far,31,density=True)
-plt.figure()
-plt.title('Under pop')
-plt.hist(und_pop,31,density=True)
-plt.figure()
-plt.title('Over pop')
-plt.hist(over_pop,31,density=True)
-plt.show()
+# plt.figure()
+# plt.title('Near')
+# plt.hist(near,31,density=True)
+# plt.figure()
+# plt.title('Far')
+# plt.hist(far,31,density=True)
+# plt.figure()
+# plt.title('Under pop')
+# plt.hist(und_pop,31,density=True)
+# plt.figure()
+# plt.title('Over pop')
+# plt.hist(over_pop,31,density=True)
+# plt.show()
 
 ## Distribution Check
 mean_lum = np.mean(rec_lum)
