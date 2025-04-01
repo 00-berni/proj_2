@@ -16,3 +16,6 @@
 .vscode/configurationCache.log
 .vscode/dryrun.log
 .vscode/targets.log
+
+# my stuff
+*cose-da-fare.md
