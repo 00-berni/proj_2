@@ -214,7 +214,7 @@ def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['sta
     fake_index = abs(diff/Drec_lum) > 3
     # update the arrays
     fake_lum  = np.append(fake_lum,rec_lum[fake_index])
-    Dfake_lum = np.append(fake_lum,Drec_lum[fake_index])
+    Dfake_lum = np.append(Dfake_lum,Drec_lum[fake_index])
     fake_pos  = np.append(fake_pos,rec_pos[:,fake_index],axis=1)
     lum0 = np.delete(lum0,fake_index)
     diff = np.delete(diff,fake_index)
@@ -316,7 +316,7 @@ if __name__ == '__main__':
     # _ = pipeline(star_num=500,**params,overlap=True, iter=1000)
 
     ### DIFFERNT BACKGROUNDS
-    bkg_mean = np.linspace(3.5,4.3,10)
+    bkg_mean = np.linspace(3.5,5.0,10)
 
     bkg_data = [pipeline(**params,overlap=True,bkg_param=('Gaussian',(bkg*1e-4/sky.K,bkg*1e-4/sky.K*20e-2)),results=False,checks=False,montecarlo=False)[:-1] for bkg in bkg_mean]
 
@@ -325,10 +325,34 @@ if __name__ == '__main__':
     NAME = 'source'
     NAMES = [f'bkg-{bkg:.2f}' for bkg in bkg_mean]
     HEADER = 'r-a\tDra\tw-a\tDwa'
+    sky.store_results(NAME,[[*bkg_data[0][2][0].lum,bkg_data[0][2][0].mean_lum()]],main_dir=DIRECTORY,header='Lum')
     for name, bkg in zip(NAMES,bkg_data):
-        sky.store_results(NAME,[*bkg[2][0].lum,bkg[2][0].mean_lum()],main_dir=DIRECTORY,header='Lum')
-        sky.store_results(name,[bkg[0][0],bkg[0][1],bkg[1][0],bkg[1][1]],main_dir=DIRECTORY,header=HEADER)
-    
+        print('Save '+name)
+        diff = len(bkg[0][0]) - len(bkg[1][0])
+        ext1 = 0 if diff >= 0 else -diff
+        ext2 = 0 if diff <= 0 else diff
+        col1 = np.append(bkg[0][0],[-1]*ext1)
+        col2 = np.append(bkg[0][1],[-1]*ext1)
+        col3 = np.append(bkg[1][0],[-1]*ext2)
+        col4 = np.append(bkg[1][1],[-1]*ext2)
+        print('\tdiff -',diff)
+        print('\tcol1 -',len(col1))
+        print('\tcol2 -',len(col2))
+        print('\tcol3 -',len(col3))
+        print('\tcol4 -',len(col4))
+        if len(col1) != len(col3):
+            print(col1)
+            print(col2)
+            raise
+        elif len(col1) != len(col2):
+            print(col1)
+            print(col2)
+            raise
+        elif len(col3) != len(col4):
+            print(col1)
+            print(col2)
+            raise
+        sky.store_results(name,[col1,col2,col3,col4],main_dir=DIRECTORY,header=HEADER)
 
     print(len(bkg_data),len(bkg_data[0]),len(bkg_data[0][0]))
     for i in range(len(bkg_data)):
