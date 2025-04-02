@@ -30,11 +30,44 @@ import matplotlib.pyplot as plt
 from scipy.signal import fftconvolve
 from scipy.ndimage import gaussian_filter
 from .display import fast_image, field_image
-from .stuff import Gaussian, DISTR 
-from .stuff import field_convolve, from_parms_to_distr, mean_n_std
+from .stuff import Gaussian, DISTR
+from .stuff import field_convolve, from_parms_to_distr, mean_n_std, open_data
+
+### STANDARD VALUES
+# MSOL = 1.989e+33 # g
+# LSOL = 3.84e+33 # erg/s
+N = int(1e2)            #: size of the field matrix
+M = int(1e2)            #: number of stars
+MIN_m = 0.5             #: min mass value for stars
+MAX_m = 10              #: max mass value for stars
+ALPHA = 2.35            #: IMF exp
+BETA = 3                #: M-L exp
+K = 1/(MAX_m**BETA)     #: normalization constant
+M_SEED = 27             #: seed for mass sample generation
+POS_SEED = 38
+# background values for a Gaussian distribution
+BACK_MEAN = MAX_m**BETA * 3.2e-4      #: mean
+BACK_SIGMA = BACK_MEAN * 20e-2      #: sigma
+BACK_PARAM = ('Gaussian',(BACK_MEAN, BACK_SIGMA))
+BACK_SEED = 1000
+# detector noise values for a Gaussian distribution
+NOISE_MEAN = 5e-2                   #: mean
+NOISE_SIGMA = NOISE_MEAN * 50e-2    #: sigma
+NOISE_PARAM = ('Gaussian',(NOISE_MEAN,NOISE_SIGMA))
+NOISE_SEED = 2000
+# gaussian psf
+SEEING_SIGMA = 3        #: seeing
+ATM_PARAM = ('Gaussian',SEEING_SIGMA)                                                                                     
+##
 
 ### CLASS DEFINITIONS
 class Star():
+    @staticmethod
+    def load_data(file_name: str, main_dir: str = '', alpha: float = ALPHA, beta: float = BETA, mass_range: tuple[float, float] = (MIN_m, MAX_m), **csvtw) -> 'Star':
+        data = open_data(file_name,main_dir,out_type='array',**csvtw)
+        return Star(mass=data[0],lum=data[1],pos=(data[2],data[3]),alpha=alpha,beta=beta,mrange=mass_range)
+
+
     """Star object class.
     This class will be used only to store the 
     parameters of star object.
@@ -195,32 +228,6 @@ class Star():
                         
 
 
-### STANDARD VALUES
-# MSOL = 1.989e+33 # g
-# LSOL = 3.84e+33 # erg/s
-N = int(1e2)            #: size of the field matrix
-M = int(1e2)            #: number of stars
-MIN_m = 0.5             #: min mass value for stars
-MAX_m = 10              #: max mass value for stars
-ALPHA = 2.35            #: IMF exp
-BETA = 3                #: M-L exp
-K = 1/(MAX_m**BETA)     #: normalization constant
-M_SEED = 15             #: seed for mass sample generation
-POS_SEED = 38
-# background values for a Gaussian distribution
-BACK_MEAN = MAX_m**BETA * 3.2e-4      #: mean
-BACK_SIGMA = BACK_MEAN * 20e-2      #: sigma
-BACK_PARAM = ('Gaussian',(BACK_MEAN, BACK_SIGMA))
-BACK_SEED = 1000
-# detector noise values for a Gaussian distribution
-NOISE_MEAN = 5e-2                   #: mean
-NOISE_SIGMA = NOISE_MEAN * 50e-2    #: sigma
-NOISE_PARAM = ('Gaussian',(NOISE_MEAN,NOISE_SIGMA))
-NOISE_SEED = 2000
-# gaussian psf
-SEEING_SIGMA = 3        #: seeing
-ATM_PARAM = ('Gaussian',SEEING_SIGMA)                                                                                     
-##
 
 def generate_mass_array(m_min: float = MIN_m, m_max: float = MAX_m, alpha: float = ALPHA,  sdim: int = M, seed: int = M_SEED) -> NDArray:
     """To compute masses sample from the IMF distribution
@@ -566,7 +573,7 @@ def field_builder(acq_num: int = 6, dim: int = N, stnum: int = M, masses: tuple[
         matricies of mean and STD from it of dark
     """
     SEP = '-'*10 + '\n'
-    print(SEP+f'Initialization of the field\nDimension:\t{dim} x {dim}\nNumber of stars:\t{stnum}')
+    print(SEP+f'Initialization of the field\nDimension:\t{dim} x {dim}\nNumber of stars:\t{stnum}\nMass range:\t{masses}\nMass seed:\t{seed[0]}\nPos seed:\t{seed[1]}\nNumber acquisitions:\t{acq_num}')
     # creating the starting field
     m_seed, p_seed = seed
     F, S = initialize(dim,stnum,masses,*star_param,overlap=overlap,m_seed=m_seed,p_seed=p_seed,display_fig=display_fig,v=1,norm='log')
