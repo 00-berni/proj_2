@@ -9,6 +9,7 @@ BINNING = 20
 FONTSIZE = 18
 BKG_MEAN = sky.BACK_MEAN
 OVERLAP  = True
+DIR_NAME = 'default'
 
 ### MONTE CARLO REALIZATIONS
 def generate_sample(selection: None | sky.ArrayLike = None,**initargs) -> sky.NDArray:
@@ -24,6 +25,8 @@ from time import time
 start_time = time()
 distances = np.array([ generate_sample(overlap=OVERLAP) for _ in range(max_iter) ])
 end_time = time()
+sky.store_results('random_sample',distances,main_dir=DIR_NAME,columns=[f'{i:d}' for i in range(max_iter)])
+
 print('TIME:',end_time-start_time)
 samples = distances.copy()
 dist_means = np.mean(distances,axis=1)
@@ -54,6 +57,9 @@ if PLOTTING:
     plt.ylabel('norm. counts',fontsize=FONTSIZE)
     plt.show()
 
+obs_distances = np.array([ generate_sample(selection=BKG_MEAN,overlap=OVERLAP) for _ in range(max_iter) ])
+sky.store_results('random_sample-obs',obs_distances,main_dir=DIR_NAME,columns=[f'{i:d}' for i in range(max_iter)])
+exit()
 ### SCIENCE FRAME
 ## Initialization
 STARS, (master_light, Dmaster_light), (master_dark, Dmaster_dark) = sky.field_builder(overlap=OVERLAP,results=PLOTTING,display_fig=DISPLAY_PLOTS)
@@ -104,7 +110,7 @@ rec_lum, Drec_lum = sky.light_recover(dec_field,thr,bkg_mean,(ker_sigma,Dker_sig
 mean_lum = STARS.mean_lum() if STARS.mean_lum() is not None else STARS.lum.mean()           #: mean value
 # average and compute the STD
 mean_rec = np.mean(rec_lum)
-observable = STARS.lum>bkg_mean
+observable = slice(None,None) #STARS.lum>bkg_mean
 # print
 print(f'Slum {STARS.lum[:4]}')
 print(f'Rlum {rec_lum[:4]}')
@@ -137,6 +143,11 @@ plt.xlabel('$\\ell$ [a.u.]',fontsize=FONTSIZE)
 plt.ylabel('norm. counts',fontsize=FONTSIZE)
 plt.grid(linestyle='dashed',color='gray',alpha=0.5)
 plt.show()
+
+### STORE DATA
+sky.store_results('source.csv',[STARS.m,STARS.lum,STARS.pos[0],STARS.pos[1]],main_dir=DIR_NAME,columns=['M','L','X','Y'])
+sky.store_results('recovered.csv',[rec_lum,Drec_lum,results['pos'][0],results['pos'][1]],main_dir=DIR_NAME,columns=['L','DL','X','Y'])
+
 
 ### CHECKS
 ## Position check
@@ -240,8 +251,12 @@ for lum,Dlum,l0,sl in zip(rec_lum,Drec_lum,lum0,diff):
 # remove artifacts
 fake_index = abs(diff/Drec_lum) > 3
 # update the arrays
-fake_obj = np.append(fake_obj,rec_lum[fake_index])
-fake_pos = np.append(fake_pos,rec_pos[:,fake_index],axis=1)
+try:
+    fake_obj = np.append(fake_obj,rec_lum[fake_index])
+    fake_pos = np.append(fake_pos,rec_pos[:,fake_index],axis=1)
+except IndexError:
+    print(fake_index,rec_pos.shape,fake_pos.shape)
+    raise
 lum0 = np.delete(lum0,fake_index)
 diff = np.delete(diff,fake_index)
 rec_lum  = np.delete(rec_lum,fake_index)
@@ -271,7 +286,7 @@ ax.legend()
 plt.show()
 
 ## Distances Check
-obs_distances = np.array([ generate_sample(selection=bkg_mean) for _ in range(max_iter) ]).flatten()
+obs_distances = obs_distances.flatten()
 rec_distances = sky.dist_corr(rec_pos)
 rec_distances0 = sky.dist_corr(rec_pos0)
 plt.figure()
@@ -343,124 +358,4 @@ plt.legend(fontsize=FONTSIZE)
 plt.xlabel('$\\ell$ [a.u.]',fontsize=FONTSIZE)
 plt.ylabel('norm. counts',fontsize=FONTSIZE)
 plt.grid(linestyle='dashed',color='gray',alpha=0.5)
-plt.show()
-
-
-exit()
-### ANOTHER METHOD
-g_objs, g_errs, g_pos = sky.searching(sci_frame,thr,bkg_mean,Dsci_frame,ker_sigma=None,max_size=10,cntrl=None,cntrl_sel='bright',sel_cond='new',debug_plots=False,log=True)
-g_rec_lum  = np.array([ obj.max() for obj in g_objs])
-g_Drec_lum = np.array([ err[sky.peak_pos(obj)] for obj,err in zip(g_objs,g_errs)])
-
-g_Drec_lum = g_rec_lum * np.sqrt(2*np.pi)*ker_sigma * np.sqrt((g_Drec_lum/g_rec_lum)**2 + (Dker_sigma/ker_sigma)**2)
-g_rec_lum *= np.sqrt(2*np.pi)*ker_sigma
-g_rec_lum = np.array([ obj.sum() for obj in g_objs])
-
-mean_lum = STARS.mean_lum() if STARS.mean_lum() is not None else STARS.lum.mean()           #: mean value
-# average and compute the STD
-g_mean_rec = np.mean(g_rec_lum)
-# print
-print(f'Slum {STARS.lum[:4]}')
-print(f'Glum {g_rec_lum[:4]}')
-print(f'S: {mean_lum:.2e}\tL: {g_mean_rec:.2e}\t{(g_mean_rec-mean_lum)/mean_lum:.2%}')
-print(f'FOUND: {len(g_rec_lum)}')
-print(f'EXPEC: {len(STARS.lum[STARS.lum>bkg_mean])}')
-
-plt.figure()
-plt.title('Restored distribution in brightness',fontsize=FONTSIZE+2)
-plt.hist(g_rec_lum,BINNING,histtype='step',color='blue')
-plt.axvline(g_mean_rec,0,1,color='blue',label='mean recovered brightness',linestyle='dashed')
-# plt.axvspan(mean_rec-Dmean_rec,mean_rec+Dmean_rec,facecolor='blue',alpha=0.4)
-plt.axvline(mean_lum,0,1,color='red',label='mean source brightness',linestyle='dashed')
-# plt.axvline(bkg_mean,0,1,color='green',label='mean background',linestyle='dashed')
-plt.legend(fontsize=FONTSIZE)
-plt.xlabel('$\\ell$ [a.u.]',fontsize=FONTSIZE)
-plt.ylabel('counts',fontsize=FONTSIZE)
-plt.grid(linestyle='dashed',color='gray',alpha=0.5)
-plt.figure()
-plt.title('Restored distribution in brightness',fontsize=FONTSIZE+2)
-bins = np.linspace(min(STARS.lum.min(),g_rec_lum.min()),max(STARS.lum.max(),g_rec_lum.max()),BINNING)
-plt.hist(STARS.lum,bins,density=True,color='red',histtype='step')
-plt.hist(g_rec_lum,bins,density=True,histtype='step',color='blue')
-plt.axvline(g_mean_rec,0,1,color='blue',label='mean recovered brightness',linestyle='dashed')
-plt.axvline(bkg_mean,0,1,color='green',label='mean background',linestyle='dashed')
-# plt.axvspan(mean_rec-Dmean_rec,mean_rec+Dmean_rec,facecolor='blue',alpha=0.4)
-plt.axvline(mean_lum,0,1,color='red',label='mean source brightness',linestyle='dashed')
-plt.legend(fontsize=FONTSIZE)
-plt.xlabel('$\\ell$ [a.u.]',fontsize=FONTSIZE)
-plt.ylabel('counts',fontsize=FONTSIZE)
-plt.grid(linestyle='dashed',color='gray',alpha=0.5)
-plt.show()
-
-g_diff = g_rec_lum-STARS.lum[:len(g_rec_lum)]
-plt.figure()
-plt.title('Brightness comparison',fontsize=FONTSIZE+2)
-plt.errorbar(np.arange(len(g_rec_lum)),g_diff,g_Drec_lum,fmt='.--',capsize=3)
-plt.axhline(0,0,1,color='k')
-plt.grid(linestyle='dashed',color='gray',alpha=0.5)
-plt.xticks(np.arange(len(g_rec_lum)),np.round(g_rec_lum*1e4,0))
-plt.xlabel('$\\ell_{rec}$',fontsize=FONTSIZE)
-plt.ylabel('$\\ell_{rec} - \\ell_0$',fontsize=FONTSIZE)
-
-plt.figure()
-plt.hist(g_diff/g_Drec_lum,30)
-plt.show()
-
-
-init_pos = np.asarray(STARS.pos)
-g_rec_pos  = np.copy(g_pos)
-g_check = np.array([ sky.distance(g_rec_pos,init_pos[:,i]) for i in range(init_pos.shape[1])])
-s1_cnts = len(g_check[g_check <=   ker_sigma])/init_pos.shape[1]*100
-s2_cnts = len(g_check[g_check <= 2*ker_sigma])/init_pos.shape[1]*100
-s3_cnts = len(g_check[g_check <= 3*ker_sigma])/init_pos.shape[1]*100
-
-WIDTH = 0.25
-plt.figure()
-plt.bar(np.arange(3)/3,[s1_cnts,s2_cnts,s3_cnts],width=WIDTH)
-plt.xticks(np.arange(3)/3,['$1\\sigma$','$2\\sigma$','$3\\sigma$'])
-plt.show()
-
-rec_distances = sky.dist_corr(g_pos)
-plt.figure()
-plt.title('Distribution of objects relative distances',fontsize=FONTSIZE+2)
-plt.xlabel('$d$ [px]',fontsize=FONTSIZE)
-plt.xlabel('norm. counts',fontsize=FONTSIZE)
-g_cnts, bins, _ = plt.hist(distances,BINNING,color='red',density=True,histtype='step',label='generated')
-rec_cnts, _, _  = plt.hist(rec_distances,bins,color='blue',density=True,histtype='step',label='recover')
-plt.legend(fontsize=FONTSIZE)
-
-def compare(gen_sample: sky.NDArray, data_cnts: sky.NDArray, binning: sky.NDArray, avg_dist: float, und_pop: list[float], over_pop: list[float]):
-    smpl_cnts, _, = np.histogram(gen_sample,binning,density=True)
-    avg_bin = (binning[1:]+binning[:-1])/2
-    diff = data_cnts - smpl_cnts
-    near_pos = np.argmax(abs(diff[avg_bin < avg_dist]))
-    far_pos  = np.argmax(abs(diff[avg_bin > avg_dist])) + np.where(avg_bin > avg_dist)[0][0]
-    near_max = avg_bin[near_pos]
-    far_max  = avg_bin[far_pos]
-    if diff[near_pos] < 0:   und_pop  += [near_max]
-    elif diff[near_pos] > 0: over_pop += [near_max]
-    if diff[far_pos] < 0:    und_pop  += [far_max]
-    elif diff[far_pos] > 0:  over_pop += [far_max]
-    return near_max, far_max
-
-
-und_pop  = []
-over_pop = []
-near, far = np.array([ compare(sample,rec_cnts,bins,mean_dist,und_pop,over_pop) for sample in samples]).T
-
-und_pop  = np.asarray(und_pop).flatten()
-over_pop = np.asarray(over_pop).flatten()
-
-plt.figure()
-plt.title('Near')
-plt.hist(near,31,density=True)
-plt.figure()
-plt.title('Far')
-plt.hist(far,31,density=True)
-plt.figure()
-plt.title('Under pop')
-plt.hist(und_pop,31,density=True)
-plt.figure()
-plt.title('Over pop')
-plt.hist(over_pop,31,density=True)
 plt.show()
