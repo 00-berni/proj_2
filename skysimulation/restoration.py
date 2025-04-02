@@ -2093,21 +2093,31 @@ def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArr
         pop, pcov = curve_fit(gauss_func,xfit,yfit,initial_values,sigma=sigma)
         print(pop,np.sqrt(pcov.diagonal()))
         pop_err = np.sqrt(pcov.diagonal())
+        if debug_plots:
+            fig, ax = plt.subplots(1,1)
+            field_image(fig,ax,fit_obj)
+            ax.plot(avg_cen[1],avg_cen[0],'xr')
+            ax.plot(pop[-1],pop[-2],'.b')
+            mx = np.linspace(-1,xdim,50)
+            my = np.linspace(-1,ydim,50)
+            yy, xx = np.meshgrid(my,mx)
+            ax.contour(yy,xx,gauss_func((xx,yy),*pop),colors='b',linestyles='dashed',alpha=0.7)
+            onesigma = plt.Circle((pop[-1],pop[-2]),pop[1],color='orange',alpha=0.4)
+            ax.add_patch(onesigma)
     except RuntimeError:
-        try:
-            if debug_plots:        
-                plt.figure()
-                plt.title('runtime0')
-                plt.imshow(fit_obj)
-                plt.plot(index[1],index[0],'.')
-                plt.show()
-            print('Another Chance')
-            pop, pop_err = new_kernel_fit(fit_obj,display_fig=debug_plots)
-            # return None, None
-            # exit()
-            # pop, pcov = curve_fit(gauss_func,xfit,yfit,initial_values,sigma=None)
-            # print(pop,np.sqrt(pcov.diagonal()))
-        except RuntimeError:
+        if debug_plots:        
+            plt.figure()
+            plt.title('runtime0')
+            plt.imshow(fit_obj)
+            plt.plot(index[1],index[0],'.')
+            plt.show()
+        print('Another Chance')
+        pop, pop_err = new_kernel_fit(fit_obj,display_fig=debug_plots)
+        # return None, None
+        # exit()
+        # pop, pcov = curve_fit(gauss_func,xfit,yfit,initial_values,sigma=None)
+        # print(pop,np.sqrt(pcov.diagonal()))
+        if pop is None:
             if debug_plots:        
                 plt.figure()
                 plt.title('runtime')
@@ -2119,7 +2129,7 @@ def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArr
         print('YOHEY',errs.shape,fit_obj.shape)
         print(type(xfit),type(yfit),initial_values)
         raise
-    if pop[1] < 0: 
+    if pop[1] < 0.5: 
         print('Sigma is negative -->',pop[1])
         return None,None
     elif ker_sigma is not None: 
@@ -2223,7 +2233,7 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
         # remove small object
         # if False and (obj.shape[0] <= 3 or obj.shape[1] <= 3):
         if (obj.shape[0] <= 3 or obj.shape[1] <= 3):
-                if sel_cond == 'new' and obj.mean() >= 2*thr:
+                if (sel_cond == 'new' and obj.mean() >= 2*thr) and (ker_sigma is not None) and (0 not in obj.shape):
                     x0, y0 = xmax,ymax
                     acc_obj += [obj]
                     acc_pos = np.append(acc_pos, [[x0], [y0]], axis=1)
