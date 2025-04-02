@@ -1,9 +1,10 @@
 import os
-from typing import Sequence, Any
+from typing import Sequence, Any, Literal
 import numpy as np
 from numpy.typing import NDArray,ArrayLike
 from astropy.units import Quantity
 import matplotlib.pyplot as plt
+import pandas as pd
 
 ### CONSTANTS
 ## Paths
@@ -380,7 +381,7 @@ def dist_corr(postions: tuple[NDArray,NDArray], binning: int = 63,fontsize: int 
         plt.show()
     return distances
 
-def store_results(file_name: str, data: ArrayLike, main_dir: str | None = None, **txtkw) -> None:
+def store_results(file_name: str, data: ArrayLike, main_dir: str | None = None, columns: ArrayLike | None = None, **csvkw) -> None:
     """To store results in a `.txt` file
 
     Parameters
@@ -398,14 +399,23 @@ def store_results(file_name: str, data: ArrayLike, main_dir: str | None = None, 
         the parameter `'delimiter'` is set to `'\t'` by default
     """
     # check delimiter
-    if 'delimiter' not in txtkw.keys():
-        txtkw['delimiter'] = '\t'
+    if 'sep' not in csvkw.keys():
+        csvkw['sep'] = ','
     # build the path
     res_dir = RESULT_DIR
     if main_dir is not None:
         new_dir = os.path.join(res_dir,main_dir)
         if not os.path.isdir(new_dir): os.mkdir(new_dir)
         res_dir = new_dir
-    file_path = os.path.join(res_dir, file_name + '.txt')
+    file_path = os.path.join(res_dir, file_name + '.csv')
     # save data
-    np.savetxt(file_path, np.column_stack(data), **txtkw)
+    dataframe = pd.DataFrame(np.column_stack(data),columns=columns,copy=True)
+    dataframe.to_csv(file_path,**csvkw)
+
+def open_data(file_name: str, main_dir: str = '', out_type: Literal['dataframe','array'] = 'dataframe',**csvtw) -> pd.DataFrame | NDArray:
+    file_path = os.path.join(RESULT_DIR,main_dir,file_name+'.csv')
+    data = pd.read_csv(file_path,**csvtw)
+    if out_type == 'dataframe':
+        return data
+    elif out_type == 'array':
+        return data.to_numpy().transpose()[1:]
