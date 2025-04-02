@@ -24,7 +24,7 @@ def generate_sample(selection: None | sky.ArrayLike = None,**initargs) -> sky.ND
 
 
 
-def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['stars'], mass_range: tuple[float,float] = sky.FRAME['mass_range'], mass_seed: float | None = None, pos_seed: float | None = None, bkg_seed: float | None = None, det_seed: float | None = None, bkg_param: tuple = sky.field.BACK_PARAM, overlap: bool = False, acq_num: int = 6, montecarlo: bool = True, iter: int = ITERATIONS, display_plots: bool = False, results:bool=True, checks:bool=True) -> tuple[list[sky.NDArray],list[sky.NDArray],tuple[sky.Star, sky.NDArray], list[sky.NDArray | None]]:
+def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['stars'], mass_range: tuple[float,float] = sky.FRAME['mass_range'], mass_seed: float | None = None, pos_seed: float | None = None, bkg_seed: float | None = None, det_seed: float | None = None, bkg_param: tuple = sky.field.BACK_PARAM, overlap: bool = True, acq_num: int = 6, montecarlo: bool = True, iter: int = ITERATIONS, display_plots: bool = False, results:bool=True, verbose_display: bool = False, checks:bool=True,stop_ctrl:bool = False, result_param: dict | None = None) -> tuple[list[sky.NDArray],list[sky.NDArray],tuple[sky.Star, sky.NDArray], list[sky.NDArray | None]]:
     ### SCIENCE FRAME
     ## Initialization
     STARS, (master_light, Dmaster_light), (master_dark, Dmaster_dark) = sky.field_builder(acq_num=acq_num,dim=frame_size,stnum=star_num,masses=mass_range,back_param=bkg_param,back_seed=bkg_seed,det_seed=det_seed,overlap=overlap,seed=(mass_seed,pos_seed),results=results,display_fig=display_plots)
@@ -44,19 +44,23 @@ def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['sta
     ### RESTORATION
     ## Background Estimation
     (bkg_mean, _), bkg_sigma = sky.bkg_est(sci_frame,display_plot=results)
+    if result_param is not None: result_param['bkg'] = {'mean': bkg_mean, 'sigma': bkg_sigma}
 
     ## Kernel Estimation
     thr = bkg_mean + bkg_sigma  #: the threshold for searching algorithm
     max_num_obj = 10            #: number of objects at the most 
     obj_param = [[],[],[],[]]   #: list of gaussian fit results for each obj
     # extract objects
-    objs, Dobjs, _ = sky.searching(sci_frame,thr,bkg_mean,Dsci_frame,ker_sigma=None,num_objs=max_num_obj,cntrl=20,log=True,obj_params=obj_param,display_fig=results)
+    objs, Dobjs, _ = sky.searching(sci_frame,thr,bkg_mean,Dsci_frame,ker_sigma=None,num_objs=max_num_obj,cntrl=20,log=True,obj_params=obj_param,display_fig=results,debug_plots=verbose_display)
     print(obj_param)
     # fit a 2DGaussian profile to extraction
-    ker_sigma, Dker_sigma = sky.kernel_estimation(objs,Dobjs,(bkg_mean,0),obj_param=obj_param,results=results,title='title-only')
+    ker_sigma, Dker_sigma = sky.kernel_estimation(objs,Dobjs,(bkg_mean,0),obj_param=obj_param,results=results,display_plot=verbose_display,title='title-only')
     # compute the kernel
     atm_kernel = sky.Gaussian(sigma=ker_sigma)
-
+    if result_param is not None: result_param['kernel'] = {'sigma': ker_sigma, 'Dsigma': Dker_sigma, 'kernel': atm_kernel}
+    
+    if stop_ctrl: return None
+    
     ## RL Algorithm
     dec_field = sky.LR_deconvolution(sci_frame,atm_kernel,Dsci_frame,bkg_mean,bkg_sigma,results=results)
 
@@ -269,6 +273,8 @@ def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['sta
             rec_cnts, _, _  = plt.hist(rec_distances,bins,color='blue',density=True,histtype='step',label='recover')
             plt.legend(fontsize=FONTSIZE)
             plt.show()
+    print('\n- - END - -')
+    print('\n'+'=='*30+'\n\n')
     return [rec_lum,Drec_lum,rec_pos], [fake_lum,Dfake_lum,fake_pos], (STARS, lum0), [distances, rec_distances, rec_distances0]
 
 if __name__ == '__main__':
@@ -277,6 +283,11 @@ if __name__ == '__main__':
     DISPLAY_PLOTS = False
 
     params = DEFAULT_PARAMS.copy()
+
+    # mseeds = [ 16, 18, 19, 27, 29, 46, 48 ]
+
+    # params.pop('mass_seed')
+    # results = [pipeline(mass_seed=ms,**params,overlap=True,results=False,montecarlo=True) for ms in mseeds]
 
     ### DEFAULT WITH OVERLAP 
     # _ = pipeline(**DEFAULT_PARAMS,overlap=True)
@@ -317,6 +328,8 @@ if __name__ == '__main__':
 
     ### DIFFERNT BACKGROUNDS
     bkg_mean = np.linspace(3.5,5.0,10)
+
+    
 
     bkg_data = [pipeline(**params,overlap=True,bkg_param=('Gaussian',(bkg*1e-4/sky.K,bkg*1e-4/sky.K*20e-2)),results=False,checks=False,montecarlo=False)[:-1] for bkg in bkg_mean]
 
