@@ -2,10 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import skysimulation as sky
 
-MAIN_DIR = 'default'
+# MAIN_DIR = 'default'
 
-source = sky.Star.load_data('source',MAIN_DIR)
-recover = sky.open_data('recovered',MAIN_DIR,'array')
+# source = sky.Star.load_data('source',MAIN_DIR)
+# recover = sky.open_data('recovered',MAIN_DIR,'array')
+
+# mean_lum0 = source.mean_lum()
+
 
 # bkg_mean = np.linspace(3.5,5.0,10)
 
