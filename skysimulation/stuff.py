@@ -419,3 +419,14 @@ def open_data(file_name: str, main_dir: str = '', out_type: Literal['dataframe',
         return data
     elif out_type == 'array':
         return data.to_numpy().transpose()[1:]
+    
+def log_update(log_txt: str, file_name: str = '', main_dir: str = '', mode: str = 'a', sep: str = '\n',**openkws) -> None:
+    # build the path
+    res_dir = os.path.join(RESULT_DIR,main_dir)
+    if not os.path.isdir(res_dir): os.mkdir(res_dir)
+    file_name = 'log' if file_name == '' else 'log-' + file_name
+    file_path = os.path.join(res_dir, file_name + '.txt')
+    
+    log_file = open(file_path,mode=mode,**openkws)
+    log_file.write(log_txt+sep)
+    log_file.close()

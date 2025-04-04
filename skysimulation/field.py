@@ -577,6 +577,7 @@ def field_builder(acq_num: int = 6, dim: int = N, stnum: int = M, masses: tuple[
     # creating the starting field
     m_seed, p_seed = seed
     F, S = initialize(dim,stnum,masses,*star_param,overlap=overlap,m_seed=m_seed,p_seed=p_seed,display_fig=display_fig,v=1,norm='log')
+    print(f'Mean Lum:\t{S.mean_lum()}')
     print('\n- - - Background - - -')
     background = from_parms_to_distr(back_param,infos=True)
     print('\n- - - Detector noise - - -')
