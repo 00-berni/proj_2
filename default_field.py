@@ -57,9 +57,9 @@ if PLOTTING:
     plt.ylabel('norm. counts',fontsize=FONTSIZE)
     plt.show()
 
-obs_distances = np.array([ generate_sample(selection=BKG_MEAN,overlap=OVERLAP) for _ in range(max_iter) ])
+obs_distances = np.array([ generate_sample(selection=BKG_MEAN*sky.K,overlap=OVERLAP) for _ in range(max_iter) ])
 sky.store_results('random_sample-obs',obs_distances,main_dir=DIR_NAME,columns=[f'{i:d}' for i in range(max_iter)])
-exit()
+
 ### SCIENCE FRAME
 ## Initialization
 STARS, (master_light, Dmaster_light), (master_dark, Dmaster_dark) = sky.field_builder(overlap=OVERLAP,results=PLOTTING,display_fig=DISPLAY_PLOTS)
@@ -145,8 +145,8 @@ plt.grid(linestyle='dashed',color='gray',alpha=0.5)
 plt.show()
 
 ### STORE DATA
-sky.store_results('source.csv',[STARS.m,STARS.lum,STARS.pos[0],STARS.pos[1]],main_dir=DIR_NAME,columns=['M','L','X','Y'])
-sky.store_results('recovered.csv',[rec_lum,Drec_lum,results['pos'][0],results['pos'][1]],main_dir=DIR_NAME,columns=['L','DL','X','Y'])
+sky.store_results('source',[STARS.m,STARS.lum,STARS.pos[0],STARS.pos[1]],main_dir=DIR_NAME,columns=['M','L','X','Y'])
+sky.store_results('recovered',[rec_lum,Drec_lum,results['pos'][0],results['pos'][1]],main_dir=DIR_NAME,columns=['L','DL','X','Y'])
 
 
 ### CHECKS
