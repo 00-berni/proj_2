@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import skysimulation as sky
+from skysimulation import log_update
 
 DEFAULT_PARAMS = {
     'mass_seed': sky.FRAME['mass_seed'],
@@ -22,10 +23,7 @@ def generate_sample(selection: None | sky.ArrayLike = None,**initargs) -> sky.ND
     distances = sky.dist_corr(pos)
     return distances
 
-
-
-def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['stars'], mass_range: tuple[float,float] = sky.FRAME['mass_range'], mass_seed: float | None = None, pos_seed: float | None = None, bkg_seed: float | None = None, det_seed: float | None = None, bkg_param: tuple = sky.field.BACK_PARAM, overlap: bool = True, acq_num: int = 6, montecarlo: bool = True, iter: int = ITERATIONS, display_plots: bool = False, results:bool=True, verbose_display: bool = False, checks:bool=True,stop_ctrl:bool = False, result_param: dict | None = None) -> tuple[list[sky.NDArray],list[sky.NDArray],tuple[sky.Star, sky.NDArray], list[sky.NDArray | None]]:
-    ### SCIENCE FRAME
+def science_frame(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['stars'], mass_range: tuple[float,float] = sky.FRAME['mass_range'], mass_seed: float | None = None, pos_seed: float | None = None, bkg_seed: float | None = None, det_seed: float | None = None, bkg_param: tuple = sky.field.BACK_PARAM, overlap: bool = True, acq_num: int = 6,display_plots: bool = False, results:bool=True) -> tuple[sky.Star, tuple[sky.NDArray,sky.NDArray]]:
     ## Initialization
     STARS, (master_light, Dmaster_light), (master_dark, Dmaster_dark) = sky.field_builder(acq_num=acq_num,dim=frame_size,stnum=star_num,masses=mass_range,back_param=bkg_param,back_seed=bkg_seed,det_seed=det_seed,overlap=overlap,seed=(mass_seed,pos_seed),results=results,display_fig=display_plots)
     if results:
@@ -40,11 +38,13 @@ def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['sta
         plt.figure()
         plt.hist(Dsci_frame.flatten(),71)
         plt.show()
+    return STARS, (sci_frame, Dsci_frame)
 
-    ### RESTORATION
+def restoration(sci_frame: sky.NDArray, Dsci_frame: sky.NDArray, stars: sky.Star, display_plots: bool = False, results:bool=True, verbose_display: bool = False, checks:bool=True,stop_ctrl:bool = False) -> tuple[tuple[sky.NDArray,sky.NDArray], dict]:
+    params = {}
     ## Background Estimation
     (bkg_mean, _), bkg_sigma = sky.bkg_est(sci_frame,display_plot=results)
-    if result_param is not None: result_param['bkg'] = {'mean': bkg_mean, 'sigma': bkg_sigma}
+    params['bkg'] = {'mean': bkg_mean, 'sigma': bkg_sigma}
 
     ## Kernel Estimation
     thr = bkg_mean + bkg_sigma  #: the threshold for searching algorithm
@@ -57,7 +57,7 @@ def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['sta
     ker_sigma, Dker_sigma = sky.kernel_estimation(objs,Dobjs,(bkg_mean,0),obj_param=obj_param,results=results,display_plot=verbose_display,title='title-only')
     # compute the kernel
     atm_kernel = sky.Gaussian(sigma=ker_sigma)
-    if result_param is not None: result_param['kernel'] = {'sigma': ker_sigma, 'Dsigma': Dker_sigma, 'kernel': atm_kernel}
+    params['kernel'] = {'sigma': ker_sigma, 'Dsigma': Dker_sigma, 'kernel': atm_kernel}
     
     if stop_ctrl: return None
     
@@ -75,17 +75,19 @@ def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['sta
     ## Light Recover
     light_results = {}
     rec_lum, Drec_lum = sky.light_recover(dec_field,thr,bkg_mean,(ker_sigma,Dker_sigma),extraction=light_results,binning=BINNING,results=results,display_fig=results)
+    params['objects'] = light_results
+    params['dec_field'] = dec_field
 
-    mean_lum = STARS.mean_lum() if STARS.mean_lum() is not None else STARS.lum.mean()           #: mean value
+    mean_lum = stars.mean_lum() if stars.mean_lum() is not None else stars.lum.mean()           #: mean value
     # average and compute the STD
     mean_rec = np.mean(rec_lum)
-    observable = STARS.lum>bkg_mean
+    observable = stars.lum>bkg_mean
     # print
-    print(f'Slum {STARS.lum[:4]}')
+    print(f'Slum {stars.lum[:4]}')
     print(f'Rlum {rec_lum[:4]}')
     print(f'S: {mean_lum:.2e}\tL: {mean_rec:.2e}\t{(mean_rec-mean_lum)/mean_lum:.2%}')
     print(f'FOUND: {len(rec_lum)}')
-    print(f'EXPEC: {len(STARS.lum[observable])}')
+    print(f'EXPEC: {len(stars.lum[observable])}')
 
     if results:
         plt.figure()
@@ -103,8 +105,8 @@ def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['sta
     if checks:
         plt.figure()
         plt.title('Restored distribution in brightness',fontsize=FONTSIZE+2)
-        bins = np.linspace(min(STARS.lum.min(),rec_lum.min()),max(STARS.lum.max(),rec_lum.max()),BINNING*3)
-        plt.hist(STARS.lum,bins,density=True,color='red',histtype='step')
+        bins = np.linspace(min(stars.lum.min(),rec_lum.min()),max(stars.lum.max(),rec_lum.max()),BINNING*3)
+        plt.hist(stars.lum,bins,density=True,color='red',histtype='step')
         plt.hist(rec_lum,bins,density=True,histtype='step',color='blue')
         plt.axvline(mean_rec,0,1,color='blue',label='mean recovered brightness',linestyle='dashed',alpha=0.5)
         plt.axvline(mean_lum,0,1,color='red',label='mean source brightness',linestyle='dashed',alpha=0.5)
@@ -115,10 +117,18 @@ def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['sta
         plt.ylabel('counts',fontsize=FONTSIZE)
         plt.grid(linestyle='dashed',color='gray',alpha=0.5)
         plt.show()
+    return (rec_lum, Drec_lum), params
 
-    ### CHECKS
+def check_results(rec_lum: sky.NDArray, Drec_lum: sky.NDArray, parameters: dict, observable: list[bool], stars: sky.Star,frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['stars'], mass_range: tuple[float,float] = sky.FRAME['mass_range'], mass_seed: float | None = None, pos_seed: float | None = None, bkg_seed: float | None = None, det_seed: float | None = None, bkg_param: tuple = sky.field.BACK_PARAM, overlap: bool = True, acq_num: int = 6, montecarlo: bool = True, iter: int = ITERATIONS, checks:bool=True) -> tuple[tuple[sky.NDArray,sky.NDArray,sky.NDArray],tuple[sky.NDArray,sky.NDArray,sky.NDArray], list[bool],tuple[sky.NDArray,sky.NDArray,sky.NDArray]]:
+    bkg_mean      = parameters['bkg']['mean']
+    ker_sigma     = parameters['kernel']['sigma']
+    dec_field     = parameters['dec_field']
+    light_results = parameters['objects']
+
+    rec_lum = np.copy(rec_lum)
+    Drec_lum = np.copy(Drec_lum)
     ## Position check
-    init_pos = np.asarray(STARS.pos)[:,observable]      #: source stars positions
+    init_pos = np.asarray(stars.pos)[:,observable]      #: source stars positions
     rec_pos  = np.copy(light_results['pos'])                  #: recovered stars positions
     # store the variable for distance check
     rec_pos0 = np.copy(light_results['pos'])                  
@@ -181,7 +191,7 @@ def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['sta
                 upper = (obj_dist[mindist] // ker_sigma + 1) * ker_sigma 
                 sect  = obj_dist <= upper 
                 if len(obj_dist[sect]) != 1:
-                    init_lum = STARS.lum[tmp_init_pos].copy()
+                    init_lum = stars.lum[tmp_init_pos].copy()
                     # take the brightest 
                     minpos = np.argmax(init_lum[sect])
                 # store
@@ -209,7 +219,7 @@ def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['sta
     Drec_lum = np.delete(Drec_lum,fake_index)
     rec_pos  = np.delete(rec_pos,fake_index,axis=1)
     # source brightness
-    lum0 = STARS.lum[new_sort]
+    lum0 = stars.lum[new_sort]
     # compute the differences
     diff = rec_lum-lum0
     for lum,Dlum,l0,sl in zip(rec_lum,Drec_lum,lum0,diff):
@@ -273,9 +283,27 @@ def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['sta
             rec_cnts, _, _  = plt.hist(rec_distances,bins,color='blue',density=True,histtype='step',label='recover')
             plt.legend(fontsize=FONTSIZE)
             plt.show()
-    print('\n- - END - -')
-    print('\n'+'=='*30+'\n\n')
-    return [rec_lum,Drec_lum,rec_pos], [fake_lum,Dfake_lum,fake_pos], (STARS, lum0), [distances, rec_distances, rec_distances0]
+    return (rec_lum, Drec_lum, rec_pos), (fake_lum, Dfake_lum, fake_pos), lum0, (distances, rec_distances, rec_distances0)
+
+def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['stars'], mass_range: tuple[float,float] = sky.FRAME['mass_range'], mass_seed: float | None = None, pos_seed: float | None = None, bkg_seed: float | None = None, det_seed: float | None = None, bkg_param: tuple = sky.field.BACK_PARAM, overlap: bool = True, acq_num: int = 6, montecarlo: bool = True, iter: int = ITERATIONS, display_plots: bool = False, results:bool=True, verbose_display: bool = False, checks:bool=True,stop_ctrl:bool = False, checks_trigger: bool = True) -> tuple[list[sky.NDArray],list[sky.NDArray],tuple[sky.Star, sky.NDArray], list[sky.NDArray | None]] | tuple[list[sky.NDArray], dict, sky.Star]:
+    
+    ### SCIENCE FRAME
+    STARS, (sci_frame, Dsci_frame) = science_frame(frame_size, star_num, mass_range, mass_seed, pos_seed, bkg_seed, det_seed, bkg_param, overlap, acq_num, display_plots, results)
+
+    ### RESTORATION
+    (rec_lum, Drec_lum), params = restoration(sci_frame,Dsci_frame,STARS,display_plots,results,verbose_display,checks,stop_ctrl)
+
+    ### CHECKS
+    if checks_trigger:
+        observable = STARS.lum > params['bkg']['mean']
+        (rec_lum, Drec_lum, rec_pos), (fake_lum, Dfake_lum, fake_pos), lum0, (distances, rec_distances, rec_distances0) = check_results(rec_lum,Drec_lum,params,observable,STARS,frame_size,star_num,mass_range,mass_seed,pos_seed,bkg_seed,det_seed,bkg_param,overlap,acq_num,montecarlo,iter,checks)
+        print('\n- - END - -')
+        print('\n'+'=='*30+'\n\n')
+        return [rec_lum,Drec_lum,rec_pos], [fake_lum,Dfake_lum,fake_pos], (STARS, lum0), [distances, rec_distances, rec_distances0]
+    else:
+        print('\n- - END - -')
+        print('\n'+'=='*30+'\n\n')
+        return [rec_lum, Drec_lum], params, STARS
 
 if __name__ == '__main__':
     
@@ -283,6 +311,8 @@ if __name__ == '__main__':
     DISPLAY_PLOTS = False
 
     params = DEFAULT_PARAMS.copy()
+
+
 
     # mseeds = [ 16, 18, 19, 27, 29, 46, 48 ]
 
@@ -327,67 +357,112 @@ if __name__ == '__main__':
     # _ = pipeline(star_num=500,**params,overlap=True, iter=1000)
 
     ### DIFFERNT BACKGROUNDS
-    bkg_mean = np.linspace(3.5,5.0,10)
+    # bkg_mean = np.linspace(3.5,5.0,10)
+    # params['bkg_seed'] = None
+    # BKG_ITER = 5
 
-    
+    # bkg_data = [pipeline(**params,overlap=True,bkg_param=('Gaussian',(bkg*1e-4/sky.K,bkg*1e-4/sky.K*20e-2)),results=False,checks=False,montecarlo=False)[:-1] for bkg in bkg_mean]
 
-    bkg_data = [pipeline(**params,overlap=True,bkg_param=('Gaussian',(bkg*1e-4/sky.K,bkg*1e-4/sky.K*20e-2)),results=False,checks=False,montecarlo=False)[:-1] for bkg in bkg_mean]
+    # # store data
+    # DIRECTORY = 'multi-means'
+    # NAME = 'source'
+    # NAMES = [f'bkg-{bkg:.2f}' for bkg in bkg_mean]
+    # HEADER = ['r-a','Dra','w-a','Dwa']
+    # STARS = bkg_data[0][2][0]
+    # sky.store_results('source',[STARS.m,STARS.lum,STARS.pos[0],STARS.pos[1]],main_dir=DIRECTORY,columns=['M','L','X','Y'])
+    # for name, bkg in zip(NAMES,bkg_data):
+    #     print('Save '+name)
+    #     diff = len(bkg[0][0]) - len(bkg[1][0])
+    #     ext1 = 0 if diff >= 0 else -diff
+    #     ext2 = 0 if diff <= 0 else diff
+    #     col1 = np.append(bkg[0][0],[-1]*ext1)
+    #     col2 = np.append(bkg[0][1],[-1]*ext1)
+    #     col3 = np.append(bkg[1][0],[-1]*ext2)
+    #     col4 = np.append(bkg[1][1],[-1]*ext2)
+    #     print('\tdiff -',diff)
+    #     print('\tcol1 -',len(col1))
+    #     print('\tcol2 -',len(col2))
+    #     print('\tcol3 -',len(col3))
+    #     print('\tcol4 -',len(col4))
+    #     if len(col1) != len(col3):
+    #         print(col1)
+    #         print(col2)
+    #         raise
+    #     elif len(col1) != len(col2):
+    #         print(col1)
+    #         print(col2)
+    #         raise
+    #     elif len(col3) != len(col4):
+    #         print(col1)
+    #         print(col2)
+    #         raise
+    #     sky.store_results(name,[col1,col2,col3,col4],main_dir=DIRECTORY,columns=HEADER)
 
-    # store data
-    DIRECTORY = 'multi-means'
-    NAME = 'source'
-    NAMES = [f'bkg-{bkg:.2f}' for bkg in bkg_mean]
-    HEADER = 'r-a\tDra\tw-a\tDwa'
-    sky.store_results(NAME,[[*bkg_data[0][2][0].lum,bkg_data[0][2][0].mean_lum()]],main_dir=DIRECTORY,header='Lum')
-    for name, bkg in zip(NAMES,bkg_data):
-        print('Save '+name)
-        diff = len(bkg[0][0]) - len(bkg[1][0])
-        ext1 = 0 if diff >= 0 else -diff
-        ext2 = 0 if diff <= 0 else diff
-        col1 = np.append(bkg[0][0],[-1]*ext1)
-        col2 = np.append(bkg[0][1],[-1]*ext1)
-        col3 = np.append(bkg[1][0],[-1]*ext2)
-        col4 = np.append(bkg[1][1],[-1]*ext2)
-        print('\tdiff -',diff)
-        print('\tcol1 -',len(col1))
-        print('\tcol2 -',len(col2))
-        print('\tcol3 -',len(col3))
-        print('\tcol4 -',len(col4))
-        if len(col1) != len(col3):
-            print(col1)
-            print(col2)
-            raise
-        elif len(col1) != len(col2):
-            print(col1)
-            print(col2)
-            raise
-        elif len(col3) != len(col4):
-            print(col1)
-            print(col2)
-            raise
-        sky.store_results(name,[col1,col2,col3,col4],main_dir=DIRECTORY,header=HEADER)
+    # print(len(bkg_data),len(bkg_data[0]),len(bkg_data[0][0]))
+    # for i in range(len(bkg_data)):
+    #     bkg = bkg_data[i]
+    #     print(f'{i} - elment')
+    #     print('\t',bkg[0][0])
+    #     print('\t',bkg[1][0])
+    #     print('\t',bkg[2][0])
+    #     if len(bkg[0][0]) != 0:
+    #         print('\t\t',np.mean(bkg[0][0])) 
+    #     else: 
+    #         print('\t\tNada')
+    # print([np.mean(bkg[0][0]) if len(bkg[0][0]) != 0 else 0 for bkg in bkg_data])
+    # rec_lum = np.array([np.mean(bkg[0][0]) if len(bkg[0][0]) != 0 else 0 for bkg in bkg_data])
+    # rec_lum_tot = np.array([np.append(bkg[0][0],bkg[1][0]).mean() if len(bkg[0][0]) != 0 else np.mean(bkg[1][0]) for bkg in bkg_data])
+    # sour_lum = np.array([bkg[2][0].mean_lum() for bkg in bkg_data])
+    # plt.figure()
+    # plt.plot(bkg_mean,rec_lum-sour_lum,'.--b',label='rem. art.')
+    # plt.plot(bkg_mean,rec_lum_tot-sour_lum,'.--r',label='with art.')
+    # plt.axhline(0,0,1,color='k')
+    # plt.legend()
+    # plt.xlabel('$\\bar{n}_B$')
+    # plt.ylabel('$\\bar{\\ell}_{rec} - \\bar{\\ell}_{0}$')
+    # plt.grid()
+    # plt.show()
 
-    print(len(bkg_data),len(bkg_data[0]),len(bkg_data[0][0]))
-    for i in range(len(bkg_data)):
-        bkg = bkg_data[i]
-        print(f'{i} - elment')
-        print('\t',bkg[0][0])
-        print('\t',bkg[1][0])
-        print('\t',bkg[2][0])
-        if len(bkg[0][0]) != 0:
-            print('\t\t',np.mean(bkg[0][0])) 
-        else: 
-            print('\t\tNada')
-    print([np.mean(bkg[0][0]) if len(bkg[0][0]) != 0 else 0 for bkg in bkg_data])
-    rec_lum = np.array([np.mean(bkg[0][0]) if len(bkg[0][0]) != 0 else 0 for bkg in bkg_data])
-    rec_lum_tot = np.array([np.append(bkg[0][0],bkg[1][0]).mean() if len(bkg[0][0]) != 0 else np.mean(bkg[1][0]) for bkg in bkg_data])
-    sour_lum = np.array([bkg[2][0].mean_lum() for bkg in bkg_data])
-    plt.figure()
-    plt.plot(bkg_mean,rec_lum-sour_lum,'.--b',label='rem. art.')
-    plt.plot(bkg_mean,rec_lum_tot-sour_lum,'.--r',label='with art.')
-    plt.axhline(0,0,1,color='k')
-    plt.legend()
-    plt.xlabel('$\\bar{n}_B$')
-    plt.ylabel('$\\bar{\\ell}_{rec} - \\bar{\\ell}_{0}$')
-    plt.grid()
-    plt.show()
+
+    ### MALQUIST BIAS
+    BKG_VALUES = [3.2,4.4]
+    BKG_ITER = 3
+    params['bkg_seed'] = None
+    DIRECTORY = 'multi-bkg-real'
+    LOG_NAME = 'multi_bkg'
+
+    log_update('Multi Bkg different realizations\n',file_name=LOG_NAME,main_dir=DIRECTORY,mode='w')
+
+    # [ [[[rec_lum, Drec_lum], params, STARS], ...], ...]
+    SAMPLES = np.asarray([ [ pipeline(**params,overlap=True,bkg_param=('Gaussian',(bkg*1e-4/sky.K,bkg*1e-4/sky.K*20e-2)),results=False,checks_trigger=False,checks=False) for _ in range(BKG_ITER)] for bkg in BKG_VALUES],dtype='object')
+    # recovered  = [ [ [rec_lum, Drec_lum], ... ], ... ]
+    # parameters = [ [  params, ... ], ... ]
+    # stars      = [ [  STARS, ... ], ... ]
+    recovered  = SAMPLES[:,:,0]
+    parameters = SAMPLES[:,:,1]
+    stars      = SAMPLES[:,:,2]
+    del SAMPLES
+    stars = stars[0][0]
+    avg_lum = stars.mean_lum()
+    sky.store_results('source',[stars.m,stars.lum,stars.pos[0],stars.pos[1]],main_dir=DIRECTORY,columns=['M','L','X','Y'])
+
+    # rec = [[rec_lum, Drec_lum], ...]
+    # par = [params, ...]
+    for j in range(len(BKG_VALUES)):
+        val = BKG_VALUES[j]
+        log_update(f'MEAN VAL:\t{val}',file_name=LOG_NAME,main_dir=DIRECTORY)
+        for i in range(BKG_ITER):
+            pr = parameters[j,i]
+            rc = recovered[j,i]
+            bkg = pr['bkg']
+            ker = pr['kernel']
+            log_update(f"Backgr:\t{bkg['mean']}\t{bkg['sigma']}",file_name=LOG_NAME,main_dir=DIRECTORY)
+            log_update(f"Kernel:\t{ker['sigma']}\t{ker['Dsigma']}",file_name=LOG_NAME,main_dir=DIRECTORY)
+
+            avg_rc = np.mean(rc[0])
+            object_pos = pr['objects']['pos']
+            name = f'bkg-{val:.2f}-{avg_rc*1e2:.1f}_{i:02d}'
+            sky.store_results(name,[rc[0],rc[1],object_pos[0],object_pos[1]],main_dir=DIRECTORY,columns=['L','DL','X','Y'])
+
+            log_update('=='*30+'\n',file_name=LOG_NAME,main_dir=DIRECTORY)
+        
