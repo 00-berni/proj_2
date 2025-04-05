@@ -285,13 +285,39 @@ def check_results(rec_lum: sky.NDArray, Drec_lum: sky.NDArray, parameters: dict,
             plt.show()
     return (rec_lum, Drec_lum, rec_pos), (fake_lum, Dfake_lum, fake_pos), lum0, (distances, rec_distances, rec_distances0)
 
-def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['stars'], mass_range: tuple[float,float] = sky.FRAME['mass_range'], mass_seed: float | None = None, pos_seed: float | None = None, bkg_seed: float | None = None, det_seed: float | None = None, bkg_param: tuple = sky.field.BACK_PARAM, overlap: bool = True, acq_num: int = 6, montecarlo: bool = True, iter: int = ITERATIONS, display_plots: bool = False, results:bool=True, verbose_display: bool = False, checks:bool=True,stop_ctrl:bool = False, checks_trigger: bool = True) -> tuple[list[sky.NDArray],list[sky.NDArray],tuple[sky.Star, sky.NDArray], list[sky.NDArray | None]] | tuple[list[sky.NDArray], dict, sky.Star]:
+def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['stars'], mass_range: tuple[float,float] = sky.FRAME['mass_range'], mass_seed: float | None = None, pos_seed: float | None = None, bkg_seed: float | None = None, det_seed: float | None = None, bkg_param: tuple = sky.field.BACK_PARAM, overlap: bool = True, acq_num: int = 6, montecarlo: bool = True, iter: int = ITERATIONS, display_plots: bool = False, results:bool=True, verbose_display: bool = False, checks:bool=True,stop_ctrl:bool = False, checks_trigger: bool = True, save: dict | None = None, log: dict | None = None) -> tuple[list[sky.NDArray],list[sky.NDArray],tuple[sky.Star, sky.NDArray], list[sky.NDArray | None]] | tuple[list[sky.NDArray], dict, sky.Star]:
+    bkg_val = bkg_param[1][0]*1e4*sky.K
     
+    if save is not None:
+        if 'id' not in save.keys():
+            save['id'] = 0
+
+    if log is not None:
+        log_name  = log['file_name'] if 'file_name' in log.keys() else ''
+        directory = log['main_dir']  if 'main_dir'  in log.keys() else ''
+        id_num = save['id'] if save is not None else 0
+        log_update(f'MEAN VAL:\t{bkg_val} - {id_num:02d}',file_name=log_name,main_dir=directory)
+
     ### SCIENCE FRAME
     STARS, (sci_frame, Dsci_frame) = science_frame(frame_size, star_num, mass_range, mass_seed, pos_seed, bkg_seed, det_seed, bkg_param, overlap, acq_num, display_plots, results)
 
     ### RESTORATION
     (rec_lum, Drec_lum), params = restoration(sci_frame,Dsci_frame,STARS,display_plots,results,verbose_display,checks,stop_ctrl)
+    
+    if save is not None:
+        save_dir = save['main_dir']
+        avg_rc = np.mean(rec_lum)
+        object_pos = params['objects']['pos']
+        name = f'bkg-{bkg_val:.2f}-{avg_rc*1e2:.1f}_{save['id']:02d}'
+        sky.store_results(name,[rec_lum,Drec_lum,object_pos[0],object_pos[1]],main_dir=save_dir,columns=['L','DL','X','Y'])
+
+    if log is not None:
+        bkg = params['bkg']
+        ker = params['kernel']
+        log_update(f"Backgr:\t{bkg['mean']}\t{bkg['sigma']}",file_name=log_name,main_dir=directory)
+        log_update(f"Kernel:\t{ker['sigma']}\t{ker['Dsigma']}",file_name=log_name,main_dir=directory)
+        log_update('=='*30+'\n',file_name=log_name,main_dir=directory)
+
 
     ### CHECKS
     if checks_trigger:
@@ -304,6 +330,7 @@ def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['sta
         print('\n- - END - -')
         print('\n'+'=='*30+'\n\n')
         return [rec_lum, Drec_lum], params, STARS
+
 
 if __name__ == '__main__':
     
@@ -425,8 +452,8 @@ if __name__ == '__main__':
 
 
     ### MALQUIST BIAS
-    BKG_VALUES = [3.2,4.4]
-    BKG_ITER = 3
+    BKG_VALUES = [3.2,4.2,5.2,6.2]
+    BKG_ITER = 20
     params['bkg_seed'] = None
     DIRECTORY = 'multi-bkg-real'
     LOG_NAME = 'multi_bkg'
@@ -434,35 +461,35 @@ if __name__ == '__main__':
     log_update('Multi Bkg different realizations\n',file_name=LOG_NAME,main_dir=DIRECTORY,mode='w')
 
     # [ [[[rec_lum, Drec_lum], params, STARS], ...], ...]
-    SAMPLES = np.asarray([ [ pipeline(**params,overlap=True,bkg_param=('Gaussian',(bkg*1e-4/sky.K,bkg*1e-4/sky.K*20e-2)),results=False,checks_trigger=False,checks=False) for _ in range(BKG_ITER)] for bkg in BKG_VALUES],dtype='object')
-    # recovered  = [ [ [rec_lum, Drec_lum], ... ], ... ]
-    # parameters = [ [  params, ... ], ... ]
-    # stars      = [ [  STARS, ... ], ... ]
-    recovered  = SAMPLES[:,:,0]
-    parameters = SAMPLES[:,:,1]
-    stars      = SAMPLES[:,:,2]
-    del SAMPLES
-    stars = stars[0][0]
-    avg_lum = stars.mean_lum()
-    sky.store_results('source',[stars.m,stars.lum,stars.pos[0],stars.pos[1]],main_dir=DIRECTORY,columns=['M','L','X','Y'])
+    _ = np.asarray([ [ pipeline(**params,overlap=True,bkg_param=('Gaussian',(bkg*1e-4/sky.K,bkg*1e-4/sky.K*20e-2)),results=False,checks_trigger=False,checks=False,log={'file_name': LOG_NAME,'main_dir': DIRECTORY},save={'main_dir': DIRECTORY,'id': i}) for i in range(BKG_ITER)] for bkg in BKG_VALUES],dtype='object')
+    # # recovered  = [ [ [rec_lum, Drec_lum], ... ], ... ]
+    # # parameters = [ [  params, ... ], ... ]
+    # # stars      = [ [  STARS, ... ], ... ]
+    # recovered  = SAMPLES[:,:,0]
+    # parameters = SAMPLES[:,:,1]
+    # stars      = SAMPLES[:,:,2]
+    # del SAMPLES
+    # stars = stars[0][0]
+    # avg_lum = stars.mean_lum()
+    # sky.store_results('source',[stars.m,stars.lum,stars.pos[0],stars.pos[1]],main_dir=DIRECTORY,columns=['M','L','X','Y'])
 
-    # rec = [[rec_lum, Drec_lum], ...]
-    # par = [params, ...]
-    for j in range(len(BKG_VALUES)):
-        val = BKG_VALUES[j]
-        log_update(f'MEAN VAL:\t{val}',file_name=LOG_NAME,main_dir=DIRECTORY)
-        for i in range(BKG_ITER):
-            pr = parameters[j,i]
-            rc = recovered[j,i]
-            bkg = pr['bkg']
-            ker = pr['kernel']
-            log_update(f"Backgr:\t{bkg['mean']}\t{bkg['sigma']}",file_name=LOG_NAME,main_dir=DIRECTORY)
-            log_update(f"Kernel:\t{ker['sigma']}\t{ker['Dsigma']}",file_name=LOG_NAME,main_dir=DIRECTORY)
+    # # rec = [[rec_lum, Drec_lum], ...]
+    # # par = [params, ...]
+    # for j in range(len(BKG_VALUES)):
+    #     val = BKG_VALUES[j]
+    #     log_update(f'MEAN VAL:\t{val}',file_name=LOG_NAME,main_dir=DIRECTORY)
+    #     for i in range(BKG_ITER):
+    #         pr = parameters[j,i]
+    #         rc = recovered[j,i]
+    #         bkg = pr['bkg']
+    #         ker = pr['kernel']
+    #         log_update(f"Backgr:\t{bkg['mean']}\t{bkg['sigma']}",file_name=LOG_NAME,main_dir=DIRECTORY)
+    #         log_update(f"Kernel:\t{ker['sigma']}\t{ker['Dsigma']}",file_name=LOG_NAME,main_dir=DIRECTORY)
 
-            avg_rc = np.mean(rc[0])
-            object_pos = pr['objects']['pos']
-            name = f'bkg-{val:.2f}-{avg_rc*1e2:.1f}_{i:02d}'
-            sky.store_results(name,[rc[0],rc[1],object_pos[0],object_pos[1]],main_dir=DIRECTORY,columns=['L','DL','X','Y'])
+    #         avg_rc = np.mean(rc[0])
+    #         object_pos = pr['objects']['pos']
+    #         name = f'bkg-{val:.2f}-{avg_rc*1e2:.1f}_{i:02d}'
+    #         sky.store_results(name,[rc[0],rc[1],object_pos[0],object_pos[1]],main_dir=DIRECTORY,columns=['L','DL','X','Y'])
 
-            log_update('=='*30+'\n',file_name=LOG_NAME,main_dir=DIRECTORY)
+    #         log_update('=='*30+'\n',file_name=LOG_NAME,main_dir=DIRECTORY)
         
