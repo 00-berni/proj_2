@@ -286,6 +286,8 @@ def check_results(rec_lum: sky.NDArray, Drec_lum: sky.NDArray, parameters: dict,
     return (rec_lum, Drec_lum, rec_pos), (fake_lum, Dfake_lum, fake_pos), lum0, (distances, rec_distances, rec_distances0)
 
 def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['stars'], mass_range: tuple[float,float] = sky.FRAME['mass_range'], mass_seed: float | None = None, pos_seed: float | None = None, bkg_seed: float | None = None, det_seed: float | None = None, bkg_param: tuple = sky.field.BACK_PARAM, overlap: bool = True, acq_num: int = 6, montecarlo: bool = True, iter: int = ITERATIONS, display_plots: bool = False, results:bool=True, verbose_display: bool = False, checks:bool=True,stop_ctrl:bool = False, checks_trigger: bool = True, save: dict | None = None, log: dict | None = None) -> tuple[list[sky.NDArray],list[sky.NDArray],tuple[sky.Star, sky.NDArray], list[sky.NDArray | None]] | tuple[list[sky.NDArray], dict, sky.Star]:
+    from time import time
+    start_time = time()
     bkg_val = bkg_param[1][0]*1e4*sky.K
     
     if save is not None:
@@ -297,25 +299,41 @@ def pipeline(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME['sta
         directory = log['main_dir']  if 'main_dir'  in log.keys() else ''
         id_num = save['id'] if save is not None else 0
         log_update(f'MEAN VAL:\t{bkg_val} - {id_num:02d}',file_name=log_name,main_dir=directory)
+    ctrl_cnt = 0
+    while True:
+        ### SCIENCE FRAME
+        STARS, (sci_frame, Dsci_frame) = science_frame(frame_size, star_num, mass_range, mass_seed, pos_seed, bkg_seed, det_seed, bkg_param, overlap, acq_num, display_plots, results)
 
-    ### SCIENCE FRAME
-    STARS, (sci_frame, Dsci_frame) = science_frame(frame_size, star_num, mass_range, mass_seed, pos_seed, bkg_seed, det_seed, bkg_param, overlap, acq_num, display_plots, results)
+        ### RESTORATION
+        (rec_lum, Drec_lum), params = restoration(sci_frame,Dsci_frame,STARS,display_plots,results,verbose_display,checks,stop_ctrl)
+        
+        if ctrl_cnt == 20: 
+            if log is not None:
+               log_update(f"\t!FAIL:\tMore than 20 iterations",file_name=log_name,main_dir=directory)
+            
+            break
 
-    ### RESTORATION
-    (rec_lum, Drec_lum), params = restoration(sci_frame,Dsci_frame,STARS,display_plots,results,verbose_display,checks,stop_ctrl)
-    
-    if save is not None:
-        save_dir = save['main_dir']
-        avg_rc = np.mean(rec_lum)
-        object_pos = params['objects']['pos']
-        name = f'bkg-{bkg_val:.2f}-{avg_rc*1e2:.1f}_{save['id']:02d}'
-        sky.store_results(name,[rec_lum,Drec_lum,object_pos[0],object_pos[1]],main_dir=save_dir,columns=['L','DL','X','Y'])
+        try:
+            if save is not None:
+                save_dir = save['main_dir']
+                object_pos = params['objects']['pos']
+                name = f"bkg-{bkg_val:.2f}_{save['id']:02d}"
+                sky.store_results(name,[rec_lum,Drec_lum,object_pos[0],object_pos[1]],main_dir=save_dir,columns=['L','DL','X','Y'])
+            break
+        except ValueError as valerr:
+            ctrl_cnt += 1
+            if log is not None:
+               log_update(f"\t!FAIL:\tlen rec {len(rec_lum)}\tDrec {len(Drec_lum)}",file_name=log_name,main_dir=directory)
+               log_update('\tError: '+str(valerr),file_name=log_name,main_dir=directory)
+
 
     if log is not None:
+        end_time = time()
         bkg = params['bkg']
         ker = params['kernel']
-        log_update(f"Backgr:\t{bkg['mean']}\t{bkg['sigma']}",file_name=log_name,main_dir=directory)
-        log_update(f"Kernel:\t{ker['sigma']}\t{ker['Dsigma']}",file_name=log_name,main_dir=directory)
+        log_update(f"\tBackgr:\t{bkg['mean']}\t{bkg['sigma']}",file_name=log_name,main_dir=directory)
+        log_update(f"\tKernel:\t{ker['sigma']}\t{ker['Dsigma']}",file_name=log_name,main_dir=directory)
+        log_update(f"Time:\t{end_time-start_time}",file_name=log_name,main_dir=directory)
         log_update('=='*30+'\n',file_name=log_name,main_dir=directory)
 
 
