@@ -297,7 +297,8 @@ def mean_n_std(data: Sequence[Any], axis: int | None = None, weights: Sequence[A
     mean = np.average(data,axis=axis,weights=weights)
     # compute the STD from it
     if weights is None:
-        std = np.sqrt( ((data-mean)**2).sum(axis=axis) / (dim*(dim-1)) )
+        std = np.std(data, axis=axis, ddof=1)
+        # std = np.sqrt( ((data-mean)**2).sum(axis=axis) / (dim*(dim-1)) )
     else:
         std = np.sqrt(np.average((data-mean)**2, weights=weights) / (dim-1) * dim)
     return mean, std
