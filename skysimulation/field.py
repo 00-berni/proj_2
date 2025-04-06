@@ -63,7 +63,7 @@ ATM_PARAM = ('Gaussian',SEEING_SIGMA)
 ### CLASS DEFINITIONS
 class Star():
     @staticmethod
-    def load_data(file_name: str, main_dir: str = '', alpha: float = ALPHA, beta: float = BETA, mass_range: tuple[float, float] = (MIN_m, MAX_m), **csvtw) -> 'Star':
+    def load_data(file_name: str = 'source', main_dir: str = '', alpha: float = ALPHA, beta: float = BETA, mass_range: tuple[float, float] = (MIN_m, MAX_m), **csvtw) -> 'Star':
         data = open_data(file_name,main_dir,out_type='array',**csvtw)
         return Star(mass=data[0],lum=data[1],pos=(data[2],data[3]),alpha=alpha,beta=beta,mrange=mass_range)
 
