@@ -470,13 +470,13 @@ if __name__ == '__main__':
 
 
     ### MALQUIST BIAS
-    BKG_VALUES = [3.2,4.2,5.2,6.2]
+    BKG_VALUES = [11,15,20]
     BKG_ITER = 20
     params['bkg_seed'] = None
     DIRECTORY = 'multi-bkg-real'
     LOG_NAME = 'multi_bkg'
 
-    log_update('Multi Bkg different realizations\n',file_name=LOG_NAME,main_dir=DIRECTORY,mode='w')
+    # log_update('Multi Bkg different realizations\n',file_name=LOG_NAME,main_dir=DIRECTORY,mode='w')
 
     # [ [[[rec_lum, Drec_lum], params, STARS], ...], ...]
     _ = np.asarray([ [ pipeline(**params,overlap=True,bkg_param=('Gaussian',(bkg*1e-4/sky.K,bkg*1e-4/sky.K*20e-2)),results=False,checks_trigger=False,checks=False,log={'file_name': LOG_NAME,'main_dir': DIRECTORY},save={'main_dir': DIRECTORY,'id': i}) for i in range(BKG_ITER)] for bkg in BKG_VALUES],dtype='object')
