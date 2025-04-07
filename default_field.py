@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import skysimulation as sky
 
 ## Constants
+RESOLUTION = None #sky.MIN_m**sky.BETA*sky.K * 1e-2
 PLOTTING = True
 DISPLAY_PLOTS = False
 BINNING = 20
@@ -13,7 +14,7 @@ DIR_NAME = 'default'
 
 ### MONTE CARLO REALIZATIONS
 def generate_sample(selection: None | sky.ArrayLike = None,**initargs) -> sky.NDArray:
-    _, S = sky.initialize(**initargs,p_seed=None)
+    _, S = sky.initialize(**initargs,p_seed=None,quantize=RESOLUTION)
     pos = np.asarray(S.pos)
     if selection is not None:
         pos = pos[:,S.lum > selection]
@@ -62,7 +63,7 @@ sky.store_results('random_sample-obs',obs_distances,main_dir=DIR_NAME,columns=[f
 
 ### SCIENCE FRAME
 ## Initialization
-STARS, (master_light, Dmaster_light), (master_dark, Dmaster_dark) = sky.field_builder(overlap=OVERLAP,results=PLOTTING,display_fig=DISPLAY_PLOTS)
+STARS, (master_light, Dmaster_light), (master_dark, Dmaster_dark) = sky.field_builder(overlap=OVERLAP,quantize=RESOLUTION,results=PLOTTING,display_fig=DISPLAY_PLOTS)
 if PLOTTING:
     STARS.plot_info()
     plt.show()
@@ -70,6 +71,7 @@ print('CHECK',sky.BACK_MEAN*sky.K,len(STARS.lum[STARS.lum<sky.BACK_MEAN*sky.K]),
 ## Science Frame
 sci_frame = master_light - master_dark 
 Dsci_frame = np.sqrt(Dmaster_light**2 + Dmaster_dark**2)
+print('NEGATIVE',len(np.where(sci_frame <0)[0]) )
 if PLOTTING:
     sky.fast_image(sci_frame,'Science Frame')
     plt.figure()
@@ -78,7 +80,7 @@ if PLOTTING:
 
 ### RESTORATION
 ## Background Estimation
-(bkg_mean, _), bkg_sigma = sky.bkg_est(sci_frame,display_plot=PLOTTING)
+bkg_mean, bkg_sigma = sky.bkg_est(sci_frame,display_plot=PLOTTING)
 
 ## Kernel Estimation
 thr = bkg_mean + bkg_sigma  #: the threshold for searching algorithm
