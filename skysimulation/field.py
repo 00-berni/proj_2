@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 from scipy.signal import fftconvolve
 from scipy.ndimage import gaussian_filter
 from .display import fast_image, field_image
-from .stuff import Gaussian, DISTR
+from .stuff import Gaussian, Poisson, DISTR
 from .stuff import field_convolve, from_parms_to_distr, mean_n_std, open_data
 
 ### STANDARD VALUES
@@ -307,7 +307,7 @@ def star_location(sdim: int = M, dim: int = N, overlap: bool = False, seed: int 
     return (X, Y)    
 
 
-def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m,MAX_m), alpha: float = ALPHA, beta: float = BETA, overlap: bool = False, m_seed: int = M_SEED, p_seed: int = POS_SEED, display_fig: bool = False, **kwargs) -> tuple[NDArray, Star]:
+def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m,MAX_m), alpha: float = ALPHA, beta: float = BETA, overlap: bool = False, m_seed: int = M_SEED, p_seed: int = POS_SEED, quantize: float | None = None, display_fig: bool = False, **kwargs) -> tuple[NDArray, Star]:
     """To inizialize the field
 
     It generates the stars and updates the field without any seeing 
@@ -358,12 +358,16 @@ def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m
     # locating the stars
     star_pos = star_location(sdim=sdim, dim=dim, overlap=overlap, seed=p_seed)
     # updating the field matrix
+    # if quantize is not None:
+    #     res = quantize
+    #     L = L//res
     F[star_pos] += L 
     # sort values
     sortpos = np.argsort(m)[::-1]
     m = m[sortpos]
     L = L[sortpos]
     star_pos = (star_pos[0][sortpos],star_pos[1][sortpos])
+    if quantize is not None: L /= quantize
     # saving stars infos
     S = Star(m, L, star_pos,alpha,beta,(m_inf,m_sup))
     if display_fig:
@@ -404,7 +408,7 @@ def atm_seeing(field: NDArray, sigma: float = SEEING_SIGMA, bkg: DISTR = Gaussia
     return see_field
 
 
-def noise(distr: DISTR, dim: int = N, seed: int | None = None, display_fig: bool = False, **kwargs) -> NDArray:
+def noise(distr: DISTR, dim: int = N, seed: int | None = None, quantize: float | None = None, display_fig: bool = False, **kwargs) -> NDArray:
     """To generate a noisy board
 
     Parameters
@@ -437,10 +441,12 @@ def noise(distr: DISTR, dim: int = N, seed: int | None = None, display_fig: bool
         n = np.sqrt(n**2)
     # normalize
     n *= K
+    if quantize is not None and not isinstance(distr,Poisson):
+        n = n // quantize 
     return n
 
 
-def add_effects(F: NDArray, background: DISTR, back_seed: int | None, atm_param: tuple[str, float], det_noise: DISTR, det_seed: int | None, i: int = 0, add_params: dict = {}, display_fig: bool = False, **kwargs) -> NDArray:
+def add_effects(F: NDArray, background: DISTR, back_seed: int | None, atm_param: tuple[str, float], det_noise: DISTR, det_seed: int | None, i: int = 0,quantize: float | None = None, add_params: dict = {}, display_fig: bool = False, **kwargs) -> NDArray:
     """To compute the final field 
 
     The method adds to the initialized field the effects of
@@ -500,13 +506,22 @@ def add_effects(F: NDArray, background: DISTR, back_seed: int | None, atm_param:
         # convolve the kernel
         F_bs = atm_seeing(F_b,sigma,bkg=background,size=ker_size,display_fig=display_fig,**kwargs)
 
+    print(quantize is not None,isinstance(det_noise, Poisson))
+    if quantize is not None and isinstance(det_noise, Poisson):
+        print('QUANTA')
+        F_bs = F_bs // quantize
+
     ## Detector
     kwargs['title'] = 'Detector noise'
     # compute the detector noise
     n_d = noise(det_noise,dim,seed=det_seed,display_fig=display_fig,**kwargs)
     # add the noise
     F_bsd = F_bs + n_d 
-    
+
+    if quantize is not None and not isinstance(det_noise, Poisson):
+        F_bsd = F_bsd // quantize
+
+
     if display_fig:
         kwargs = {key: kwargs[key] for key in kwargs.keys() - {'title'}}
         fig, ((ax1,ax2),(ax3,ax4)) = plt.subplots(2,2)
@@ -527,7 +542,7 @@ def add_effects(F: NDArray, background: DISTR, back_seed: int | None, atm_param:
     return F_bsd
 
 
-def field_builder(acq_num: int = 6, dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, back_param: tuple[str, float | tuple] = BACK_PARAM, back_seed: int | None = BACK_SEED, det_param: tuple[str, float | tuple] = NOISE_PARAM, det_seed: int | None = NOISE_SEED, overlap: bool = False, seed: tuple[int,int] = (M_SEED, POS_SEED), iteration: int = 5, results: bool = True, display_fig: bool = False, **kwargs) -> tuple[Star, list[NDArray], list[NDArray]]:
+def field_builder(acq_num: int = 6, dim: int = N, stnum: int = M, masses: tuple[float,float] = (MIN_m,MAX_m), star_param: tuple[float,float] = (ALPHA,BETA), atm_param: tuple[str,float | tuple] = ATM_PARAM, back_param: tuple[str, float | tuple] = BACK_PARAM, back_seed: int | None = BACK_SEED, det_param: tuple[str, float | tuple] = NOISE_PARAM, det_seed: int | None = NOISE_SEED, overlap: bool = True, seed: tuple[int,int] = (M_SEED, POS_SEED), iteration: int = 5, quantize: float | None = None, results: bool = True, display_fig: bool = False, **kwargs) -> tuple[Star, list[NDArray], list[NDArray]]:
     """To generate the acquired picture
 
     Parameters
@@ -572,17 +587,24 @@ def field_builder(acq_num: int = 6, dim: int = N, stnum: int = M, masses: tuple[
     [master_dark, std_dark] : [NDArray, NDArray]
         matricies of mean and STD from it of dark
     """
+    if 'norm' not in kwargs.keys():
+        kwargs['norm'] = 'linear'
+
     SEP = '-'*10 + '\n'
     print(SEP+f'Initialization of the field\nDimension:\t{dim} x {dim}\nNumber of stars:\t{stnum}\nMass range:\t{masses}\nMass seed:\t{seed[0]}\nPos seed:\t{seed[1]}\nNumber acquisitions:\t{acq_num}')
-    # creating the starting field
+    
+    # generate the starting field
     m_seed, p_seed = seed
-    F, S = initialize(dim,stnum,masses,*star_param,overlap=overlap,m_seed=m_seed,p_seed=p_seed,display_fig=display_fig,v=1,norm='log')
+    F, S = initialize(dim,stnum,masses,*star_param,overlap=overlap,m_seed=m_seed,p_seed=p_seed,quantize=quantize,display_fig=display_fig,v=1,norm='log')
     print(f'Mean Lum:\t{S.mean_lum()}')
+    # load background info
     print('\n- - - Background - - -')
     background = from_parms_to_distr(back_param,infos=True)
+    # load detector info
     print('\n- - - Detector noise - - -')
     det_noise = from_parms_to_distr(det_param, infos=True)
     print(f'\nAtm Seeing:\n{atm_param[0]} distribution')
+    # load atmosphere info
     if atm_param[0] == 'Gaussian':
         sigma = atm_param[1]
         print(f'sigma:\t{sigma}')
@@ -596,15 +618,19 @@ def field_builder(acq_num: int = 6, dim: int = N, stnum: int = M, masses: tuple[
         seeds_gen = np.random.default_rng(det_seed)
         det_seed = seeds_gen.integers(maxsize,size=acq_num)
         del seeds_gen
-    lights = [ add_effects(F.copy(), background, back_seed[i], atm_param, det_noise, det_seed[i], i, display_fig=display_fig, **kwargs) for i in range(acq_num)]
+    print('quantsize',quantize)
+    # make multiple acquisitions
+    lights = [ add_effects(F.copy(), background, back_seed[i], atm_param, det_noise, det_seed[i], i,quantize=quantize, display_fig=display_fig, **kwargs) for i in range(acq_num)]
 
     master_light, std_light = mean_n_std(lights, axis=0)
+
+    print()
 
     if results:
         fig, (ax1,ax2) = plt.subplots(1,2)
         field_image(fig,ax1,F,v=1,norm='log')
         ax1.set_title('Source Image',fontsize=20)
-        field_image(fig,ax2,master_light)
+        field_image(fig,ax2,master_light,**kwargs)
         ax2.set_title('Master Light',fontsize=20)
 
         cols = acq_num//2 if acq_num%2==0 else acq_num//2+1
@@ -623,7 +649,7 @@ def field_builder(acq_num: int = 6, dim: int = N, stnum: int = M, masses: tuple[
 
     # Dark Computation
     dark_seed = np.random.default_rng(seed=det_seed[0]).integers(maxsize,size=iteration)
-    dark = [noise(det_noise,dim=dim,seed=dark_seed[i]) for i in range(iteration)]
+    dark = [noise(det_noise,dim=dim,seed=dark_seed[i],quantize=quantize) for i in range(iteration)]
     # averaging
     master_dark, std_dark = mean_n_std(dark, axis=0) 
     if results:

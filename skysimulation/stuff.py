@@ -154,6 +154,7 @@ class Poisson():
     def info(self) -> None:
         print('Poisson distribution')
         print(f'lambda:\t{self.lam}')
+        print(f'Normalization:\t{self.k}')
 
     def field(self, shape: int | Sequence[int], seed: int | None = None) -> NDArray:
         rng = np.random.default_rng(seed = seed)
@@ -161,7 +162,7 @@ class Poisson():
         
 DISTR = Gaussian | Uniform | Poisson    #: variable to collect distributions type
 
-def from_parms_to_distr(params: tuple[str, float] | tuple[str, tuple], infos: bool = False) -> Gaussian | Uniform:
+def from_parms_to_distr(params: tuple[str, float] | tuple[str, tuple], infos: bool = False) -> DISTR:
     """To get from input parameter the chosen distribution
 
     Parameters
@@ -273,7 +274,7 @@ def field_convolve(field: NDArray, kernel: NDArray, bkg: DISTR, norm_cost: float
     # cut and remove the frame
     return conv_field[pad_slice,pad_slice]
 
-def mean_n_std(data: Sequence[Any], axis: int | None = None, weights: Sequence[Any] | None = None) -> tuple[float, float]:
+def mean_n_std(data: ArrayLike, axis: int | None = None, weights: ArrayLike | None = None) -> tuple[ArrayLike, ArrayLike | None]:
     """To compute the mean and standard deviation from it
 
     Parameters
@@ -293,14 +294,18 @@ def mean_n_std(data: Sequence[Any], axis: int | None = None, weights: Sequence[A
         the STD from the mean
     """
     dim = len(data)     #: size of the sample
-    # compute the mean
-    mean = np.average(data,axis=axis,weights=weights)
-    # compute the STD from it
-    if weights is None:
-        std = np.std(data, axis=axis, ddof=1)
-        # std = np.sqrt( ((data-mean)**2).sum(axis=axis) / (dim*(dim-1)) )
-    else:
-        std = np.sqrt(np.average((data-mean)**2, weights=weights) / (dim-1) * dim)
+    if dim != 1:
+        # compute the mean
+        mean = np.average(data,axis=axis,weights=weights)
+        # compute the STD from it
+        if weights is None:
+            std = np.std(data, axis=axis, ddof=1)
+            # std = np.sqrt( ((data-mean)**2).sum(axis=axis) / (dim*(dim-1)) )
+        else:
+            std = np.sqrt(np.average((data-mean)**2, weights=weights) / (dim-1) * dim)
+    elif dim == 1:
+        mean = np.copy(data[0])
+        std  = None
     return mean, std
 
 def autocorr(arr: NDArray, **kwargs) -> float | NDArray:
