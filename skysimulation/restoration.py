@@ -565,7 +565,7 @@ class Histogram():
 
 
 
-def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, display_plot: bool = False,**pltargs) -> tuple[tuple[float,float],float]:
+def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, display_plot: bool = False,**pltargs) -> tuple[float,float]:
     """To estimate the background brightness
 
     Assuming the distribution of the background is a normal one,
@@ -652,7 +652,7 @@ def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, 
         plt.legend(fontsize=pltargs['fontsize'])
         plt.show()
 
-    return (mean_bkg, sigma_bkg), sigma_bkg
+    return mean_bkg, sigma_bkg
 
 def new_moving(direction: str, field: NDArray, index: tuple[int,int], back: float, size: int = 7, debug_check: bool = False) -> list[int] | int:
     """To compute the size in one direction
