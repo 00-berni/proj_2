@@ -43,7 +43,7 @@ def science_frame(frame_size: int = sky.FRAME['size'], star_num: int = sky.FRAME
 def restoration(sci_frame: sky.NDArray, Dsci_frame: sky.NDArray, stars: sky.Star, display_plots: bool = False, results:bool=True, verbose_display: bool = False, checks:bool=True,stop_ctrl:bool = False) -> tuple[tuple[sky.NDArray,sky.NDArray], dict]:
     params = {}
     ## Background Estimation
-    (bkg_mean, _), bkg_sigma = sky.bkg_est(sci_frame,display_plot=results)
+    bkg_mean, bkg_sigma = sky.bkg_est(sci_frame,display_plot=results)
     params['bkg'] = {'mean': bkg_mean, 'sigma': bkg_sigma}
 
     ## Kernel Estimation
