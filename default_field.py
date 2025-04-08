@@ -4,13 +4,14 @@ import skysimulation as sky
 
 ## Constants
 RESOLUTION = None #sky.MIN_m**sky.BETA*sky.K * 1e-2
-PLOTTING = True
+PLOTTING = False
 DISPLAY_PLOTS = False
 BINNING = 20
 FONTSIZE = 18
 BKG_MEAN = sky.BACK_MEAN
 OVERLAP  = True
 DIR_NAME = 'default'
+STORE = False
 
 ### MONTE CARLO REALIZATIONS
 def generate_sample(selection: None | sky.ArrayLike = None,**initargs) -> sky.NDArray:
@@ -26,7 +27,8 @@ from time import time
 start_time = time()
 distances = np.array([ generate_sample(overlap=OVERLAP) for _ in range(max_iter) ])
 end_time = time()
-sky.store_results('random_sample',distances,main_dir=DIR_NAME,columns=[f'{i:d}' for i in range(max_iter)])
+if STORE:
+    sky.store_results('random_sample',distances,main_dir=DIR_NAME,columns=[f'{i:d}' for i in range(max_iter)])
 
 print('TIME:',end_time-start_time)
 samples = distances.copy()
@@ -59,7 +61,8 @@ if PLOTTING:
     plt.show()
 
 obs_distances = np.array([ generate_sample(selection=BKG_MEAN*sky.K,overlap=OVERLAP) for _ in range(max_iter) ])
-sky.store_results('random_sample-obs',obs_distances,main_dir=DIR_NAME,columns=[f'{i:d}' for i in range(max_iter)])
+if STORE:
+    sky.store_results('random_sample-obs',obs_distances,main_dir=DIR_NAME,columns=[f'{i:d}' for i in range(max_iter)])
 
 ### SCIENCE FRAME
 ## Initialization
@@ -69,8 +72,10 @@ if PLOTTING:
     plt.show()
 print('CHECK',sky.BACK_MEAN*sky.K,len(STARS.lum[STARS.lum<sky.BACK_MEAN*sky.K]),STARS.lum.max(),STARS.lum[:4])
 ## Science Frame
-sci_frame = master_light - master_dark 
-Dsci_frame = np.sqrt(Dmaster_light**2 + Dmaster_dark**2)
+# sci_frame  = master_light - master_dark 
+# Dsci_frame = np.sqrt(Dmaster_light**2 + Dmaster_dark**2)
+sci_frame  = master_light 
+Dsci_frame = Dmaster_light 
 print('NEGATIVE',len(np.where(sci_frame <0)[0]) )
 if PLOTTING:
     sky.fast_image(sci_frame,'Science Frame')
@@ -81,6 +86,7 @@ if PLOTTING:
 ### RESTORATION
 ## Background Estimation
 bkg_mean, bkg_sigma = sky.bkg_est(sci_frame,display_plot=PLOTTING)
+
 
 ## Kernel Estimation
 thr = bkg_mean + bkg_sigma  #: the threshold for searching algorithm
@@ -147,8 +153,9 @@ plt.grid(linestyle='dashed',color='gray',alpha=0.5)
 plt.show()
 
 ### STORE DATA
-sky.store_results('source',[STARS.m,STARS.lum,STARS.pos[0],STARS.pos[1]],main_dir=DIR_NAME,columns=['M','L','X','Y'])
-sky.store_results('recovered',[rec_lum,Drec_lum,results['pos'][0],results['pos'][1]],main_dir=DIR_NAME,columns=['L','DL','X','Y'])
+if STORE:
+    sky.store_results('source',[STARS.m,STARS.lum,STARS.pos[0],STARS.pos[1]],main_dir=DIR_NAME,columns=['M','L','X','Y'])
+    sky.store_results('recovered',[rec_lum,Drec_lum,results['pos'][0],results['pos'][1]],main_dir=DIR_NAME,columns=['L','DL','X','Y'])
 
 
 ### CHECKS

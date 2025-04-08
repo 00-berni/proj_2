@@ -62,7 +62,7 @@ from numpy import ndarray
 from scipy.signal import find_peaks
 from .display import fast_image, field_image
 from .stuff import Gaussian, DISTR
-from .stuff import distance, pad_field, field_convolve, mean_n_std, peak_pos, minimum_pos, unc_format, dist_corr
+from .stuff import distance, pad_field, field_convolve, mean_n_std, peak_pos, minimum_pos, unc_format, dist_corr, print_measure
 
 class StellarObject():
 
@@ -565,7 +565,7 @@ class Histogram():
 
 
 
-def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, display_plot: bool = False,**pltargs) -> tuple[float,float]:
+def bkg_est(field: NDArray, quantize: float | None = None, display_plot: bool = False,**pltargs) -> tuple[float,float]:
     """To estimate the background brightness
 
     Assuming the distribution of the background is a normal one,
@@ -616,35 +616,25 @@ def bkg_est(field: NDArray, binning: int | Sequence[int | float] | None = None, 
     # print the results
     print('\nBackground estimation')
     print(f'\tmean:\t{mean_bkg}\n\tsigma:\t{sigma_bkg}\n\trelerr:\t{sigma_bkg/mean_bkg*100:.2f} %')
-    
+    if quantize is not None:
+        print(f'\tmean:\t{mean_bkg*quantize}\n\tsigma:\t{sigma_bkg*quantize}\n\trelerr:\t{sigma_bkg/mean_bkg*100:.2f} %')
+        print_measure(mean_bkg*quantize,sigma_bkg*quantize,'bkg')
+
     ## Plotting
     if display_plot:
         frame = field.copy()        #: copy of the field matrix
         data = frame.flatten()      #: 1-D data array
-        # if binning is None:
-        #     # compute the magnitude between max and min data
-        #     ratio = int(data.max()/data.min())
-        #     if ratio == 0: raise Exception("Binning is not possible")
-        #     # set the number of bins
-        #     binning = int(len(field) / np.log10(ratio)) *2 if ratio != 1 else int(len(field)*2)
-        #     # print information
-        #     print('\nBinning Results')
-        #     print('Number of pixels:', data.shape[0])
-        #     print('Magnitudes:', np.log10(ratio))
-        #     print('Number of bins:', binning)
-        # # compute the histogram
-        # cnts, bins = np.histogram(data,bins=binning)
+        if quantize is not None: data *= quantize
 
-
-        bkg_fmt = unc_format(mean_bkg,sigma_bkg)
+        displ_bkg, displ_sigma = (mean_bkg,sigma_bkg) if quantize is None else (mean_bkg*quantize,sigma_bkg*quantize) 
+        bkg_fmt = unc_format(displ_bkg,displ_sigma)
         mean_label  = '$\\bar{n}_B$ = {mean:' + bkg_fmt[0][1:] + '}'
         sigma_label = '$\\sigma_B$ = {sigma:' + bkg_fmt[1][1:] + '}'
         plt.figure()
         plt.title(f'Background Estimation',fontsize=pltargs['fontsize']+2)
-        # plt.stairs(cnts, bins, fill=False)
         plt.hist(data,len(field)*2,histtype='step')
-        plt.axvline(mean_bkg, 0, 1, color='red', linestyle='dotted', label=mean_label.format(n='{n}',mean=mean_bkg))
-        plt.axvspan(mean_bkg-sigma_bkg,mean_bkg+sigma_bkg, 0, 1, facecolor='orange', alpha=0.4, label=sigma_label.format(sigma=sigma_bkg))
+        plt.axvline(displ_bkg, 0, 1, color='red', linestyle='dotted', label=mean_label.format(n='{n}',mean=displ_bkg))
+        plt.axvspan(displ_bkg-displ_sigma,displ_bkg+displ_sigma, 0, 1, facecolor='orange', alpha=0.4, label=sigma_label.format(sigma=displ_sigma))
         plt.xscale('log')
         plt.xlabel('$\\ell$ [a.u.]',fontsize=pltargs['fontsize'])
         plt.ylabel('counts',fontsize=pltargs['fontsize'])
@@ -1377,7 +1367,7 @@ def kernel_estimation(extraction: list[NDArray], errors: list[NDArray], bkg: tup
     return sigma, Dsigma
 
 
-def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: float, sigma_bkg: float, max_iter: int | None = None, max_r: int = 3000, thr_mul: float | None = None, mode: None | dict = None, results: bool = True, display_fig: bool = False, **kwargs) -> NDArray:
+def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: float, sigma_bkg: float, max_iter: int | None = None, max_r: int = 3000, thr_mul: float | None = None, mode: None | dict = None, pad_size: int | None = None, trig_chisq: bool = False, results: bool = True, display_fig: bool = False, **kwargs) -> NDArray:
     """To provide the Richardson-Lucy algorithm
 
     Parameters
@@ -1441,7 +1431,8 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
     # pad the field before convolutions
     #.. the field is put in a frame filled by drawing values 
     #.. from `bkg` distribution
-    pad_size  = (len(P)-1)+2                  #: number of pixels to pad the field
+    if pad_size is None: 
+        pad_size  = (len(P)-1)+2              #: number of pixels to pad the field
     # pad_slice = slice(pad_size,-pad_size)   #: field size cut
     I = pad_field(field, pad_size, mean_bkg)
     # I = field.copy()
@@ -1478,6 +1469,8 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
         Sr1 = Sr(Sr0,Ir0)
         Ir1 = Ir(Sr1)
         Ir1 = np.where(Ir1<0,0,Ir1)
+        # if Dn == 0:
+        #     if r%100 == 0: fast_image(Ir1)
         # estimate the error
         diff = np.abs(Ir1-Ir0).sum()/np.sum(I)
         chisq = ((I-Ir1)**2).sum()/(len(I)**2-1)
@@ -1488,7 +1481,7 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
             if r > max_iter: 
                 print(f'Routine stops due to the limit in iterations: {r} reached')
                 break
-        stop_cond = r<max_iter if Dn == 0 else diff >= Dn*thr_mul#/I.sum()
+        stop_cond = r<max_r if Dn == 0 else diff >= Dn*thr_mul#/I.sum()
     print(f'\nTime: {time.time()-start_time} s')
     print()
     if results:
@@ -1516,7 +1509,7 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
                             [val, val] ])
         fig, ax = plt.subplots(1,1)
         ax.set_title('Before cutting')
-        field_image(fig,ax,Sr(Sr1,Ir1))
+        field_image(fig,ax,Sr(Sr1,Ir1),**kwargs)
         s_k = kernel.sigma
         mask0 = sqr_mask(s_k*1, len(I))
         mask1 = sqr_mask(s_k*2, len(I))
@@ -1533,12 +1526,12 @@ def LR_deconvolution(field: NDArray, kernel: DISTR, sigma: NDArray, mean_bkg: fl
     ## Plotting
     if display_fig:
         fast_image(rec_field,'Restored Field',**kwargs)
-        fast_image(rec_field, norm='log',**kwargs)
+        fast_image(rec_field,**kwargs)
         fig,(ax1,ax2) = plt.subplots(1,2)
         ax1.set_title('Science Frame',fontsize=20)
-        field_image(fig,ax1,field)
+        field_image(fig,ax1,field,**kwargs)
         ax2.set_title('Restored Field',fontsize=20)
-        field_image(fig,ax2,rec_field)
+        field_image(fig,ax2,rec_field,**kwargs)
         plt.show()
     return rec_field
 

@@ -367,7 +367,7 @@ def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m
     m = m[sortpos]
     L = L[sortpos]
     star_pos = (star_pos[0][sortpos],star_pos[1][sortpos])
-    if quantize is not None: L /= quantize
+    # if quantize is not None: L /= quantize
     # saving stars infos
     S = Star(m, L, star_pos,alpha,beta,(m_inf,m_sup))
     if display_fig:
@@ -506,7 +506,6 @@ def add_effects(F: NDArray, background: DISTR, back_seed: int | None, atm_param:
         # convolve the kernel
         F_bs = atm_seeing(F_b,sigma,bkg=background,size=ker_size,display_fig=display_fig,**kwargs)
 
-    print(quantize is not None,isinstance(det_noise, Poisson))
     if quantize is not None and isinstance(det_noise, Poisson):
         print('QUANTA')
         F_bs = F_bs // quantize
@@ -620,11 +619,13 @@ def field_builder(acq_num: int = 6, dim: int = N, stnum: int = M, masses: tuple[
         del seeds_gen
     print('quantsize',quantize)
     # make multiple acquisitions
-    lights = [ add_effects(F.copy(), background, back_seed[i], atm_param, det_noise, det_seed[i], i,quantize=quantize, display_fig=display_fig, **kwargs) for i in range(acq_num)]
+    lights = np.array([ add_effects(F.copy(), background, back_seed[i], atm_param, det_noise, det_seed[i], i,quantize=quantize, display_fig=display_fig, **kwargs) for i in range(acq_num)])
+    fast_image(lights[0])
+    if quantize is not None:
+        lights *= quantize
+    fast_image(lights[0])
 
     master_light, std_light = mean_n_std(lights, axis=0)
-
-    print()
 
     if results:
         fig, (ax1,ax2) = plt.subplots(1,2)
@@ -649,9 +650,12 @@ def field_builder(acq_num: int = 6, dim: int = N, stnum: int = M, masses: tuple[
 
     # Dark Computation
     dark_seed = np.random.default_rng(seed=det_seed[0]).integers(maxsize,size=iteration)
-    dark = [noise(det_noise,dim=dim,seed=dark_seed[i],quantize=quantize) for i in range(iteration)]
+    dark = np.array([noise(det_noise,dim=dim,seed=dark_seed[i],quantize=quantize) for i in range(iteration)])
+    if quantize is not None:
+        dark *= quantize
     # averaging
     master_dark, std_dark = mean_n_std(dark, axis=0) 
+
     if results:
         vmin = np.min([ dark[i].min() for i in range(iteration)]+[master_dark.min()])
         vmax = np.max([ dark[i].max() for i in range(iteration)]+[master_dark.max()])

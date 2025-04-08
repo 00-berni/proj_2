@@ -183,8 +183,8 @@ def from_parms_to_distr(params: tuple[str, float] | tuple[str, tuple], infos: bo
         mu, sigma = vals
         distr = Gaussian(sigma,mu)
     elif name == 'Uniform':
-        max_val = vals
-        distr = Uniform(max_val)
+        min_val, max_val = vals
+        distr = Uniform(min_val, max_val)
     elif name == 'Poisson':
         lam, k = vals
         distr = Poisson(lam,k)
