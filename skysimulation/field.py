@@ -378,7 +378,7 @@ def initialize(dim: int = N, sdim: int = M, masses: tuple[float, float] = (MIN_m
     return F, S
 
 
-def atm_seeing(field: NDArray, sigma: float = SEEING_SIGMA, bkg: DISTR = Gaussian(BACK_SIGMA, BACK_MEAN), size: int = 4, display_fig: bool = False, **kwargs) -> NDArray:
+def atm_seeing(field: NDArray, sigma: float = SEEING_SIGMA, bkg: float | DISTR = Gaussian(BACK_SIGMA, BACK_MEAN), size: int = 4, display_fig: bool = False, **kwargs) -> NDArray:
     """To compute the atmospheric seeing
 
     Parameters
@@ -399,6 +399,9 @@ def atm_seeing(field: NDArray, sigma: float = SEEING_SIGMA, bkg: DISTR = Gaussia
     """
     # compute the kernel
     kernel = Gaussian(sigma).kernel(size=size)
+    if len(kernel[kernel<0]) != 0: 
+        print(len(kernel[kernel<0]))
+        raise ValueError('HEY!')
     # convolve the field with the kernel
     see_field = field_convolve(field, kernel, bkg, norm_cost=K)
     if display_fig:
@@ -438,7 +441,8 @@ def noise(distr: DISTR, dim: int = N, seed: int | None = None, quantize: float |
         plt.show()
     # check the presence of negative values
     if len(np.where(n < 0)) != 0:
-        n = np.sqrt(n**2)
+        # n = np.sqrt(n**2)
+        n[n<0] = 0
     # normalize
     n *= K
     if quantize is not None and not isinstance(distr,Poisson):
