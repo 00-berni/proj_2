@@ -43,7 +43,7 @@ MAX_m = 10              #: max mass value for stars
 ALPHA = 2.35            #: IMF exp
 BETA = 3                #: M-L exp
 K = 1/(MAX_m**BETA)     #: normalization constant
-M_SEED = 27             #: seed for mass sample generation
+M_SEED = 48             #: seed for mass sample generation
 POS_SEED = 38
 # background values for a Gaussian distribution
 BACK_MEAN = MAX_m**BETA * 3.2e-4      #: mean
@@ -624,16 +624,16 @@ def field_builder(acq_num: int = 6, dim: int = N, stnum: int = M, masses: tuple[
     print('quantsize',quantize)
     # make multiple acquisitions
     lights = np.array([ add_effects(F.copy(), background, back_seed[i], atm_param, det_noise, det_seed[i], i,quantize=quantize, display_fig=display_fig, **kwargs) for i in range(acq_num)])
-    fast_image(lights[0])
+    # fast_image(lights[0])
     if quantize is not None:
         lights *= quantize
-    fast_image(lights[0])
+    # fast_image(lights[0])
 
     master_light, std_light = mean_n_std(lights, axis=0)
 
     if results:
         fig, (ax1,ax2) = plt.subplots(1,2)
-        field_image(fig,ax1,F,v=1,norm='log')
+        field_image(fig,ax1,F,v=0,norm='log')
         ax1.set_title('Source Image',fontsize=20)
         field_image(fig,ax2,master_light,**kwargs)
         ax2.set_title('Master Light',fontsize=20)
