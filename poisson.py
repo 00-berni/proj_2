@@ -10,7 +10,7 @@ DIR_NAME = 'poisson_det'
 ### INITIALIZATION
 ## Parameters
 BINNING = 20
-DC = sky.MIN_m**sky.BETA*sky.K *1e-2
+DC = sky.MIN_m**sky.BETA*sky.K / 7
 POI_SEED = 100
 
 source_frame, STARS = sky.initialize(overlap=True,display_fig=True)
@@ -34,6 +34,7 @@ plt.show()
 
 fig, (ax1,ax2) = plt.subplots(1,2)
 sky.field_image(fig,ax1,conv_frame,norm='log')
+ax2.set_title('Light Frame')
 sky.field_image(fig,ax2,light_frame,norm='log')
 plt.show()
 ## Kernel Estimation
@@ -61,6 +62,9 @@ sky.field_image(fig,ax1,light_frame)
 ax2.set_title('After deconvolution',fontsize=FONTSIZE+2)
 sky.field_image(fig,ax2,dec_field)
 plt.show()
+
+sky.fast_image(dec_field,norm='log',colorbar=False)
+
 ## Light Recover
 results = {}
 rec_lum, Drec_lum = sky.light_recover(dec_field,thr,0,(ker_sigma,Dker_sigma),extraction=results,binning=BINNING,results=PLOTTING,display_fig=PLOTTING)
