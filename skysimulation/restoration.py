@@ -1640,7 +1640,8 @@ def cutting(obj: NDArray, centre: Sequence[int], err: NDArray | None = None, deb
         #?
         if debug_plots:        fast_image(obj,'! HWHM small')
         #?
-        return WRONG_RESULT
+        hwhm = 1
+        # return WRONG_RESULT
     xends = (max(x0-hwhm,0), min(x0+hwhm +1 , xdim))
     yends = (max(y0-hwhm,0), min(y0+hwhm +1 , ydim))
     # select only the pixels inside hwhm
@@ -1755,6 +1756,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             #?
             if debug_plots:
                 fig, ax = plt.subplots(1,1)
+                ax.set_title('BAD Object Check')
                 field_image(fig,ax,c_obj)
                 ax.plot(ymax,xmax,'.b')
                 ax.plot(yymax,xxmax,'.r')
@@ -1769,7 +1771,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
     hm_pos = max(minimum_pos(np.abs(np.where(c_obj != val0,c_obj,0)-hm)))
     # compute the best approximation of the HWHM
     hwhm = np.rint((abs(hm_pos-xmax) + abs(hm_pos-ymax))/2).astype(int)
-    if hwhm <= 1: mode = 'low'
+    # if hwhm <= 1: mode = 'low'
     
 
     ### Bright object 
@@ -1780,6 +1782,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         centre = np.array([xmax, ymax])
         # select the pixels of interest from `obj`
         cut_obj, cut_err, shift = cutting(c_obj, centre, err=err, debug_plots=debug_plots)
+        if kwargs['log']: print('\n\tshift',shift)
         # reject null object
         if cut_obj is None: return None
         if err is not None:
@@ -1802,24 +1805,26 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             #?
             return None
         coord = np.rint(pop[-2:]).astype(int)
+        if kwargs['log']: print('New coordinates',coord)
         if debug_plots:
             fig,ax = plt.subplots(1,1)
+            ax.set_title('Bright')
             field_image(fig,ax,cut_obj)
             ax.plot(*coord[::-1],'xb')
             plt.show()
         # check the centroid position
-        if 0 <= coord[0] < cut_obj.shape[0] and 0 <= coord[1] < cut_obj.shape[1]:
-            if kwargs['log']: print('\n\tSecond cut')
-            # compute centre coordinates in the frame of `obj`
-            centre = coord + shift
-            # select the pixels of interest from `obj`
-            cut_obj, cut_err, shift = cutting(c_obj, centre, err=err, debug_plots=debug_plots)
-            if cut_obj is None:     #: check
-                return None
-            if err is not None:
-                if cut_err.shape != cut_obj.shape: 
-                    print(cut_err.shape,cut_obj.shape)
-                    raise IndexError('OH!')
+        # if 0 <= coord[0] < cut_obj.shape[0] and 0 <= coord[1] < cut_obj.shape[1]:
+        #     if kwargs['log']: print('\n\tSecond cut')
+        #     # compute centre coordinates in the frame of `obj`
+        #     centre = coord + shift
+        #     # select the pixels of interest from `obj`
+        #     cut_obj, cut_err, shift = cutting(c_obj, centre, err=err, debug_plots=debug_plots)
+        #     if cut_obj is None:     #: check
+        #         return None
+        #     if err is not None:
+        #         if cut_err.shape != cut_obj.shape: 
+        #             print(cut_err.shape,cut_obj.shape)
+        #             raise IndexError('OH!')
         # change coordinates reference
         x0, y0 = centre - shift
         if debug_plots:
@@ -1846,7 +1851,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             plt.plot(cut_obj[x0,:])
             plt.show()
         # compute the first derivative
-        grad1 = np.diff(mean_obj) 
+        grad1 = np.diff(mean_obj)/np.diff(px) 
         # check the derivative sign around the centre
         mean_width = np.rint(max(hwhm, 3)).astype(int)
         g_pos = np.where(grad1[:mean_width+1] >= 0)[0]
@@ -1856,11 +1861,12 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             ax0.set_title('Mean obj')
             ax0.plot(px,mean_obj,'.--',color='blue')
             m_px = (px[:-1] + px[1:])/2
-            ax0.plot(m_px, grad1, 'v--', color='orange')
-            ax0.plot((m_px[:-1]+m_px[1:])/2, np.diff(grad1), '^--', color='green')
+            ax0.plot(m_px, grad1, 'v--', color='orange',label='grad1')
+            ax0.plot((m_px[:-1]+m_px[1:])/2, np.diff(grad1), '^--', color='green',label='grad2')
             ax0.axhline(0,0,1,color='black')
             ax0.axhline(np.mean(mean_obj[1:mean_width+1]),0,1,color='blue',linestyle='dashed')
             ax0.axhline(thr,0,1,color='red',linestyle='dotted')
+            ax0.legend()
             plt.show()
         #?
         if len(g_pos) == 0:
@@ -1868,31 +1874,37 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             x0, y0 = np.array([x0, y0]) + shift
             # check the derivative sign out from the bulk
             g_pos = np.where(grad1[mean_width:] >= 0)[0]
-            if len(g_pos) != 0:     #: cut the object
-                xdim, ydim = c_obj.shape  #: initial sizes
-                # cut at the first positive value of the derivative
-                mean_width = g_pos[0]
-                if kwargs['log']: print('Quite')
-                # compute the size of the object from the centre
-                xsize = ( max(0, x0-mean_width),  min(xdim, x0+mean_width+1))
-                ysize = ( max(0, y0-mean_width),  min(xdim, y0+mean_width+1))
-                # cut the object
-                obj = c_obj[slice(*xsize), slice(*ysize)].copy()
-                if err is not None:
-                    err = err[slice(*xsize), slice(*ysize)]
-                #?
-                if debug_plots:                fast_image(obj,'cutted')
-                #?
+            # if len(g_pos) != 0:     #: cut the object
+            #     xdim, ydim = c_obj.shape  #: initial sizes
+            #     # cut at the first positive value of the derivative
+            #     mean_width = g_pos[0]
+            #     if kwargs['log']: print('Quite')
+            #     # compute the size of the object from the centre
+            #     xsize = ( max(0, x0-mean_width),  min(xdim, x0+mean_width+1))
+            #     ysize = ( max(0, y0-mean_width),  min(xdim, y0+mean_width+1))
+            #     # cut the object
+            #     obj = c_obj[slice(*xsize), slice(*ysize)].copy()
+            #     if err is not None:
+            #         err = err[slice(*xsize), slice(*ysize)]
+            #     #?
+            #     if debug_plots:                fast_image(obj,'cutted')
+            #     #?
             if kwargs['log']: print('GOOD')
         else:
             ## S/N
             # compute the ratio between pixels around the centre and mean background
-            ratio = np.mean(mean_obj[1:mean_width+1])/thr
-            if kwargs['log']: print('S/N',ratio*100,'%')
+            avg = np.mean(mean_obj[1:mean_width+1])
+            if thr != 0:
+                ratio = avg/thr 
+                condition = ratio >= 1
+                if kwargs['log']: print('S/N',ratio*100,'%')
+            else:
+                condition = avg > 0
+                if kwargs['log']: print('avg:',avg)
             #?
             if debug_plots:            plt.show()
             #?
-            if ratio >= 1:
+            if condition:
                 if kwargs['log']: print('Quite Quite Good')
                 # convert coordinates to the initial frame
                 x0, y0 = np.array([x0, y0]) + shift
@@ -1918,6 +1930,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
         #?
         if debug_plots:        fast_image(obj,'LOW before cutting')
         #?
+
         if kwargs['log']: print('LOW')
         hwhm = np.rint(np.mean(sigma)).astype(int) if len(sigma) != 0 else SIZE
         cut = lambda centre, dim : slice(max(0, centre-hwhm), min(dim, centre + hwhm + 1))
@@ -1952,6 +1965,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             #?
             return None
         coord = np.rint(pop[-2:]).astype(int)
+        if kwargs['log']: print('New coordinates',coord)
         # check the centroid position
         if 0 <= coord[0] < cut_obj.shape[0] and 0 <= coord[1] < cut_obj.shape[1]:
             centre = coord + shift
@@ -2005,8 +2019,13 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             ax0.axhline(thr,0,1,color='red',linestyle='dotted')
             plt.show()
         #?
-        ratio = np.mean(mean_obj[1:])/thr
-        if ratio >= 1:
+        avg = np.mean(mean_obj[1:])
+        if thr != 0:
+            ratio = avg/thr 
+            condition = ratio >= 1
+        else:
+            condition = avg > 0
+        if condition:
             g_pos = np.where(grad1 >= 0)[0]
             if np.mean(grad1) < 0:#len(g_pos) == 0:
                 obj = cut_obj.copy()
@@ -2023,7 +2042,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
             return None
     if 0 in obj.shape:
         print('> STOP NO SHAPE')
-        fast_image(init_obj)
+        if debug_plots: fast_image(init_obj)
         return -1
         print('position',index)
         raise Exception(f'Zero shape ')
@@ -2035,6 +2054,7 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
     xmax, ymax = peak_pos(obj)
     if debug_plots:
         fig,ax = plt.subplots(1,1)
+        ax.set_title('MAH')
         field_image(fig,ax,obj)
         ax.plot(y0,x0,'xb')
         ax.plot(ymax,xmax,'xr')
@@ -2043,13 +2063,15 @@ def object_check(obj: NDArray, index: tuple[int,int], thr: float, sigma: Sequenc
     index = (x0 + (x-xmax), y0 + (y-ymax))
     xsize = (x-xmax, xdim + (x-xmax))
     ysize = (y-ymax, ydim + (y-ymax))
+    if kwargs['log']:
+        print('Params',index,xsize,ysize)
     if err is not None:
         if err.shape != obj.shape:
             print(err.shape,obj.shape)
             raise IndexError('NOOOOO')
     return obj, err, index, (xsize, ysize)
                 
-def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArray | None = None, ker_sigma: float | None = None, obj_param: list | None = None, debug_plots: bool = False) -> tuple[NDArray,NDArray] | tuple[None,None]:
+def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArray | None = None, ker_sigma: float | None = None, obj_param: list | None = None, relax_cond: bool = False, debug_plots: bool = False) -> tuple[NDArray,NDArray] | tuple[None,None]:
     fit_obj = prb_obj.copy() - bkg_val
     # prb_x, prb_y = index
     avg_cen = index 
@@ -2071,20 +2093,21 @@ def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArr
     #         fast_image(fit_obj)
     #     print(index)
     #     raise
-    std0 = ker_sigma
-    if std0 is None:
-        hm = k0/2
-        hm_xpos, hm_ypos = minimum_pos(abs(hm-fit_obj))
-        hwhm = np.sqrt((hm_xpos - index[0])**2 + (hm_ypos - index[1])**2)
-        std0 = hwhm   
+    # std0 = ker_sigma
+    # if std0 is None:
+    hm = k0/2
+    hm_xpos, hm_ypos = minimum_pos(abs(hm-fit_obj))
+    hwhm = np.sqrt((hm_xpos - index[0])**2 + (hm_ypos - index[1])**2)
+    std0 = hwhm   
     initial_values = [k0,std0,index[0],index[1]]  
+    print('Initial Values',initial_values)
     xfit = np.vstack((xrange.ravel(),yrange.ravel()))
     yfit = fit_obj.ravel()
     sigma = errs.ravel().copy() if errs is not None else None
 
     try:
         pop, pcov = curve_fit(gauss_func,xfit,yfit,initial_values,sigma=sigma)
-        print(pop,np.sqrt(pcov.diagonal()))
+        print('POP',pop,np.sqrt(pcov.diagonal()))
         pop_err = np.sqrt(pcov.diagonal())
         if debug_plots:
             fig, ax = plt.subplots(1,1)
@@ -2097,6 +2120,8 @@ def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArr
             ax.contour(yy,xx,gauss_func((xx,yy),*pop),colors='b',linestyles='dashed',alpha=0.7)
             onesigma = plt.Circle((pop[-1],pop[-2]),pop[1],color='orange',alpha=0.4)
             ax.add_patch(onesigma)
+        if np.any(np.isinf(pcov.diagonal())):
+            raise RuntimeError 
     except RuntimeError:
         if debug_plots:        
             plt.figure()
@@ -2122,13 +2147,20 @@ def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArr
         print('YOHEY',errs.shape,fit_obj.shape)
         print(type(xfit),type(yfit),initial_values)
         raise
-    if pop[1] < 0.5: 
+    if not relax_cond and pop[1] < 0.5: 
         print('Sigma is negative -->',pop[1])
         return None,None
     elif ker_sigma is not None: 
-        if pop[1] >= ker_sigma or pop[1] < 1:
+        print('RELAX',relax_cond)
+        if pop[1] >= ker_sigma :
             print('Sigma > Kernel -->',pop[1])
             return None,None
+    if np.any(pop < 0) or np.any(pop_err < 0):
+            print('Impossible')
+            return None,None
+    # if pop_err[0]/pop[0]>2:
+    #         print('Terrible precision')
+            # return None,None
     # elif ker_sigma is not None and pop[1] >= ker_sigma:
     #     print('Sigma > Kernel -->',pop[1])
     #     return None,None
@@ -2158,7 +2190,7 @@ def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArr
     return new_obj, new_err
 
             
-def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None = None, max_size: int = 5, min_dist: int = 0, ker_sigma: float | None = None, num_objs: int | None = None, sel_cond: Literal['all', 'size', 'dist','new'] = 'new', debug_plots: bool = False, cntrl: int | None = None, cntrl_sel: str | None = None, gausfit: bool = True, obj_params: NDArray | None = None, display_fig: bool = True, **kwargs) -> None | tuple[list[NDArray], list[NDArray] | None, NDArray]:
+def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None = None, max_size: int = 5, min_dist: int = 0, ker_sigma: float | None = None, num_objs: int | None = None, sel_cond: Literal['all', 'size', 'dist','new'] = 'new', debug_plots: bool = False, cntrl: int | None = None, cntrl_sel: str | None = None, gausfit: bool = True, obj_params: NDArray | None = None, relax_cond: bool = False, display_fig: bool = True, **kwargs) -> None | tuple[list[NDArray], list[NDArray] | None, NDArray]:
     if 'log' not in kwargs.keys():
         kwargs['log'] = False
     if 'debug_check' not in kwargs.keys():
@@ -2187,11 +2219,21 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
     stop_val = thr                      #: threashold
     cnt = 1
     obj_cnt = 0
+    repetation = {'pos': (xmax,ymax),'cnt':1}
     print('\n- - - SEARCHING START - - -')
     print(f'Stop_val : {stop_val}')
     info_print(cnt,(xmax, ymax), peak)
     while peak > stop_val:
         print(f'ker_sigma : {ker_sigma}')
+        # if xmax==58 and ymax==92 and ker_sigma is not None:
+        #     print('INIZIO')
+        #     fast_image(tmp_field)
+        #     debug_plots = True
+        #     debug_check = True
+        # else:
+        #     debug_plots = False
+        #     debug_check = False
+        
         # debug_plots = True if cnt == 2 else False
         # debug_check = True if cnt == 2 else False
         rec_obj = None
@@ -2338,7 +2380,7 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
                     ax0.plot(ymax,xmax,'.')
                 #?
                 # check if object is acceptable
-                check = object_check(obj, (xmax, ymax), bkg_val, sigma, err=err, debug_plots=debug_plots,**kwargs)
+                check = object_check(obj, (xmax, ymax), bkg_val, sigma, err=err,mode='bright', debug_plots=debug_plots,**kwargs)
                 if check is None or check == -1:
                     print('Check',check)
                     if kwargs['log']: print('Check is not good 1')
@@ -2386,7 +2428,7 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
                         if gausfit:
                             xcen = x0 - x.indices(xmax)[0]
                             ycen = y0 - y.indices(ymax)[0]
-                            rec_obj, rec_err = art_obj(obj,(xcen,ycen),bkg_val=bkg_val,errs=err,ker_sigma=ker_sigma,obj_param=obj_params,debug_plots=debug_plots)  
+                            rec_obj, rec_err = art_obj(obj,(xcen,ycen),bkg_val=bkg_val,errs=err,ker_sigma=ker_sigma,obj_param=obj_params,relax_cond=relax_cond,debug_plots=debug_plots)  
                         else: 
                             rec_obj, rec_err = obj, err
                         # acc_obj += [obj]
@@ -2454,7 +2496,7 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
                             plt.show()
                         #?
             else:       #: faint objects
-                
+                if kwargs['log']: print('LOW:',peak/2)
                 if cntrl_sel is not None and cntrl_sel == 'low': debug_plots = True
                 #?
                 if debug_plots:
@@ -2516,7 +2558,7 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
                         if gausfit:
                             xcen = x0 - x.indices(xmax)[0]
                             ycen = y0 - y.indices(ymax)[0]
-                            rec_obj, rec_err = art_obj(obj,(xcen,ycen),bkg_val=bkg_val,errs=err,ker_sigma=ker_sigma,obj_param=obj_params,debug_plots=debug_plots)  
+                            rec_obj, rec_err = art_obj(obj,(xcen,ycen),bkg_val=bkg_val,errs=err,ker_sigma=ker_sigma,obj_param=obj_params,relax_cond=relax_cond,debug_plots=debug_plots)  
                         else: 
                             rec_obj, rec_err = obj, err                        
                         if rec_obj is not None:
@@ -2619,6 +2661,11 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
         #!
         peak = tmp_field[xmax, ymax]   
         cnt += 1
+        if (xmax,ymax) == repetation['pos']: 
+            print('! REPEAT')
+            repetation['cnt'] += 1
+        else: repetation['cnt'] = 1
+        repetation['pos'] = (xmax,ymax)
         info_print(cnt,(xmax, ymax), peak)
         #?
         if debug_plots: fast_image(tmp_field,'tmp_field')
@@ -2626,7 +2673,7 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
         if cnt == cntrl:
             print('Stop for control')
             break
-        if obj_cnt == num_objs:
+        if obj_cnt == num_objs or repetation['cnt'] > 10:
             break
     if display_fig:            
         fig, ax = plt.subplots(1,1)
