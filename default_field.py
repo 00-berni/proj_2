@@ -4,7 +4,7 @@ import skysimulation as sky
 
 ## Constants
 RESOLUTION = None #sky.MIN_m**sky.BETA*sky.K * 1e-2
-PLOTTING = False
+PLOTTING = True
 DISPLAY_PLOTS = False
 BINNING = 20
 FONTSIZE = 18
@@ -72,11 +72,12 @@ if PLOTTING:
     plt.show()
 print('CHECK',sky.BACK_MEAN*sky.K,len(STARS.lum[STARS.lum<sky.BACK_MEAN*sky.K]),STARS.lum.max(),STARS.lum[:4])
 ## Science Frame
-# sci_frame  = master_light - master_dark 
-# Dsci_frame = np.sqrt(Dmaster_light**2 + Dmaster_dark**2)
-sci_frame  = master_light 
-Dsci_frame = Dmaster_light 
+sci_frame  = master_light - master_dark 
+Dsci_frame = np.sqrt(Dmaster_light**2 + Dmaster_dark**2)
+# sci_frame  = master_light 
+# Dsci_frame = Dmaster_light 
 print('NEGATIVE',len(np.where(sci_frame <0)[0]) )
+print(STARS.mean_lum(),np.mean(STARS.lum))
 if PLOTTING:
     sky.fast_image(sci_frame,'Science Frame')
     plt.figure()
