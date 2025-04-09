@@ -470,10 +470,10 @@ if __name__ == '__main__':
 
 
     ### MALQUIST BIAS
-    BKG_VALUES = [11,15,20]
+    BKG_VALUES = np.array([3.2,4.2,5.2,6.2,7.2,8.2,9.2,10,11,15,20])
     BKG_ITER = 20
     params['bkg_seed'] = None
-    DIRECTORY = 'multi-bkg-real'
+    DIRECTORY = 'multi-new-corr'
     LOG_NAME = 'multi_bkg'
 
     # log_update('Multi Bkg different realizations\n',file_name=LOG_NAME,main_dir=DIRECTORY,mode='w')
