@@ -36,11 +36,12 @@ def field_image(fig: Figure, image: Axes, F: np.ndarray, v: int = 0, sct: Sequen
     elif v == 0: color = 'gray'
     elif v == 1: color = 'viridis' 
     elif v == 2: color = 'brg'
+    sel_field = F[xcut,ycut].copy()
     # generating the image
-    # if norm == 'log':
-    #     minval = F[xcut,ycut][F[xcut,ycut]>0].min()
-    #     vmin = minval
-    pic = image.imshow(F[xcut,ycut],  origin='lower', cmap=color, norm=norm, vmin=vmin, vmax=vmax)
+    if norm == 'log' and np.any(sel_field<=0):
+        from matplotlib.colors import LogNorm
+        norm = LogNorm(sel_field[sel_field>0].min()*1e-1,sel_field.max(),clip=True)
+    pic = image.imshow(sel_field,  origin='lower', cmap=color, norm=norm, vmin=vmin, vmax=vmax)
     if ticks:
         x0,x1 = sct[1]
         y0,y1 = sct[0]
