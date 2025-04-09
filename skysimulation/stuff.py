@@ -234,7 +234,7 @@ def sqr_mask(val: float, dim: int) -> NDArray:
                       [dim - val, val],
                       [val, val] ])
 
-def field_convolve(field: NDArray, kernel: NDArray, bkg: DISTR, norm_cost: float = 1, mode: str = 'fft') -> NDArray:
+def field_convolve(field: NDArray, kernel: NDArray, bkg: DISTR | float, norm_cost: float = 1, mode: str = '2d') -> NDArray:
     """To convolve the field with a kernel
 
     Parameters
@@ -263,15 +263,24 @@ def field_convolve(field: NDArray, kernel: NDArray, bkg: DISTR, norm_cost: float
     pad_slice = slice(pad_size, -pad_size)  #: frame cut
     # pad the field to avoid edge artifacts after convolution
     tmp_field = pad_field(field, pad_size, bkg, norm_cost=norm_cost)
+    if len(tmp_field[tmp_field<0]): 
+        print(len(tmp_field[tmp_field<0]))
+        # raise ValueError('Oh no')
     # convolve
     if mode == 'fft':
         from scipy.signal import fftconvolve   
         conv_field = fftconvolve(tmp_field, kernel, mode='same')
     elif mode == '2d':
         from scipy.signal import convolve2d   
-        conv_field = convolve2d(tmp_field, kernel, mode='same', boundary='fill', fillvalue=bkg.mean())
+        if isinstance(bkg,(int,float)):
+            fillvalue = bkg
+        else:
+            fillvalue = bkg.mean()
+        conv_field = convolve2d(tmp_field, kernel, mode='same', boundary='fill', fillvalue=fillvalue)
     else: raise Exception(f'Error in convolution mode!\n`{mode}` is no accepted')
-    # cut and remove the frame
+    if len(conv_field[conv_field<0]): 
+        print(len(conv_field[conv_field<0]))
+        # raise ValueError('Oh no2')    # cut and remove the frame
     return conv_field[pad_slice,pad_slice]
 
 def mean_n_std(data: ArrayLike, axis: int | None = None, weights: ArrayLike | None = None) -> tuple[ArrayLike, ArrayLike | None]:
