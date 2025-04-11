@@ -628,12 +628,12 @@ def bkg_est(field: NDArray, quantize: float | None = None, display_plot: bool = 
 
         displ_bkg, displ_sigma = (mean_bkg,sigma_bkg) if quantize is None else (mean_bkg*quantize,sigma_bkg*quantize) 
         bkg_fmt = unc_format(displ_bkg,displ_sigma)
-        mean_label  = '$\\bar{n}_B$ = {mean:' + bkg_fmt[0][1:] + '}'
-        sigma_label = '$\\sigma_B$ = {sigma:' + bkg_fmt[1][1:] + '}'
+        mean_label  = '$\\tilde{m}_B$ = {mean:' + bkg_fmt[0][1:] + '}'
+        sigma_label = '$s_B$ = {sigma:' + bkg_fmt[1][1:] + '}'
         plt.figure()
         plt.title(f'Background Estimation',fontsize=pltargs['fontsize']+2)
         plt.hist(data,len(field)*2,histtype='step')
-        plt.axvline(displ_bkg, 0, 1, color='red', linestyle='dotted', label=mean_label.format(n='{n}',mean=displ_bkg))
+        plt.axvline(displ_bkg, 0, 1, color='red', linestyle='dotted', label=mean_label.format(m='{m}',mean=displ_bkg))
         plt.axvspan(displ_bkg-displ_sigma,displ_bkg+displ_sigma, 0, 1, facecolor='orange', alpha=0.4, label=sigma_label.format(sigma=displ_sigma))
         plt.xscale('log')
         plt.xlabel('$\\ell$ [a.u.]',fontsize=pltargs['fontsize'])
@@ -1559,7 +1559,7 @@ def light_recover(dec_field: NDArray, thr: float, mean_bkg: float, ker_sigma: tu
     print('SUM EST',[np.sum(o) for o in objs[:4]])
     # maxvals = np.array([o.max() for o in objs])# - mean_bkg
     rec_brt  = np.array([o.sum() for o in objs])# - mean_bkg
-    Drec_brt = np.array([e[0,0]*e.shape[0] for e in errs]) 
+    Drec_brt = np.array([e[0,0]*e.shape[0] if e is not None else 0 for e in errs]) 
     rec_param = np.asarray(search_args['obj_params'])
     maxpos = rec_brt.argmax()
     # fast_image(objs[maxpos])
@@ -1567,8 +1567,9 @@ def light_recover(dec_field: NDArray, thr: float, mean_bkg: float, ker_sigma: tu
     # field_image(fig,ax,dec_field)
     # ax.plot(pos[1,maxpos],pos[0,maxpos],'.')
     # plt.show()
-    print('ERRS',abs(rec_brt.max()-np.mean(rec_brt[rec_brt!=rec_brt.max()]))/Drec_brt[maxpos])
-    print('SIGMAS',rec_param[1,:,0])
+    if 0 not in Drec_brt:
+        print('ERRS',abs(rec_brt.max()-np.mean(rec_brt[rec_brt!=rec_brt.max()]))/Drec_brt[maxpos])
+        print('SIGMAS',rec_param[1,:,0])
     # if abs(rec_brt.max()-np.mean(rec_brt[rec_brt!=rec_brt.max()]))/Drec_brt[maxpos] >= 2:
     #     print('No good one:', rec_param[1,maxpos,0])
     #     rec_brt = np.delete(rec_brt,maxpos)
@@ -2156,6 +2157,10 @@ def art_obj(prb_obj: NDArray, index: tuple[int,int], bkg_val: float, errs: NDArr
             print('Sigma > Kernel -->',pop[1])
             return None,None
     if np.any(pop < 0) or np.any(pop_err < 0):
+            print('NEG POP',pop,pop_err)
+            if relax_cond and np.mean(fit_obj[fit_obj!=0]) > 2*bkg_val:
+                print('Take as it is')
+                return fit_obj, np.zeros(fit_obj.shape)           
             print('Impossible')
             return None,None
     # if pop_err[0]/pop[0]>2:
@@ -2225,7 +2230,7 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
     info_print(cnt,(xmax, ymax), peak)
     while peak > stop_val:
         print(f'ker_sigma : {ker_sigma}')
-        # if xmax==58 and ymax==92 and ker_sigma is not None:
+        # if xmax==4 and ymax==55 and ker_sigma is not None:
         #     print('INIZIO')
         #     fast_image(tmp_field)
         #     debug_plots = True
@@ -2267,6 +2272,16 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
         if kwargs['log']: print('SHAPE: ',obj.shape)
         # remove small object
         # if False and (obj.shape[0] <= 3 or obj.shape[1] <= 3):
+        if relax_cond:
+            if np.mean(obj[obj!=0]) > 2*thr:
+                x0, y0 = xmax,ymax
+                acc_obj += [obj]
+                acc_pos = np.append(acc_pos, [[x0], [y0]], axis=1)
+            else:
+                x0, y0 = xmax, ymax
+                rej_obj += [obj]
+                rej_pos = np.append(rej_pos, [[x0], [y0]], axis=1)
+
         if (obj.shape[0] <= 3 or obj.shape[1] <= 3):
                 if (sel_cond == 'new' and obj.mean() >= 2*thr) and (ker_sigma is not None) and (0 not in obj.shape):
                     x0, y0 = xmax,ymax
@@ -2683,15 +2698,15 @@ def searching(field: NDArray, thr: float, bkg_val: float, errs: NDArray | None =
             ax.plot(acc_pos[1],acc_pos[0],'.b')
         if len(rej_pos[0]) != 0:
             ax.plot(rej_pos[1],rej_pos[0],'.r')
-        if 0 not in acc_pos:
+        if 0 not in acc_pos.shape:
             ax.plot(acc_pos[1],acc_pos[0],'.b')
-        if 0 not in rej_pos:
+        if 0 not in rej_pos.shape:
             ax.plot(rej_pos[1],rej_pos[0],'.r')
         plt.show()
         fig, ax = plt.subplots(1,1)
         ax.set_title('Detecting algorithm',fontsize=20)
         field_image(fig,ax,field)
-        if 0 not in acc_pos:
+        if 0 not in acc_pos.shape:
             ax.plot(acc_pos[1],acc_pos[0],'.b')
         plt.show()
     if 0 in acc_pos.shape: return None
