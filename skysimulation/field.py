@@ -43,7 +43,7 @@ MAX_m = 10              #: max mass value for stars
 ALPHA = 2.35            #: IMF exp
 BETA = 3                #: M-L exp
 K = 1/(MAX_m**BETA)     #: normalization constant
-M_SEED = 48             #: seed for mass sample generation
+M_SEED = 27             #: seed for mass sample generation
 POS_SEED = 38
 # background values for a Gaussian distribution
 BACK_MEAN = MAX_m**BETA * 3.2e-4      #: mean
@@ -156,9 +156,9 @@ class Star():
         if 'mass' in sel or sel == 'both':
             # bins = np.linspace(min(self.m),max(self.m),nstars//3*2)
             # m_cnts, m_bins = np.histogram(self.m,bins=nstars//4*3)
-            m_cnts, m_bins = np.histogram(self.m,bins=nstars//5*4)
+            m_cnts, m_bins = np.histogram(self.m,bins=np.round(np.sqrt(nstars)).astype(int))
             masses = (m_bins[1:] + m_bins[:-1])/2
-            mm = np.linspace(masses.min(),masses.max(),len(self.m))
+            mm = np.linspace(masses.min(),masses.max(),nstars)
             imf = mm**(-alpha)
             imf *= m_cnts.max()/imf.max()
             avg_mass = self.mean_mass()
@@ -179,13 +179,14 @@ class Star():
             # compute the logarithm of the values
             L = np.log10(np.sort(self.lum))
             # L = np.sort(self.lum)
-            l_bins = np.linspace(min(L),max(L),nstars//2)
+            l_bins = np.linspace(min(L),max(L),np.round(np.sqrt(nstars)).astype(int))
             # bins = np.linspace(min(L),max(L),int(L.max()/L.min()))
             l_cnts, l_bins = np.histogram(L,bins=l_bins)
-            brigs = (l_bins[1:] + l_bins[:-1])/2
+            brigs = l_bins[1:] #(l_bins[1:] + l_bins[:-1])/2
             # log(IMF) = -a * log(M) = -a/b * log(L/K)
             ll = np.linspace(brigs.min(),brigs.max(),len(self.m))
-            logimf = -alpha/beta * ll + alpha/beta * np.log10(K)
+            # logimf = -alpha/beta * ll + alpha/beta * np.log10(K)
+            logimf = ((1-(alpha+beta))/beta) * ll - np.log10(beta) + (alpha-1)/beta*np.log10(K)
             l_imf = 10**logimf
             l_imf *= l_cnts.max()/l_imf.max()
             avg_lum = self.mean_lum()
@@ -207,9 +208,9 @@ class Star():
             fig.suptitle(f'{nstars} stars with $\\alpha = {alpha}$ and $\\beta = {beta}$',fontsize=fontsize+2)
             ax1.set_title('Distribution in mass',fontsize=fontsize+2)
             ax1.stairs(m_cnts,m_bins,fill=False)
-            ax1.plot(mm,imf,color='red',label='$IMF = M^{-\\alpha}$')
+            ax1.plot(mm,imf,linestyle='dotted',color='red',alpha=0.7,label='$IMF = M^{-\\alpha}$')
             if avg_mass is not None:
-                ax1.axvline(avg_mass,0,1,color='green',linestyle='dashed',label='$\\bar{M}='+f'{avg_mass:.2f}$ '+'$M_{\\odot}$',alpha=0.6)
+                ax1.axvline(avg_mass,0,1,color='green',linestyle='dashed',label='$\\mu_M     ='+f'{avg_mass:.2f}$ '+'$M_{\\odot}$',alpha=0.6)
             ax1.set_xscale('log')
             ax1.set_xlabel('M [$M_\\odot$]',fontsize=fontsize)
             ax1.set_ylabel('counts',fontsize=fontsize)
@@ -217,9 +218,9 @@ class Star():
             ax1.grid(which='both',linestyle='dashed',color='gray',alpha=0.3)
             ax2.set_title('Distribution in brightness',fontsize=fontsize+2)
             ax2.stairs(l_cnts,l_bins,fill=False)
-            ax2.plot(ll,l_imf,color='red',label='$IMF = \\ell^{-\\alpha/\\beta}$')
+            # ax2.plot(ll,l_imf,linestyle='dotted',color='red',alpha=0.7,label='$IMF = \\ell^{-\\alpha/\\beta}$')
             if avg_lum is not None:
-                ax2.axvline(np.log10(avg_lum),0,1,color='lime',linestyle='dashed',label='$\\bar{\\ell}='+f'{avg_lum:.3f}$',alpha=0.6)
+                ax2.axvline(np.log10(avg_lum),0,1,color='lime',linestyle='dashed',label='$\\ell_{\\mu_M} ='+f'{avg_lum:.3f}$',alpha=0.6)
                 # ax2.axvline(np.log10(avg_lum),0,1,label=f'mean={avg_lum}')
                 ax2.legend(fontsize=fontsize)
             ax2.set_xlabel('$\log{(\\ell)}$',fontsize=fontsize)
