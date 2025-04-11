@@ -4,14 +4,14 @@ import skysimulation as sky
 
 ## Constants
 RESOLUTION = None #sky.MIN_m**sky.BETA*sky.K * 1e-2
-PLOTTING = True
+PLOTTING = False
 DISPLAY_PLOTS = False
 BINNING = 20
 FONTSIZE = 18
 BKG_MEAN = sky.BACK_MEAN
 OVERLAP  = True
 DIR_NAME = 'default'
-STORE = False
+STORE = True
 
 ### MONTE CARLO REALIZATIONS
 def generate_sample(selection: None | sky.ArrayLike = None,**initargs) -> sky.NDArray:
@@ -317,6 +317,18 @@ g_cnts, bins, _ = plt.hist(distances,BINNING*3,color='red',density=True,histtype
 rec_cnts, _, _  = plt.hist(rec_distances,8,color='blue',density=True,histtype='step',label='recover')
 obs_cnts, _, _  = plt.hist(obs_distances,bins,color='green',density=True,histtype='step',label='observable')
 plt.legend(fontsize=FONTSIZE)
+
+plt.figure()
+plt.title('Distribution of the relative distance',fontsize=FONTSIZE+2)
+plt.xlabel('$d$ [px]',fontsize=FONTSIZE)
+plt.ylabel('norm. counts',fontsize=FONTSIZE)
+g_cnts, bins, _ = plt.hist(distances,BINNING*3,color='red',density=True,histtype='step',label='generated')
+rec_cnts, _, _  = plt.hist(rec_distances0,bins,color='blue',density=True,histtype='step',label='recovered')
+# obs_cnts, _, _  = plt.hist(obs_distances,bins,color='green',density=True,histtype='step',label='observable')
+plt.grid(color='gray')
+plt.legend(fontsize=FONTSIZE)
+plt.grid(linestyle='dashed',color='gray',alpha=0.5)
+plt.show()
 
 # def compare(gen_sample: sky.NDArray, data_cnts: sky.NDArray, binning: sky.NDArray, avg_dist: float, und_pop: list[float], over_pop: list[float]):
 #     smpl_cnts, _, = np.histogram(gen_sample,binning,density=True)
