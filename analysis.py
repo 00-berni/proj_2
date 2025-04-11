@@ -20,11 +20,15 @@ FONTSIZE = 18
 # for bkg in bkg_mean:
 #     path = sky.os.path.join(sky.RESULT_DIR,f'bkg-{bkg:.2f}.txt')
     
-MAIN_DIR = 'multi-bkg-real'
+# MAIN_DIR = 'multi-bkg-real'
 MAIN_DIR = 'multi-new-corr'
 BKG_VALUES = np.array([3.2,4.2,5.2,6.2,7.2,8.2,9.2,10,11,15,20])
 BKG_ITER = 20
 # FILES_NAME =
+
+# M = (L/K)**{1/b}
+# imfm = M**{-a}
+# imfl = 1/b * K**{(a -1)/b} * L**{(1-(a+b))/b}
 
 source = sky.Star.load_data(main_dir='default')
 
@@ -51,10 +55,11 @@ for df, dm in zip(diff,Dmean_rl):
 select = [0,1,4,-3,-2,-1] #slice(-5,None)
 
 plt.figure()
+plt.title('Evidence of the bias',fontsize=FONTSIZE+2)
 plt.errorbar(BKG_VALUES[select],diff[select],fmt='.--')
 plt.grid(linestyle='dotted',alpha=0.7)
-plt.xlabel('$\\bar{n}_B$',fontsize=FONTSIZE)
-plt.ylabel('$\\langle\\ell\\rangle - \\langle\\ell_0\\rangle$',fontsize=FONTSIZE)
+plt.xlabel('$\\mu_B$',fontsize=FONTSIZE)
+plt.ylabel('$\\bar{\\ell}(\\mu_B) - \\ell_{\\mu_B}$',fontsize=FONTSIZE)
 plt.figure()
 plt.errorbar(BKG_VALUES,diff,fmt='.--')
 for i in range(BKG_ITER):
