@@ -11,11 +11,14 @@ DIR_NAME = 'poisson_det'
 ## Parameters
 BINNING = 20
 DC = sky.MIN_m**sky.BETA*sky.K / 7
+M_SEED = 48
 POI_SEED = 100
+ACQ_NUM = 6
 
-source_frame, STARS = sky.initialize(overlap=True,display_fig=True)
+source_frame, STARS = sky.initialize(m_seed=M_SEED,overlap=True,display_fig=True,norm='log')
 print(len(source_frame[source_frame<0]))
-conv_frame = sky.atm_seeing(source_frame,sigma=sky.SEEING_SIGMA,bkg=0,display_fig=True) // DC
+clear_conv_frame = sky.atm_seeing(source_frame,sigma=sky.SEEING_SIGMA,bkg=0,display_fig=True) 
+conv_frame = clear_conv_frame // DC
 print(len(conv_frame[conv_frame<0]))
 xpos, ypos = np.where(conv_frame<0)
 plt.figure()
@@ -24,32 +27,56 @@ plt.plot(ypos,xpos,'.r')
 plt.show()
 conv_frame[conv_frame<0] = 0
 rng = np.random.default_rng(seed=POI_SEED)
-light_frame = np.array([[ rng.poisson(conv_frame[i,j]) for j in range(sky.N)]for i in range(sky.N)])*DC
-conv_frame *= DC 
-print('LIGHT',len(light_frame[light_frame<0]))
+light_frame = np.array([[ rng.poisson(conv_frame[i,j],ACQ_NUM) for j in range(sky.N)]for i in range(sky.N)]).T*DC
 
+if ACQ_NUM > 1:
+    cols = ACQ_NUM//2 if ACQ_NUM%2==0 else ACQ_NUM//2+1
+    fig, axs = plt.subplots(2,cols)
+    colorbar = {'colorbar': False, 'colorbar_pos': 'bottom'}
+    for i in range(ACQ_NUM):
+        index = (i//cols,i%cols)
+        # if i%2 == 1: colorbar['colorbar'] = True  
+        axs[index].set_title(f'Light Frame {i}',fontsize=20)
+        if i == ACQ_NUM-1: colorbar['colorbar'] = True
+        sky.field_image(fig, axs[index],light_frame[i],**colorbar)
+        # colorbar['colorbar'] = False
+    plt.show()
+
+conv_frame *= DC 
+master_light = np.mean(light_frame,axis=0).T
+print('LIGHT',len(master_light[master_light<0]))
+
+
+sky.fast_image(master_light,'Master Light')
+sky.fast_image(master_light,'Master Light',norm='log')
 plt.figure()
-plt.hist(light_frame.flatten(),100)
+plt.hist(master_light.flatten(),100)
 plt.show()
 
 fig, (ax1,ax2) = plt.subplots(1,2)
-sky.field_image(fig,ax1,conv_frame,norm='log')
-ax2.set_title('Light Frame')
-sky.field_image(fig,ax2,light_frame,norm='log')
+ax1.set_title('Source + Seeing',fontsize=FONTSIZE)
+sky.field_image(fig,ax1,clear_conv_frame)
+ax2.set_title('Master Light',fontsize=FONTSIZE)
+sky.field_image(fig,ax2,master_light)
+fig, (ax1,ax2) = plt.subplots(1,2)
+ax1.set_title('Source + Seeing',fontsize=FONTSIZE)
+sky.field_image(fig,ax1,clear_conv_frame,norm='log')
+ax2.set_title('Master Light',fontsize=FONTSIZE)
+sky.field_image(fig,ax2,master_light,norm='log')
 plt.show()
 ## Kernel Estimation
 thr = 0                     #: the threshold for searching algorithm
 max_num_obj = 10            #: number of objects at the most 
 obj_param = [[],[],[],[]]   #: list of gaussian fit results for each obj
 # extract objects
-objs, Dobjs, _ = sky.searching(light_frame,thr,0,np.zeros(light_frame.shape),ker_sigma=None,num_objs=max_num_obj,cntrl=20,log=True,obj_params=obj_param,display_fig=True)
+objs, Dobjs, _ = sky.searching(master_light,thr,0,np.zeros(master_light.shape),ker_sigma=None,num_objs=max_num_obj,cntrl=20,log=True,obj_params=obj_param,display_fig=True)
 # fit a 2DGaussian profile to extraction
 ker_sigma, Dker_sigma = sky.kernel_estimation(objs,Dobjs,(0,0),obj_param=obj_param,results=True,title='title-only')
 # compute the kernel
 atm_kernel = sky.Gaussian(sigma=ker_sigma)
 
 from skimage.restoration import richardson_lucy
-dec_field = richardson_lucy(light_frame,atm_kernel.kernel(),1000)
+dec_field = richardson_lucy(master_light,atm_kernel.kernel(),1000)
 ## RL Algorithm
 # dec_field = sky.LR_deconvolution(light_frame,atm_kernel,np.zeros(light_frame.shape),0,0,max_r=2000,results=True,display_fig=True,norm='log')
 
@@ -58,16 +85,16 @@ print('DEC',len(dec_field[dec_field==0]))
 
 fig,(ax1,ax2) = plt.subplots(1,2)
 ax1.set_title('Before deconvolution',fontsize=FONTSIZE+2)
-sky.field_image(fig,ax1,light_frame)
+sky.field_image(fig,ax1,master_light)
 ax2.set_title('After deconvolution',fontsize=FONTSIZE+2)
 sky.field_image(fig,ax2,dec_field)
 plt.show()
 
-sky.fast_image(dec_field,norm='log',colorbar=False)
+sky.fast_image(dec_field,'Deconvolved Field',norm='log',colorbar=False)
 
 ## Light Recover
 results = {}
-rec_lum, Drec_lum = sky.light_recover(dec_field,thr,0,(ker_sigma,Dker_sigma),extraction=results,binning=BINNING,results=PLOTTING,display_fig=PLOTTING)
+rec_lum, Drec_lum = sky.light_recover(dec_field,thr,0,(ker_sigma,Dker_sigma),extraction=results,binning=BINNING,results=PLOTTING,display_fig=PLOTTING,relax_cond=True,debug_plots=False,gausfit=False)
 
 mean_lum = STARS.mean_lum() if STARS.mean_lum() is not None else STARS.lum.mean()           #: mean value
 # average and compute the STD
@@ -91,6 +118,7 @@ plt.legend(fontsize=FONTSIZE)
 plt.xlabel('$\\ell$ [a.u.]',fontsize=FONTSIZE)
 plt.ylabel('counts',fontsize=FONTSIZE)
 plt.grid(linestyle='dashed',color='gray',alpha=0.5)
+plt.xscale('log')
 plt.figure()
 plt.title('Restored distribution in brightness',fontsize=FONTSIZE+2)
 bins = np.linspace(min(STARS.lum.min(),rec_lum.min()),max(STARS.lum.max(),rec_lum.max()),BINNING*3)
@@ -103,6 +131,7 @@ plt.axvline(mean_lum,0,1,color='red',label='mean source brightness',linestyle='d
 plt.legend(fontsize=FONTSIZE)
 plt.xlabel('$\\ell$ [a.u.]',fontsize=FONTSIZE)
 plt.ylabel('norm. counts',fontsize=FONTSIZE)
+plt.xscale('log')
 plt.grid(linestyle='dashed',color='gray',alpha=0.5)
 plt.show()
 
