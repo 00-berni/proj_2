@@ -1,26 +1,5 @@
-""" 
-FIELD PACKAGE
-=============
-    This package provides all the methods to generate the field
-
-***
-
-::METHODS::
------------
-
-***
-
-!TO DO!
--------
-    - [x] ~**Implement a class `Field` to collect all the methods**~
-          > It's a bad idea
-
-
-***
-    
-?WHAT ASK TO STEVE?
--------------------
-"""
+__author__  = '00-berni'
+__version__ = '0.0.0'
 
 import os
 from typing import Any, Sequence

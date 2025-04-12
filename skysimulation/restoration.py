@@ -1,56 +1,5 @@
-""" 
-RESTORATION PACKAGE
-===================
-    This package provides all the methods to recover the field
-
-***
-
-::METHODS::
------------
-    - [x] **Background Estimation**
-    - [x] **Object Extraction**
-    - [x] **Kernel Fit**
-    - [x] **RL Algorithm**
-    - [] **Object Detector** 
-    - [] **Light Recovery**
-
-***
-
-!TO DO!
--------
-    - [] Try to understand the meaning of weighted std and **find some references**
-    - [] Documentation
-    - [] Check the meaning of all actions
-    - [x] Add the exact uncertainties to the objects 
-    - [] Look for a use of the [-1] size check 
-    - [] **Investigate better the different results for different seeds**
-    - [x] ~**Understand the squared artifact due to RL**~
-          > They were convolution artifacts. I solved them padding the field before the routine
-    - [] **Does padding the field before routine add some addition light?**
-    - [] **Understand the width of the padding**
-    - [] **Find a better way to extract objects**
-          ? > A possible idea is to do a checking list:
-              if peak/2 >= thr:
-                -> Cut the image and study the gradient 
-                -> Is the gradient ok? 
-                  -| Yes, store the length
-                  -| No
-                   .> Check the brightness of the pixels
-                   .> Is averaged px > bkg? 
-                    -| Yes, store the length
-                    -| No
-                     .> Reject the object
-              else:
-                -> Study the gradient
-                -> Cut the image
-                -> Is the length comparable with mean sigma?
-                  -| Yes, store the length
-                  -| No
-                   .> Reject the object
-    !!- [] **Capire come mai un oggetto viene tagliato fino a farlo scomparire**
-
-"""
-
+__author__  = '00-berni'
+__version__ = '0.0.0'
 
 from typing import Callable, Sequence, Literal, Any
 import matplotlib.pyplot as plt

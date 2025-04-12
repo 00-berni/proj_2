@@ -1,3 +1,6 @@
+__author__  = '00-berni'
+__version__ = '0.0.0'
+
 from typing import Sequence
 import numpy as np
 import matplotlib.pyplot as plt
