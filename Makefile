@@ -1,8 +1,3 @@
-# test dir
-TDIR = ./tests
-NDIR = ./notebook
-RDIR = ./../proj_2_results
-
 # To install all the required packages
 requirements:
 	python3.10 -m pip install -r requirements.txt
@@ -18,3 +13,10 @@ multi:
 # storing multi
 s_multi:
 	python3 ./multiple_runs.py > multi_results.txt
+# poisson
+poisson:
+	python3 ./poisson.py
+# store poisson
+poisson:
+	python3 ./poisson.py > poisson_results.txt
+
